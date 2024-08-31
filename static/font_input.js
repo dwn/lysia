@@ -3,7 +3,7 @@ for(let i = 33; i < 256; i++) {
   const char = String.fromCharCode(i);
   const item = document.createElement('div');
   item.classList.add('selector-item');
-  item.innerHTML = `<span style="font-family: 'Arial Narrow'">${char}</span> (${i})`;
+  item.innerHTML = `<span style="color: #f5f6fa; font-size: 1rem; font-family: 'Arial Narrow'">${char}</span>&emsp;${i}`;
   item.tabIndex = 0;
   item.addEventListener('click', () => {
     document.querySelectorAll('.selector-item').forEach(el => el.classList.remove('selected'));

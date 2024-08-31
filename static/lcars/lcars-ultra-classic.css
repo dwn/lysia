@@ -696,12 +696,13 @@ a:active {
 
 .panel-1 {
 	border-bottom: 5px solid #000;
+	background-color: #c8f;
 }
 
 .panel-1 a	{
+  position: relative;
+  top: 20px;
 	display: block;
-	background-color: #c8f;
-	padding-top: 82px;
 	padding-right: 10px;
 	padding-bottom: 15px;
 	text-decoration: none;
@@ -713,7 +714,7 @@ a:active {
 }
 
 .panel-2	{
-	padding-top: 15px;
+	padding-top: 17px;
 	padding-right: 10px;
 }
 
@@ -2101,10 +2102,6 @@ strong {
 
 	.scroll-top a {
 		width: 60px;
-	}
-
-	.panel-1 a	{
-		padding-top: 30px;
 	}
 
 	.panel-2	{
