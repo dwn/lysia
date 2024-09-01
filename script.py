@@ -1,5 +1,4 @@
 import json
-import lysia_utility as ut
 ##########################################
 # Static class Text_Replacer
 ##########################################
@@ -90,11 +89,20 @@ class File_Manager:
         'direction': 'right-down',
       }
     }
+  ##########################################
   @staticmethod
-  def load_file_url(file_url=None):
+  def uri_basename(uri):
+    uripath = urlsplit(uri).path
+    basename = posixpath.basename(unquote(uripath))
+    if (os.path.basename(basename) != basename or unquote(posixpath.basename(uripath)) != basename):
+      raise ValueError #Reject '%2f' or 'dir%5Cbasename.ext' on Windows
+    return basename
+  ##########################################
+  @staticmethod
+  def load_file_uri(file_uri=None):
     ret = {}
     input_data = {}
-    f = open(file_url, 'r')
+    f = open(file_uri, 'r')
     text = f.read()
     f.close()
     input_data = json.loads(text.split('<desc>')[1].split('</desc>')[0] if '<desc>' in text else text)
@@ -103,7 +111,7 @@ class File_Manager:
     else: #Legacy format
       if text:
         ret = {
-          'title': ut.url_basename(file_url.split('.')[0]),
+          'title': uri_basename(file_uri.split('.')[0]),
           'book_page_number': 0,
           'arr_book_page': input_data.get('user-text', '').split('{br}\n') or [input_data.get('user-text', '')],
           'graph_replace': input_data.get('grapheme-map', ''),
@@ -124,7 +132,7 @@ class File_Manager:
         num_lines = ret['font_glyph_code'].count('\n')
         ret['font_glyph_code'] += '\n' * (223 - num_lines)
       else:
-        raise ValueError('File at URL unreadable or does not exist')
+        raise ValueError('File at URI unreadable or does not exist')
     return ret
 ##########################################
 # Static class Book
@@ -137,13 +145,13 @@ class Book:
     self.source = {'options': {}}
     self.source.update(File_Manager.new_project())
   ##########################################
-  def init(self, file_url='', new_project=False):
+  def init(self, file_uri='', new_project=False):
     self.font = {}
     self.graph = {'section': {}}
     self.phone = {'section': {}}
     self.source = {'options': {}}
-    if file_url: #Load from file
-      self.source.update(File_Manager.load_file_url(file_url))
+    if file_uri: #Load from file
+      self.source.update(File_Manager.load_file_uri(file_uri))
       self.update()
     if new_project: #Clear data and set to empty book
       self.source.update(File_Manager.new_project())

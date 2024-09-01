@@ -9,30 +9,6 @@ def char(i): c = '\\' + chr(i); return (c[1] if len(c) > 1 and c != '\\#' and c 
 #Converts character string to ascii value, taking only the last character, not any escaping
 def asc(c): return (ord(c[-1]) if len(c) > 1 else ord(c))
 ##########################################
-# STATE FUNCTIONS
-##########################################
-#  def init_state(obj, bool_overwrite=False):
-#    for key, val in obj.items():
-#      if bool_overwrite or key not in st.session_state: st.session_state[key] = val
-#  def set_state_from_val(keys, val):
-#    nested_state = st.session_state
-#    if not isinstance(keys, list):
-#      keys = [keys]
-#    for key in keys[:-1]:
-#      nested_state = nested_state[key]
-#    nested_state[keys[-1]] = val
-#  def set_state_from_wkey(keys, wkey):
-#    set_state_from_val(keys, st.session_state[wkey])
-##########################################
-# URL FUNCTIONS
-##########################################
-def url_basename(url):
-  urlpath = urlsplit(url).path
-  basename = posixpath.basename(unquote(urlpath))
-  if (os.path.basename(basename) != basename or unquote(posixpath.basename(urlpath)) != basename):
-    raise ValueError #Reject '%2f' or 'dir%5Cbasename.ext' on Windows
-  return basename
-##########################################
 # FILE FUNCTIONS
 ##########################################
 #Reads multiple files from an array of filenames (or just one file from a string)

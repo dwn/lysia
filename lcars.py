@@ -70,7 +70,7 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
           A(Span("screen", cls="hop"), " top", id="scroll-top", href=""),
         cls="scroll-top"),
         Div( #left-frame-top
-          Div(A("INSTRUCTIONS", href=""), cls="panel-1"),
+          Div(Span("BRIEF"), cls="panel-1"),
           Div("02", Span("-262000", cls="hop"), cls="panel-2"),
         cls="left-frame-top"),
         Div( #right-frame-top
