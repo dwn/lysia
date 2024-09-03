@@ -1,10 +1,9 @@
 from fasthtml.common import *
 
 def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to FastHTML (https://www.thelcars.com/)
-  sty = StyleX('static/lcars/lcars-ultra-classic.css')
-  sty2 = StyleX('static/lcars/lcars-colors.css')
-  scr = ScriptX('static/lib/jquery-3-7-0.min.js')
-  scr2 = ScriptX('static/lcars/lcars.js')
+  sty = StyleX('src/lcars.css')
+  scr = ScriptX('lib/jquery-3-7-0.min.js')
+  scr2 = ScriptX('src/lcars.js')
   return Div(
     Section( #column-1
       Div( #lcars-frame
@@ -70,7 +69,7 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
           A(Span("screen", cls="hop"), " top", id="scroll-top", href=""),
         cls="scroll-top"),
         Div( #left-frame-top
-          Div(Span("BRIEF"), cls="panel-1"),
+          Div("BRIEF", Span(File('svg/starfleet.svg'), cls="hop"), cls="panel-1"),
           Div("02", Span("-262000", cls="hop"), cls="panel-2"),
         cls="left-frame-top"),
         Div( #right-frame-top
@@ -155,10 +154,10 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
       Div( #wrap gap
         Div( #left-frame
           Div(
-            Div("03", Span("-111968", cls="hop"), cls="panel-3"),
-            Div("04", Span("-041969", cls="hop"), cls="panel-4"),
-            Div("05", Span("-1701D", cls="hop"), cls="panel-5"),
-            Div("06", Span("-071984", cls="hop"), cls="panel-6"),
+            Div("03", Span(File('svg/orbit.svg'), cls="hop"), cls="panel-3"),
+            Div("04", Span(File('svg/starship.svg'), cls="hop"), cls="panel-4"),
+            Div("05", Span(File('svg/starbase.svg'), cls="hop"), cls="panel-5"),
+            Div("06", Span(File('svg/starfleet.svg'), cls="hop"), cls="panel-6"),
             Div("07", Span("-081940", cls="hop"), cls="panel-7"),
             Div("08", Span("-47148", cls="hop"), cls="panel-8"),
             Div("09", Span("-081966", cls="hop"), cls="panel-9")
@@ -195,4 +194,4 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
         cls="right-frame",),
       cls="wrap", id="gap"),
     cls="column-3", style="width: 100%;"),
-  sty, sty2, scr, scr2, cls="wrap-everything", **kw)
+  sty, scr, scr2, cls="wrap-everything", **kw)

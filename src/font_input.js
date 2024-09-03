@@ -3,7 +3,7 @@ for(let i = 33; i < 256; i++) {
   const char = String.fromCharCode(i);
   const item = document.createElement('div');
   item.classList.add('selector-item');
-  item.innerHTML = `<span style="color: #f5f6fa; font-size: 1rem; font-family: 'Arial Narrow'">${char}</span>&emsp;${i}`;
+  item.innerHTML = `<span style="color:#f5f6fa; font-size:1rem; font-family:'Arial Narrow'">${char}</span>&emsp;${i}`;
   item.tabIndex = 0;
   item.addEventListener('click', () => {
     document.querySelectorAll('.selector-item').forEach(el => el.classList.remove('selected'));
@@ -68,3 +68,18 @@ canvas.addEventListener('touchend', (event) => {
   const touch = event.changedTouches[0];
   showPoint(touch.clientX, touch.clientY);
 });
+
+function moveCursor(direction) {
+  const input = document.getElementById('font-glyph-code');
+  const cursorPos = input.selectionStart;
+  if (direction === 'left') {
+    if (cursorPos > 0) {
+      input.setSelectionRange(cursorPos - 1, cursorPos - 1);
+    }
+  } else if (direction === 'right') {
+    if (cursorPos < input.value.length) {
+      input.setSelectionRange(cursorPos + 1, cursorPos + 1);
+    }
+  }
+  input.focus();
+}
