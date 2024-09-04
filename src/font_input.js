@@ -24,31 +24,33 @@ me('#font-glyph-code').addEventListener('change', () => {
 
 function showPoint(xo, yo) {
   const canvasRect = canvas.getBoundingClientRect();
+  const mainRect = me('main').getBoundingClientRect();
+  const topOffset = (me('main').clientHeight - me('.main-1').clientHeight) * .5;
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-  const left = canvasRect.left + scrollLeft;
-  const top = canvasRect.top + scrollTop;
-  const adjustedX = xo - left;
-  const adjustedY = yo - top;
+  const left = canvasRect.left - mainRect.left + scrollLeft;
+  const top = canvasRect.top - mainRect.top + scrollTop;// + topOffset;
+  const adjustedX = xo - canvasRect.left - scrollLeft;
+  const adjustedY = yo - canvasRect.top - scrollTop;
   const x = adjustedX / canvasRect.width;
   const y = adjustedY / canvasRect.height;
   const xStep = canvasRect.width * 0.1;
   const yStep = canvasRect.height * 0.1;
-  xIndex = Math.round((x - .05) * 10);
-  yIndex = Math.round((y - .05) * 10);
+  xIndex = Math.round((x - 0.05) * 10);
+  yIndex = Math.round((y - 0.05) * 10);
   pos = [
-    ['A','A-','B','B-','C','C-','D','D-','E','E-'],
-    ['A|','A+','B|','B+','C|','C+','D|','D+','E|','E+'],
-    ['F','F-','G','G-','H','H-','I','I-','J','J-'],
-    ['F|','F+','G|','G+','H|','H+','I|','I+','J|','J+'],
-    ['K','K-','L','L-','M','M-','N','N-','O','O-'],
-    ['K|','K+','L|','L+','M|','M+','N|','N+','O|','O+'],
-    ['P','P-','Q','Q-','R','R-','S','S-','T','T-'],
-    ['P|','P+','Q|','Q+','R|','R+','S|','S+','T|','T+'],
-    ['U','U-','V','V-','W','W-','X','X-','Y','Y-'],
-    ['U|','U+','V|','V+','W|','W+','X|','X+','Y|','Y+'],
-    ['Z','Z-',']',']-','^','^-','_','_-','`','`-'],
-    ['Z|','Z+',']|',']+','^|','^+','_|','_+','`|','`+']
+    ['a','a-','b','b-','c','c-','d','d-','e','e-'],
+    ['a|','a+','b|','b+','c|','c+','d|','d+','e|','e+'],
+    ['f','f-','g','g-','h','h-','i','i-','j','j-'],
+    ['f|','f+','g|','g+','h|','h+','i|','i+','j|','j+'],
+    ['k','k-','l','l-','m','m-','n','n-','o','o-'],
+    ['k|','k+','l|','l+','m|','m+','n|','n+','o|','o+'],
+    ['p','p-','q','q-','r','r-','s','s-','t','t-'],
+    ['p|','p+','q|','q+','r|','r+','s|','s+','t|','t+'],
+    ['u','u-','v','v-','w','w-','x','x-','y','y-'],
+    ['u|','u+','v|','v+','w|','w+','x|','x+','y|','y+'],
+    ['z','z-',']',']-','^','^-','_','_-','`','`-'],
+    ['z|','z+',']|',']+','^|','^+','_|','_+','`|','`+']
   ];
   input.value += pos[yIndex][xIndex];
   const xf = xStep * (xIndex + 0.5);
@@ -57,7 +59,7 @@ function showPoint(xo, yo) {
   point.classList.add('point');
   point.style.left = `${left + xf}px`;
   point.style.top = `${top + yf}px`;
-  document.body.appendChild(point);
+  me('.main-top').appendChild(point);
 }
 
 canvas.addEventListener('click', (event) => {

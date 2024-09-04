@@ -70,7 +70,7 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
         cls="scroll-top"),
         Div( #left-frame-top
           Div("BRIEF", Span(File('svg/starfleet.svg'), cls="hop"), cls="panel-1"),
-          Div("02", Span("-262000", cls="hop"), cls="panel-2"),
+          Div("BRIEF", Span(File('svg/orbit.svg'), cls="hop"), cls="panel-2"),
         cls="left-frame-top"),
         Div( #right-frame-top
           Div( #top-menu-inside
@@ -151,7 +151,7 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
           cls="bar-panel first-bar-panel"),
         cls="right-frame-top"),
       cls="top-menu wrap"),
-      Div( #wrap gap
+      Div( #gap main-frame wrap
         Div( #left-frame
           Div(
             Div("03", Span(File('svg/orbit.svg'), cls="hop"), cls="panel-3"),
@@ -192,6 +192,6 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
             cls="main-3"),
           ),
         cls="right-frame",),
-      cls="wrap", id="gap"),
+      cls="wrap main-frame", id="gap"),
     cls="column-3", style="width: 100%;"),
   sty, scr, scr2, cls="wrap-everything", **kw)

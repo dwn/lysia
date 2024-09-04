@@ -27,6 +27,7 @@ input {
   color: white;
 }
 .point {
+  position: relative;
   width: 1rem;
   height: 1rem;
   background-color: red;
