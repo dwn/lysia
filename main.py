@@ -17,7 +17,7 @@ def get():
 ############################################
 @rt('/font')
 def get():
-  return Title('Lysia - Font'), lcars(font_tool(), headline="project lysia", menu=font_input(), bottom_elements=Div(NotStr(md.markdown('## Hello, World!'))))
+  return Title('Lysia - Font'), lcars(font_tool(), headline="system lysia", brief=Div(NotStr(md.markdown('# Brief'))), menu=font_input(), bottom_elements=Div(NotStr(md.markdown('## Hello, World!'))))
   #font_tool_component = FontTool(theme=None, font_glyph_code='A')
   #font_tool_html = font_tool_component.render()
   #return Title('Colibri - Font'), Main(

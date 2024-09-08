@@ -65,16 +65,17 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
     id="column-2"),
     Section( #column-3
       Div( #top-menu wrap
-        Div( #scroll-top
-          A(Span("screen", cls="hop"), " top", id="scroll-top", href=""),
-        cls="scroll-top"),
         Div( #left-frame-top
-          Div("BRIEF", Span(File('svg/starfleet.svg'), cls="hop"), cls="panel-1"),
-          Div("BRIEF", Span(File('svg/orbit.svg'), cls="hop"), cls="panel-2"),
+          Div( #panel-1
+            Div(Span("BRIEF", cls="hop"), File('svg/starfleet.svg'), cls="panel-1-contents"),
+          cls = "panel-1"),
+          Div( #panel-2
+            Div(Span("WFO", cls="hop"), File('svg/orbit.svg'), cls="panel-2-contents"),
+          cls = "panel-2"),
         cls="left-frame-top"),
         Div( #right-frame-top
           Div( #top-menu-inside
-            Div(kw.get("headline", "").replace(" "," ✧ "), " • ", Span("Online", cls="blink"), cls="banner"),
+            Div(kw.get("headline", ""), Div(File('svg/star-system.svg'), cls="svg-in-text fullscreen-button"), Span("life", cls="blink"), cls="banner"),
             Div( #data-cascade-button-group
               Div( #cascade-wrapper
                 Div( #data-cascade
@@ -146,21 +147,25 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
               ),
             cls="data-cascade-button-group"),
           cls="top-menu-inside"),
+          Div(kw.get("brief", ""), cls="brief"),
           Div(
             Div(cls="bar-1"), Div(cls="bar-2"), Div(cls="bar-3"), Div(cls="bar-4"), Div(cls="bar-5"),
           cls="bar-panel first-bar-panel"),
         cls="right-frame-top"),
       cls="top-menu wrap"),
       Div( #gap main-frame wrap
+        Div( #scroll-top
+          A(Span(" top", cls="hop"), " ⬆", id="scroll-top", href=""),
+        cls="scroll-top"),
         Div( #left-frame
           Div(
-            Div("03", Span(File('svg/orbit.svg'), cls="hop"), cls="panel-3"),
-            Div("04", Span(File('svg/starship.svg'), cls="hop"), cls="panel-4"),
-            Div("05", Span(File('svg/starbase.svg'), cls="hop"), cls="panel-5"),
-            Div("06", Span(File('svg/starfleet.svg'), cls="hop"), cls="panel-6"),
-            Div("07", Span("-081940", cls="hop"), cls="panel-7"),
-            Div("08", Span("-47148", cls="hop"), cls="panel-8"),
-            Div("09", Span("-081966", cls="hop"), cls="panel-9")
+            Div(Span("03", cls="hop"), File('svg/star-system.svg'), cls="panel-3"),
+            Div(Span("04", cls="hop"), File('svg/starship.svg'), cls="panel-4"),
+            Div(Span("05", cls="hop"), File('svg/starbase.svg'), cls="panel-5"),
+            Div(Span("06", cls="hop"), File('svg/starfleet.svg'), cls="panel-6"),
+            Div(Span("07", cls="hop"), "-081940", cls="panel-7"),
+            Div(Span("08", cls="hop"), "-47148", cls="panel-8"),
+            Div(Span("09", cls="hop"), "-081966", cls="panel-9")
           ),
           Div(
             Div("10", Span("-31", cls="hop"), cls="panel-10")
@@ -172,25 +177,23 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
           cls="bar-panel"),
           Main(
             Div(
-              Div(
-                *args,
-              cls="main-1"),
+              *args,
+            cls="cell main-1"),
+            Div(
               Div(
                 Div(
-                  Div(
-                    kw.get("menu", ""),
-                  cls="main-2-text"),
-                cls="main-2-inside"),
-                Div(
-                  Span("22", cls="hop"),
-                  "47",
-                cls="main-2-panel"),
-              cls="main-2"),
-            cls="main-top"),
+                  kw.get("menu", ""),
+                cls="main-2-text"),
+              cls="main-2-inside"),
+              Div(
+                Span("22", cls="hop"),
+                "47",
+              cls="main-2-panel"),
+            cls="cell main-2"),
             Div(
               kw.get("bottom_elements", ""),
             cls="main-3"),
-          ),
+          id="main"),
         cls="right-frame",),
       cls="wrap main-frame", id="gap"),
     cls="column-3", style="width: 100%;"),

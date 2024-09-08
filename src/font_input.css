@@ -39,12 +39,12 @@ input {
   display: flex;
   align-items: center;
   position: relative;
-  width: 100%; /* Adjust the width as needed */
+  width: 100%;
 }
 .input-with-icons {
   flex: 1;
-  padding-left: 3rem; /* Adjust the left padding to fit the icon */
-  padding-right: 3rem; /* Adjust the right padding to fit the icon */
+  padding-left: 2rem;
+  padding-right: 2rem;
 }
 .icon-left, .icon-right {
   cursor: pointer;
@@ -67,4 +67,10 @@ input {
 .input-container .icon-left:active,
 .input-container .icon-right:active {
     outline: none; /* Prevent outline on active state */
+}
+.icon-left, .icon-right {
+  visibility: visible; /* Default state */
+}
+.icon-left[style*="hidden"], .icon-right[style*="hidden"] {
+  visibility: hidden;
 }

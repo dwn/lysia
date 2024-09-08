@@ -1,13 +1,29 @@
 $(document).ready(function() {
   let isExpanded = false;
   let isCollapsed = false;
-  // Scroll to top on button click
-  $("#scroll-top").click(function(event) {
-    event.preventDefault();
-    if (!$("html, body").is(":animated")) {
-      $("html, body").animate({ scrollTop: 0 }, "slow");
+  let isExpanding = false;
+  let isCollapsing = false;
+  let contentWidth = -1;
+  let contentHeight = -1;
+  let contentAspectRatio = 1;
+  // Easing functions
+  jQuery.easing.easeInCirc = function (x, t, b, c, d) { return -c * (Math.sqrt(1 - (t /= d) * t) - 1) + b; };
+  jQuery.easing.easeOutCirc = function (x, t, b, c, d) { return c * Math.sqrt(1 - (t = t / d - 1) * t) + b; };
+  // Scroll-top button
+  $(window).scroll(function() {
+    var height = $(window).scrollTop();
+    if (height > 100) {
+      $('.scroll-top a').fadeIn();
+    } else {
+      $('.scroll-top a').fadeOut();
     }
-    return false;
+  });
+  $(document).ready(function() {
+    $("#scroll-top").click(function(event) {
+      event.preventDefault();
+      $("html, body").animate({ scrollTop: 0 }, "slow");
+      return false;
+    });
   });
   // Fullscreen function
   function toggleFullScreen(elem) {
@@ -23,13 +39,13 @@ $(document).ready(function() {
       else if (document.msExitFullscreen) document.msExitFullscreen();
     }
   }
-  // If banner clicked, toggle full screen
-  $(".banner").click(function() { toggleFullScreen(document.documentElement); });
-  // Collapses top menu without animation
+  // If banner clicked, toggle fullscreen
+  $(".fullscreen-button").click(function() { toggleFullScreen(document.documentElement); });
+  // Collapse top menu without animation
   function immediateCollapse() {
-    $(".panel-1").stop(true, false).css("height", 0);
-    $(".panel-1").hide();
-    $(".top-menu").stop(true, false).css("height", $(".banner").outerHeight(true) + $(".first-bar-panel").outerHeight());
+    $(".panel-1-contents").hide();
+    $(".panel-1").stop(true, false).css("height", 0).css("bottom-border-width", 0);
+    $(".top-menu").stop(true, false).css("height", $(".banner")[0].offsetHeight + $(".first-bar-panel")[0].offsetHeight);
     isExpanded = false;
     isCollapsed = true;
     isExpanding = false;
@@ -37,17 +53,18 @@ $(document).ready(function() {
   }
   // Collapse top menu
   function collapse() {
-    $(".panel-1").stop(true, false).animate({ height: 0 }, function() { $(".panel-1").hide(); });
-    $(".top-menu").stop(true, false).animate({ height: $(".banner").outerHeight(true) + $(".first-bar-panel").outerHeight() }, function() { isCollapsed = true; });
+    $(".panel-1").stop(true, false).animate({ height: 0 }, 300, function() { $(".panel-1-contents").hide(); $(".panel-1").animate({ "border-bottom-width": 0 }, 100, "easeOutCirc") });
+    $(".top-menu").stop(true, false).animate({ height: $(".banner")[0].offsetHeight + $(".first-bar-panel")[0].offsetHeight }, function() { isCollapsed = true; });
+    //$(".panel-2").fadeOut();
     isExpanded = false;
     isExpanding = false;
     isCollapsing = !isCollapsed;
   }
   // Expand top menu without animation
   function immediateExpand() {
-    $(".panel-1").stop(true, false).show();
     const expandedHeight = $(".banner").outerHeight() + $(".data-cascade-button-group").outerHeight();
-    $(".panel-1").css("height", .382 * expandedHeight);
+    $(".panel-1").stop(true, false).css("border-bottom-width", 5).css("height", .382 * expandedHeight);
+    $(".panel-1-contents").show();
     $(".top-menu").stop(true, false).css("height", expandedHeight);
     isExpanded = true;
     isCollapsed = false;
@@ -56,10 +73,10 @@ $(document).ready(function() {
   }
   // Expands top menu
   function expand() {
-    $(".panel-1").stop(true, false).show();
     const expandedHeight = $(".banner").outerHeight() + $(".data-cascade-button-group").outerHeight();
-    $(".panel-1").animate({ height: .382 * expandedHeight });
+    $(".panel-1").stop(true, false).animate({ "border-bottom-width": 5 }, 100, "easeInCirc", function() { $(".panel-1-contents").show(); $(".panel-1").animate({ height: .382 * expandedHeight }, 300) });
     $(".top-menu").stop(true, false).animate({ height: expandedHeight }, function() { isExpanded = true; });
+    //$(".panel-2").fadeIn();
     isCollapsed = false;
     isExpanding = !isExpanded;
     isCollapsing = false;
@@ -68,8 +85,6 @@ $(document).ready(function() {
   $(".top-menu").on("click mouseenter touchstart", function() { if (!(isExpanded || isExpanding)) { expand(); }});
   // Event collapse top menu
   $(".main-frame").on("click mouseenter touchstart", function() { if (!(isCollapsed || isCollapsing)) { collapse(); }});
-  // On window resize, immediately collapse top menu
-  $(window).resize(function() { immediateCollapse(); });
   // Update clock in top menu
   (function clock() {
     $('#blank').text(new Date().toLocaleString().replace(',', '').replace(/:.. /, ' ').replace(/\//g, '·').replace('M', ''));
@@ -77,20 +92,40 @@ $(document).ready(function() {
   })();
   // If clicking on panel-1, expand top menu with animation to the bottom of the whole window
   $(".panel-1").click(function() {
+    $(".brief").hide();
     $('html, body').css({ overflow: 'hidden', height: '100%' }); // Turn off vertical scrolling
     const expandedHeight = $(window).height();
     $(".panel-1").animate({ height: .382 * expandedHeight });
     $(".top-menu").animate({ height: expandedHeight });
-    $(".top-menu-inside").fadeOut(function() { $(this).hide() });
+    $(".top-menu-inside").fadeOut(function() { $(".brief").fadeIn(); });
   });
   // If clicking on top-menu when it is expanded to the whole screen, collapse it with animation
   $(".top-menu").click(function() {
     if (Math.round($(".top-menu").height()) != $(window).height()) return;
-    $(".top-menu-inside").fadeIn(function() {
-      collapse();
-      $('html, body').css({ overflow: 'auto', height: 'auto'}); // Turn on vertical scrolling
-    });
+    $(".top-menu-inside").show(); //Temporarily show top-menu-inside so that collapse can calculate target height
+    collapse(true);
+    $(".top-menu-inside").hide(); //Hide top-menu-inside now that collapse animation started
+    $(".brief").show().fadeOut(function() { $(".top-menu-inside").fadeIn(); });
+  });
+  // Update grid layout and update associated global variables
+  function updateGridLayout() {
+    contentWidth = $(window).width() - $("#main").position().left;
+    contentHeight = $(window).height() - $("#main").position().top;
+    contentAspectRatio = contentWidth / contentHeight;
+    if (contentAspectRatio >= 1) { // Apply two-column layout if aspect ratio is >= 1
+      main.classList.remove('one-column');
+      main.classList.add('two-column');
+    } else { // Apply one-column layout if aspect ratio is < 1
+      main.classList.remove('two-column');
+      main.classList.add('one-column');
+    }
+  }
+  // On window resize, immediately collapse top menu
+  $(window).resize(function() {
+    immediateCollapse();
+    updateGridLayout();
   });
   // Initially expanded top menu
   immediateExpand();
+  updateGridLayout();
 });

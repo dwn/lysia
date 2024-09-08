@@ -690,7 +690,6 @@ input, textarea, button, select {
 }
 
 body	{
-  overflow: hidden;
 	display: flex;
 	padding-block: 5px;
 	background-color: #000;
@@ -739,6 +738,13 @@ a:active {
 	display: flex;
 	width: 100%;
 	column-gap: 12px;
+}
+
+.svg-in-text {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  fill: #f5f6fa;
 }
 
 #column-1 {
@@ -1256,7 +1262,6 @@ a:active {
 
 .section-2-panel-c {
 	padding: 15px 10px 125px 0;
-	
 	border-bottom: 5px solid #000;
 }
 
@@ -1294,21 +1299,21 @@ a:active {
 
 .scroll-top {
 	display: block;
+  z-index: 1;
 }
 
 .scroll-top a {
 	display: none;
 	width: 200px;
-	height: 150px;
-	position: fixed; 
-	bottom: 0; 
+	height: 100px;
+	position: fixed;
+	bottom: 0;
 	text-decoration: none;
 	text-transform: uppercase;
 	text-align: right;
 	border-top: 5px solid #000;
-	border-bottom: 5px solid #000;
 	padding: 20px 10px 0 2px;
-	background-color:  #c8f;
+	background-color: #c8f;
 	font-size: .9rem;
 	font-weight: bold;
 	color: #000;
@@ -1341,17 +1346,6 @@ a:active {
 	padding-top: 90px;
 	background-color: #d44;
 	border-radius: 140px 0 0 0;
-}
-
-.panel-1 {
-	border-bottom: 5px solid #000;
-	background-color: #c8f;
-}
-
-.panel-1 > *, .panel-2 > * {
-  position: relative;
-  top: 5px;
-  right: 10px;
 }
 
 .right-frame-top	{
@@ -1414,7 +1408,7 @@ a:active {
 
 .banner	{
 	padding-bottom: 10px;
-  padding-right: 15px;
+  padding-right: 23px;
 	padding-left: 5px;
 	text-align: right;
 	text-transform: uppercase;
@@ -1761,7 +1755,7 @@ nav a:hover {
 }
 
 @media (max-width: 420px) {
-	
+
 	nav a {
 		margin: 4px;
 		width: 148px;
@@ -1878,64 +1872,63 @@ nav a:hover {
 	margin-top: 10px;
 }
 
-.panel-3,
-.panel-4,
-.panel-5,
-.panel-6,
-.panel-7,
-.panel-8	{
-	padding-right: 10px;
+.panel-1, .panel-3, .panel-4, .panel-5, .panel-6, .panel-7, .panel-8, .panel-9 {
 	border-bottom: 5px solid #000;
 }
 
-.panel-3	{
-	Padding-top: 15px;
-	padding-bottom: 15px;
+.panel-1 > *, .panel-2 > *, .panel-3 > *, .panel-4 > *, .panel-5 > *, .panel-6 > *, .panel-7 > *, .panel-8 > * {
+  position: relative;
+	right: 10px;
 }
 
+.panel-1 > *, .panel-2 > * {
+  top: 5px;
+}
+
+.panel-3 > *, .panel-4 > *, .panel-6 > * {
+  bottom: 15px;
+}
+
+.panel-7 > *, .panel-8 > *, .panel-9 > *, .panel-10 > * {
+  top: 5px;
+}
+
+.panel-1 {
+	background-color: #c8f;
+}
 
 .panel-4	{
-	Padding-top: 180px;
-	padding-bottom: 15px;
+	padding-top: 180px;
 	background-color: #d44; 
 }
 
 .panel-5	{
-	padding-block: 25px;
+	padding-block: 15px;
 	background-color: #f70;
 }
 
 .panel-6	{
-	padding: 230px 10px 15px 0;
-	Padding-top: ;
-	padding-bottom: ;
+	padding-top: 230px;
 	background-color:#ffaa90;
 }
 
 .panel-7	{
-	padding-top: 15px;
 	padding-bottom: 300px;
 	background-color: #78f;
 }
 
 .panel-8	{
-	Padding-top: 15px;
 	padding-bottom: 110px;
 	background-color: #ffaa90;
 }
 
 .panel-9	{
-	Padding-top: 15px;
-	padding-right: 10px;
 	padding-bottom: 170px;
 	background-color: #d44;
 }
 
 .panel-10 {
-	border-top: 5px solid #000;
 	background-color: #f70;
-	Padding-top: 15px;
-	padding-right: 10px;
 	padding-bottom: 300px;
 }
 
@@ -1953,7 +1946,7 @@ nav a:hover {
 	position: absolute;
 	left: 0;
 	top: 22px;
-	z-index: -1;	
+	z-index: -1;
 }
 
 .right-frame:after {
@@ -1999,32 +1992,36 @@ nav a:hover {
 
 /* New LCARS Middle Grid */
 
-
 .lcars-middle {
 	display: grid;
 }
 
-
 main {
-	padding-top: 2vw;
-	padding-bottom: 50px;
-	padding-left: clamp(20px, 3vw, 50px);
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  height: 100%;
 }
 
-.main-top {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  width: 100%;
+.cell {
+  align-items: center;
 }
 
-@media (min-width: 1400px) {
-	main {
-		padding-top: 25px;
-	}
+/* Default layout: one cell above another */
+.one-column {
+  grid-template-columns: 1fr;
+  grid-template-rows: 600px auto;
+}
+
+/* Two side-by-side cells */
+.two-column {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 600px auto;
+}
+
+.main-3 {
+  align-self: start;
+  grid-column: 1 / -1;
 }
 
 main > *:first-child,
@@ -2389,7 +2386,7 @@ strong {
 		border-left-width: 20px;
 	}
 
-	.lcars-text-bar span { 
+	.lcars-text-bar span {
 		position: absolute;
 		top: -3px;
 		height: 30px;
@@ -2415,9 +2412,7 @@ strong {
 }
 
 .main-1 {
-	width: 60%;
 	max-width: 500px;
-	margin-right: 2%;
 }
 
 .main-2 {
@@ -2680,8 +2675,8 @@ strong {
 	}
 
 	.first-bar-panel {
-	margin-top: 15px;
-}
+    margin-top: 15px;
+  }
 
 	.bar-1,
 	.bar-2,
@@ -2712,7 +2707,7 @@ strong {
 }
 
 @media (max-width: 500px)	{
-	
+
 	body	{
 		padding: 0;
 	}
@@ -2744,6 +2739,10 @@ strong {
 	.panel-6	{
 		padding-top: 150px;
 	}
+
+  .panel-1 > *, .panel-2 > *, .panel-3 > *, .panel-4 > *, .panel-5 > *, .panel-6 > *, .panel-7 > *, .panel-8 > * {
+    right: 3px;
+  }
 
 	.hop	{
 		display: none;

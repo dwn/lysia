@@ -1,4 +1,49 @@
 const FontToolConstant = {
+  svgGrid: `
+    <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="smallGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#8f8f8f" stroke-width="1"/>
+        </pattern>
+        <pattern id="grid" x="25" y="75" width="100" height="100" patternUnits="userSpaceOnUse">
+          <rect width="100" height="100" fill="url(#smallGrid)"/>
+          <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#8f8f8f" stroke-width="4"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+      <g fill="#8f8f8f" stroke="transparent" stroke-width=".5" style="font-family:'Arial Narrow'; font-weight: 700; font-size: 20px" transform="scale(1, -1) translate(0, -500)">
+        <text x="31" y="43">a</text>
+        <text x="131" y="43">b</text>
+        <text x="231" y="43">c</text>
+        <text x="331" y="43">d</text>
+        <text x="431" y="43">e</text>
+        <text x="31" y="143">f</text>
+        <text x="131" y="143">g</text>
+        <text x="231" y="143">h</text>
+        <text x="331" y="143">i</text>
+        <text x="431" y="143">j</text>
+        <text x="31" y="243">k</text>
+        <text x="131" y="243">l</text>
+        <text x="231" y="243">m</text>
+        <text x="331" y="243">n</text>
+        <text x="431" y="243">o</text>
+        <text x="31" y="343">p</text>
+        <text x="131" y="343">q</text>
+        <text x="231" y="343">r</text>
+        <text x="331" y="343">s</text>
+        <text x="431" y="343">t</text>
+        <text x="31" y="443">u</text>
+        <text x="131" y="443">v</text>
+        <text x="231" y="443">w</text>
+        <text x="331" y="443">x</text>
+        <text x="431" y="443">y</text>
+        <text x="31" y="496">z</text>
+        <text x="131" y="496">]</text>
+        <text x="231" y="496">^</text>
+        <text x="331" y="496">_</text>
+        <text x="431" y="496">\`</text>
+      </g>
+    </svg>`,
   svgFontCapo: `
     <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
     <desc>[[DESC]]</desc>
@@ -529,7 +574,19 @@ me().on('mouseenter', ev => {
 }).on('click', async ev => {
   const e = me(ev);
   const ctx = me('#font-canvas').getContext('2d');
-  const { boolValid, svgStr } = await FontTool.drawImageAndGetSVG_isValid(ctx, 'a/n')
+  // Get text from input #font-glyph-code
+  const fontGlyphCode = me('#font-glyph-code').value;
+  const { boolValid, svgStr } = await FontTool.drawImageAndGetSVG_isValid(ctx, fontGlyphCode)
   console.log(`Image trace appears ${boolValid? '' : 'IN'}CORRECT`);
   console.log(svgStr);
 });
+
+//Add SVG grid as canvas background
+function backgroundGrid() {
+  const svgData = `url(data:image/svg+xml;base64,${ btoa(FontToolConstant.svgGrid) })`;
+  me('#font-canvas').style.backgroundImage = svgData;
+}
+
+document.addEventListener('DOMContentLoaded', backgroundGrid);
+
+window.addEventListener('resize', backgroundGrid);
