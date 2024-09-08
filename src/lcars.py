@@ -70,7 +70,7 @@ def lcars(*args, **kw): # Star Trek ultra classic LCARS layout converted to Fast
             Div(Span("BRIEF", cls="hop"), File('svg/starfleet.svg'), cls="panel-1-contents"),
           cls = "panel-1"),
           Div( #panel-2
-            Div(Span("WFO", cls="hop"), File('svg/orbit.svg'), cls="panel-2-contents"),
+            Div(Span("PLANET WFO", cls="hop"), File('svg/orbit.svg'), cls="panel-2-contents"),
           cls = "panel-2"),
         cls="left-frame-top"),
         Div( #right-frame-top

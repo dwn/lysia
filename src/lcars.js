@@ -105,7 +105,9 @@ $(document).ready(function() {
     $(".top-menu-inside").show(); //Temporarily show top-menu-inside so that collapse can calculate target height
     collapse(true);
     $(".top-menu-inside").hide(); //Hide top-menu-inside now that collapse animation started
-    $(".brief").show().fadeOut(function() { $(".top-menu-inside").fadeIn(); });
+    $(".brief").fadeOut(function() { $(".top-menu-inside").fadeIn(function() {
+      $('html, body').css({ overflow: 'auto', height: 'auto'}); // Turn on vertical scrolling
+    })});
   });
   // Update grid layout and update associated global variables
   function updateGridLayout() {
