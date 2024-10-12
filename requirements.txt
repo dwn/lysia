@@ -1,2 +1,5 @@
-python-fasthtml
+#python-fasthtml
+fastapi
+uvicorn
+jinja2
 markdown2

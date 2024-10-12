@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCARS Interface</title>
+  <link rel="stylesheet" href="static/css/lcars.css">
+  <script src="static/lib/htmx.min.js"></script>
+  <script src="static/lib/jquery-3-7-0.min.js"></script>
+  <script src="static/js/lcars.js"></script>
+</head>
+<body>
+  <div class="wrap-everything">
+    <!-- Column 1 -->
+    <section id="column-1">
+      <div class="lcars-frame">
+        <!-- Frame Column 1 -->
+        <div class="frame-col-1">
+          <div class="frame-col-1-cell-a"></div>
+          <div class="frame-col-1-cell-b"></div>
+          <div class="frame-col-1-cell-c"></div>
+        </div>
+        <!-- Frame Column 2 -->
+        <div class="frame-col-2"></div>
+        <!-- Frame Column 3 -->
+        <div class="frame-col-3 display-vertical">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+        <!-- Frame Column 4 -->
+        <div class="frame-col-4"></div>
+        <!-- Frame Column 5 -->
+        <div class="frame-col-5">
+          <div class="frame-col-5-cell-a"></div>
+          <div class="frame-col-5-cell-b"></div>
+          <div class="frame-col-5-cell-c"></div>
+        </div>
+      </div>
+      <!-- Pillbox 1 -->
+      <div class="pillbox">
+        <div class="pill"><a href="">J-001</a></div>
+        <div class="pill"><a href="">R-002</a></div>
+        <div class="pill"><a href="">R-003</a></div>
+        <div class="pill"><a href="">I-004</a></div>
+        <div class="pill"><a href="">C-005</a></div>
+        <div class="pill"><a href="">A-006</a></div>
+      </div>
+      <!-- LCARS List 2 -->
+      <div class="lcars-list-2 uppercase">
+        <ul>
+          <li>Subspace Link: Established</li>
+          <li>Starfleet Database: Connected</li>
+          <li>Quantum Memory Field: stable</li>
+          <li class="oc-almond-creme go-almond-creme">Optical Data Network: rerouting</li>
+        </ul>
+      </div>
+      <!-- Pillbox 2 -->
+      <div class="pillbox">
+        <div class="pill-2"><a href="">F12-22</a></div>
+        <div class="pill-2"><a href="">G24-22</a></div>
+        <div class="pill-2"></div>
+        <div class="pill-2"><a href="">H-07AM</a></div>
+        <div class="pill-2"><a href="">I50-72</a></div>
+        <div class="pill-2"><a href="">J5369</a></div>
+      </div>
+    </section>
+    <!-- Column 2 -->
+    <section id="column-2">
+      <div class="section-2-panel-a">AA-1524</div>
+      <div class="section-2-buttons">
+        <a href="">JS2B-01</a>
+        <a href="">IS2B-02</a>
+        <a href="">MS2B-03</a>
+      </div>
+      <div class="section-2-panel-b"><a href="">B2-0730</a></div>
+      <div class="section-2-panel-c">C-318</div>
+      <div class="section-2-panel-d">DL-44</div>
+      <div class="section-2-panel-e">E-3504</div>
+    </section>
+    <!-- Column 3 -->
+    <section id="column-3">
+      <!-- Top Menu Wrap -->
+      <div class="top-menu wrap">
+        <div class="left-frame-top">
+          <!-- Panel 1 -->
+          <div class="panel-1">
+            <div class="panel-1-contents">
+              <span class="hop">BRIEF</span>
+              <img src="static/images/starfleet.svg" alt="">
+            </div>
+          </div>
+          <!-- Panel 2 -->
+          <div class="panel-2">
+            <div class="panel-2-contents">
+              <span class="hop">PLANET WFO</span>
+              <img src="static/images/orbit.svg" alt="">
+            </div>
+          </div>
+        </div>
+        <!-- Right Frame Top -->
+        <div class="right-frame-top">
+          <div class="top-menu-inside">
+            <div class="banner">
+              {{ headline }}
+              <div class="svg-in-text fullscreen-button">
+                <img src="static/images/star-system.svg" alt="">
+              </div>
+              <span class="blink">life</span>
+            </div>
+            <!-- Data Cascade Button Group -->
+            <div class="data-cascade-button-group">
+              <div class="cascade-wrapper">
+                <div class="data-cascade" id="default">
+                  <!-- Rows for Data Cascade -->
+                  <div class="row-1">
+                    <div class="dc1">101</div>
+                    <div class="dc2">7109</div>
+                    <div class="dc3">1966</div>
+                    <div class="dc4">36</div>
+                    <!-- More elements as per original structure... -->
+                  </div>
+                  <!-- Repeat div blocks for rows 2 to 8, similar to row 1 -->
+                </div>
+              </div>
+              <nav>
+                <a href="" id="b-one">01 • info</a>
+                <div id="blank"></div>
+                <a href="" id="b-two">02 • font</a>
+                <a href="" id="b-three">03 • script</a>
+                <a href="" id="b-four" class="go-away">04 • writing</a>
+                <a href="" id="b-five">05 • account</a>
+              </nav>
+            </div>
+          </div>
+          <div class="brief">{{ brief }}</div>
+          <div class="bar-panel first-bar-panel">
+            <div class="bar-1"></div>
+            <div class="bar-2"></div>
+            <div class="bar-3"></div>
+            <div class="bar-4"></div>
+            <div class="bar-5"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Main Frame Wrap -->
+      <div id="gap" class="main-frame wrap">
+        <!-- Scroll Top -->
+        <div class="scroll-top">
+          <a href="" id="scroll-top">
+            <span class="hop">top</span> ⬆
+          </a>
+        </div>
+        <!-- Left Frame -->
+        <div class="left-frame">
+          <!-- Panels 3 to 6 -->
+          <div class="panel-3">
+            <span class="hop">03</span>
+            <img src="static/images/star-system.svg" alt="">
+          </div>
+          <div class="panel-4">
+            <span class="hop">04</span>
+            <img src="static/images/starship.svg" alt="">
+          </div>
+          <div class="panel-5">
+            <span class="hop">05</span>
+            <img src="static/images/starbase.svg" alt="">
+          </div>
+          <div class="panel-6">
+            <span class="hop">06</span>
+            <img src="static/images/starfleet.svg" alt="">
+          </div>
+        </div>
+        <!-- Right frame -->
+        <div class="right-frame">
+          <div class="bar-panel">
+            <div class="bar-6"></div>
+            <div class="bar-7"></div>
+            <div class="bar-8"></div>
+            <div class="bar-9"></div>
+            <div class="bar-10"></div>
+          </div>
+          <main id="main">
+            <div class="cell main-1">
+              {{ primary_contents|safe }}
+            </div>
+            <div class="cell main-2">
+              <div class="main-2-inside">
+                <div class="main-2-content">
+                  {{ wing_contents|safe }}
+                </div>
+              </div>
+              <div class="main-2-panel">
+                <span class="hop">22</span> 47
+              </div>
+            </div>
+            <div class="main-3">
+              {{ bottom_contents }},
+            </div>
+          </main>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

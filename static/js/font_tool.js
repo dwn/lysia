@@ -567,26 +567,25 @@ class FontTool {
   }
 };
 
-me().on('mouseenter', ev => {
-  const e = me(ev);
-}).on('mouseleave', ev => {
-  const e = me(ev);
-}).on('click', async ev => {
-  const e = me(ev);
-  const ctx = me('#font-canvas').getContext('2d');
-  // Get text from input #font-glyph-code
-  const fontGlyphCode = me('#font-glyph-code').value;
-  const { boolValid, svgStr } = await FontTool.drawImageAndGetSVG_isValid(ctx, fontGlyphCode)
-  console.log(`Image trace appears ${boolValid? '' : 'IN'}CORRECT`);
-  console.log(svgStr);
+$(document).ready(() => {
+  const fc = document.getElementById('font-canvas');
+  fc.addEventListener('click', async () => {
+    console.log('Click');
+    const ctx = document.getElementById('font-canvas').getContext('2d');
+    // Quick sleep so that input element finishes updating
+    await new Promise(resolve => setTimeout(resolve, 5));
+    // Get text from input #font-glyph-code
+    const fontGlyphCode = document.getElementById('font-glyph-code').value;
+    const { boolValid, svgStr } = await FontTool.drawImageAndGetSVG_isValid(ctx, fontGlyphCode)
+    console.log(`Image trace appears ${boolValid? '' : 'IN'}CORRECT`);
+    console.log(svgStr);
+  });
+
+  //Add SVG grid as canvas background
+  function backgroundGrid() {
+    const svgData = `url(data:image/svg+xml;base64,${ btoa(FontToolConstant.svgGrid) })`;
+    $('#font-canvas')[0].style.backgroundImage = svgData;
+  }
+  backgroundGrid();
+  window.addEventListener('resize', backgroundGrid);
 });
-
-//Add SVG grid as canvas background
-function backgroundGrid() {
-  const svgData = `url(data:image/svg+xml;base64,${ btoa(FontToolConstant.svgGrid) })`;
-  me('#font-canvas').style.backgroundImage = svgData;
-}
-
-document.addEventListener('DOMContentLoaded', backgroundGrid);
-
-window.addEventListener('resize', backgroundGrid);
