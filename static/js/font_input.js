@@ -227,9 +227,11 @@ $(document).ready(() => {
 
   leftArrow.addEventListener('click', () => {
     moveCursor('left');
+    updateCurvePoints();
   });
   rightArrow.addEventListener('click', () => {
     moveCursor('right');
+    updateCurvePoints();
   });
 
   // Add event listeners to trigger the arrow visibility update
