@@ -747,9 +747,9 @@ a:active {
 
 .svg-in-text {
   display: inline-block;
+  vertical-align: middle;
   margin: 0;
   padding: 0;
-  fill: #f5f6fa;
 }
 
 #column-1 {
@@ -2536,15 +2536,13 @@ strong {
 	main, .main-top {
 		flex-direction: column;
 		align-items: center;
+    justify-items: center;
 	}
 
 	.main-1, .main-2 {
 		width: 100%;
 		margin-right: 0;
 	}
-  .main-2 {
-    margin-top: clamp(50px, 6vw, 125px);
-  }
 }
 
 @media (max-width: 600px)	{

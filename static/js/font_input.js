@@ -239,6 +239,9 @@ $(document).ready(() => {
   input.addEventListener('click', updateArrows);
   input.addEventListener('keyup', updateArrows);
 
+  // On resize, recalculate the two points
+  window.addEventListener('resize', updateCurvePoints);
+
   // Initially check arrow visibility on load
   updateArrows();
 });
