@@ -10,7 +10,7 @@ $(document).ready(() => {
     const char = String.fromCharCode(i);
     const item = document.createElement('div');
     item.classList.add('selector-item');
-    item.innerHTML = `<span style="color:#f5f6fa; font-size:1rem">${char}</span>&emsp;${i}`;
+    item.innerHTML = `<div style="display: inline-block; width: 2.2rem"><span style="color:#f5f6fa; font-size:1rem">${char}</span></div>${i}`;
     item.tabIndex = 0;
     item.addEventListener('click', () => {
       selectItem(item, char);

@@ -669,6 +669,10 @@
 	--sub-fonts: .8rem;
 }
 
+.panel-icon {
+  width: 40pt;
+}
+
 @media (max-width: 650px)	{
 	:root {
 		font-size: 1.2rem;
@@ -2555,7 +2559,6 @@ strong {
 /* Grouped Media */
 
 @media (max-width: 1240px) {
-
 	.bar-1,
 	.bar-6 {
 		width: 320px;
@@ -2564,13 +2567,18 @@ strong {
 	.panel-4 {
 		padding-top: 115px;
 	}
-
 }
 
 @media (min-width: 1100px) {
   main, .main-top {
     align-items: center;
-  }
+    justify-items: center;
+	}
+
+	.main-1, .main-2 {
+		width: 100%;
+		margin-right: 0;
+	}
 }
 
 @media (max-width: 1100px)	{
