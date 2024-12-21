@@ -30,6 +30,12 @@ def get_home(request: Request):
     "content": html_content
   })
 ############################################
+# Swap
+############################################
+@app.get("/swap-content")
+async def swap_content():
+  return HTMLResponse("<p>Hello world</p>")
+############################################
 # Font page route
 ############################################
 @app.get("/font", response_class=HTMLResponse)

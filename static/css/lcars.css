@@ -1689,7 +1689,7 @@ nav {
 	max-width: 450px;
 }
 
-nav a,
+nav button,
 #blank	{
 	display: block;
 	width: 210px;
@@ -1710,6 +1710,8 @@ nav a,
   -webkit-user-select: none; 
 	-ms-user-select: none; 
 	user-select: none;
+  border: 0;
+  outline: 0;
 }
 
 #b-one	{
@@ -2391,7 +2393,6 @@ strong {
 }
 
 @media (max-width: 650px) {
-
 	.lcars-text-bar {
 		border-radius: 10px;
 		height: 24px;
@@ -2582,7 +2583,6 @@ strong {
 }
 
 @media (max-width: 1100px)	{
-
 	.left-frame-top {
 		width: 180px;
 		min-width: 180px;
@@ -2611,7 +2611,6 @@ strong {
 }
 
 @media (max-width: 890px)	{
-
 	.left-frame-top,
 	.left-frame	{
 		width: 150px;
@@ -2665,6 +2664,11 @@ strong {
 }
 
 @media (max-width: 650px)	{
+  .panel-1-contents > span,
+  .panel-2-contents > span {
+    position: relative;
+    bottom: 1.4rem;
+  }
 
 	.left-frame-top,
 	.left-frame	{
@@ -2722,7 +2726,6 @@ strong {
 }
 
 @media (max-width: 500px)	{
-
 	body	{
 		padding: 0;
 	}
@@ -2811,9 +2814,9 @@ strong {
 }
 
 @media (max-width: 388px) {
-
 	.bar-1,
 	.bar-6 {
 		width: 90px;
 	}
 }
+

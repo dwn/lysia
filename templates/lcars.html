@@ -8,6 +8,7 @@
   <script src="static/lib/htmx.min.js"></script>
   <script src="static/lib/jquery-3-7-0.min.js"></script>
   <script src="static/js/lcars.js"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
   <div class="wrap-everything">
@@ -279,12 +280,13 @@
                 </div>
               </div>
               <nav>
-                <a href="" id="b-one">01 • info</a>
+                <!--<a href="" id="b-one">01 • info</a>-->
+                <button id="b-one" hx-get="/swap-content" hx-target="#main" hx-swap="innerHTML">Swap Content</button>
                 <div id="blank"></div>
-                <a href="" id="b-two">02 • font</a>
-                <a href="" id="b-three">03 • script</a>
-                <a href="" id="b-four" class="go-away">04 • writing</a>
-                <a href="" id="b-five">05 • account</a>
+                <button id="b-two">02 • font</button>
+                <button id="b-three">03 • script</button>
+                <button id="b-four" class="go-away">04 • writing</button>
+                <button id="b-five">05 • account</button>
               </nav>
             </div>
           </div>
@@ -336,22 +338,7 @@
             <div class="bar-10"></div>
           </div>
           <main id="main">
-            <div class="cell main-1">
-              {{ primary_contents|safe }}
-            </div>
-            <div class="cell main-2">
-              <div class="main-2-inside">
-                <div class="main-2-content">
-                  {{ wing_contents|safe }}
-                </div>
-              </div>
-              <div class="main-2-panel">
-                <span class="hop">22</span> 47
-              </div>
-            </div>
-            <div class="main-3">
-              {{ bottom_contents }},
-            </div>
+            Your Account Info
           </main>
         </div>
       </div>
