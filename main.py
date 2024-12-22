@@ -42,8 +42,8 @@ async def get_account_content(request: Request):
 ############################################
 @app.get("/font")
 async def get_font_content(request: Request):
-  font_tool_html = ut.read("templates/font_tool.html")  # Assuming font_tool returns HTML content
-  font_input_html = ut.read("templates/font_input.html")  # Assuming font_input returns HTML
+  font_tool_html = ut.read("templates/font_tool.html")
+  font_input_html = ut.read("templates/font_input.html")
   context = {
     "request": request,
     "primary_contents": font_tool_html,
@@ -56,8 +56,8 @@ async def get_font_content(request: Request):
 ############################################
 @app.get("/script")
 async def get_font_content(request: Request):
-  font_tool_html = ut.read("templates/font_tool.html")  # Assuming font_tool returns HTML content
-  font_input_html = ut.read("templates/font_input.html")  # Assuming font_input returns HTML
+  font_tool_html = ut.read("templates/font_tool.html")
+  font_input_html = ut.read("templates/font_input.html")
   context = {
     "request": request,
     "primary_contents": font_tool_html,
