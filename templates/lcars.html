@@ -281,16 +281,16 @@
               </div>
               <nav>
                 <!--<a href="" id="b-one">01 • info</a>-->
-                <button id="b-one" hx-get="/swap-content" hx-target="#main" hx-swap="innerHTML">Swap Content</button>
+                <button id="b-one" hx-get="/account" hx-target="#main" hx-swap="innerHTML">01 • account</button>
                 <div id="blank"></div>
-                <button id="b-two">02 • font</button>
+                <button id="b-two" hx-get="/font" hx-target="#main" hx-swap="innerHTML">02 • font</button>
                 <button id="b-three">03 • script</button>
                 <button id="b-four" class="go-away">04 • writing</button>
                 <button id="b-five">05 • account</button>
               </nav>
             </div>
           </div>
-          <div class="brief">{{ brief }}</div>
+          <div class="brief">{{ brief|safe }}</div>
           <div class="bar-panel first-bar-panel">
             <div class="bar-1"></div>
             <div class="bar-2"></div>
@@ -338,7 +338,7 @@
             <div class="bar-10"></div>
           </div>
           <main id="main">
-            Your Account Info
+            Welcome
           </main>
         </div>
       </div>

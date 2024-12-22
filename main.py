@@ -21,42 +21,50 @@ async def favicon():
 # Home page route
 ############################################
 @app.get("/", response_class=HTMLResponse)
-def get_home(request: Request):
-  # Convert markdown to HTML using markdown2
-  html_content = md.markdown('# Colibri')
-  return templates.TemplateResponse("index.html", {
-    "request": request,
-    "title": "Lysia - Briefing",
-    "content": html_content
-  })
-############################################
-# Swap
-############################################
-@app.get("/swap-content")
-async def swap_content():
-  return HTMLResponse("<p>Hello world</p>")
-############################################
-# Font page route
-############################################
-@app.get("/font", response_class=HTMLResponse)
-def get_font(request: Request):
-  # Read markdown content from a file
+def get_home_content(request: Request):
   brief_md = md.markdown(ut.read('static/md/brief.md'))
-  font_tool_html = ut.read("templates/font_tool.html")  # Assuming font_tool returns HTML content
-  font_input_html = ut.read("templates/font_input.html")  # Assuming font_input returns HTML
-  # Prepare content for the template
   context = {
     "request": request,
     "title": "Lysia - Font",
     "headline": "system wfo",
     "headline_svg": ut.read("static/images/star-system.svg").replace("#000000", "#f70"),
-    "brief": brief_md,
+    "brief": brief_md
+  }
+  return templates.TemplateResponse("lcars.html", context)
+############################################
+# Account page
+############################################
+@app.get("/account")
+async def get_account_content(request: Request):
+  return HTMLResponse("<p>Account Info</p>")
+############################################
+# Font page
+############################################
+@app.get("/font")
+async def get_font_content(request: Request):
+  font_tool_html = ut.read("templates/font_tool.html")  # Assuming font_tool returns HTML content
+  font_input_html = ut.read("templates/font_input.html")  # Assuming font_input returns HTML
+  context = {
+    "request": request,
     "primary_contents": font_tool_html,
     "wing_contents": font_input_html,
     "bottom_contents": md.markdown("## Hello, World!")
   }
-  # Use lcars template to combine components
-  return templates.TemplateResponse("lcars.html", context)
+  return templates.TemplateResponse("layout.html", context)
+############################################
+# Font page
+############################################
+@app.get("/script")
+async def get_font_content(request: Request):
+  font_tool_html = ut.read("templates/font_tool.html")  # Assuming font_tool returns HTML content
+  font_input_html = ut.read("templates/font_input.html")  # Assuming font_input returns HTML
+  context = {
+    "request": request,
+    "primary_contents": font_tool_html,
+    "wing_contents": font_input_html,
+    "bottom_contents": md.markdown("## Hello, World!")
+  }
+  return templates.TemplateResponse("layout.html", context)
 ############################################
 # Route to serve HTMX content dynamically
 ############################################
