@@ -2431,8 +2431,13 @@ strong {
 	}
 }
 
+/*.main-1 > div { //TODO: Remove this
+  display: flex;
+  justify-content: center;
+}*/
+
 .main-1 {
-	max-width: 500px;
+  max-width: 500px;
 }
 
 .main-2 {

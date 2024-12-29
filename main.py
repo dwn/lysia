@@ -7,7 +7,6 @@ from starlette.responses import Response
 import markdown2 as md
 import util as ut
 app = FastAPI()
-# Use Jinja2 templates for HTML rendering
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 ############################################
@@ -42,26 +41,26 @@ async def get_account_content(request: Request):
 ############################################
 @app.get("/font")
 async def get_font_content(request: Request):
-  font_tool_html = ut.read("templates/font_tool.html")
-  font_input_html = ut.read("templates/font_input.html")
+  primary_html = ut.read("templates/font_editor_primary.html")
+  wing_html = ut.read("templates/font_editor_wing.html")
   context = {
     "request": request,
-    "primary_contents": font_tool_html,
-    "wing_contents": font_input_html,
+    "primary_contents": primary_html,
+    "wing_contents": wing_html,
     "bottom_contents": md.markdown("## Hello, World!")
   }
   return templates.TemplateResponse("layout.html", context)
 ############################################
-# Font page
+# Script page
 ############################################
 @app.get("/script")
-async def get_font_content(request: Request):
-  font_tool_html = ut.read("templates/font_tool.html")
-  font_input_html = ut.read("templates/font_input.html")
+async def get_script_content(request: Request):
+  primary_html = ut.read("templates/script_editor_primary.html")
+  wing_html = ut.read("templates/script_editor_wing.html")
   context = {
     "request": request,
-    "primary_contents": font_tool_html,
-    "wing_contents": font_input_html,
+    "primary_contents": primary_html,
+    "wing_contents": wing_html,
     "bottom_contents": md.markdown("## Hello, World!")
   }
   return templates.TemplateResponse("layout.html", context)
