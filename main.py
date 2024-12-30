@@ -10,6 +10,16 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 ############################################
+# Disables caching for all routes
+############################################
+@app.middleware("http")
+async def add_cache_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+############################################
 # Favicon route
 ############################################
 @app.get("/favicon.ico", include_in_schema=False)
