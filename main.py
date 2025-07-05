@@ -45,7 +45,18 @@ def get_home_content(request: Request):
 ############################################
 @app.get("/account")
 async def get_account_content(request: Request):
-  return HTMLResponse("<p>Account Info</p>")
+  ut.set_colors({
+    "r": 1,
+    "o": 3,
+    "y": 4,
+    "g": 6,
+    "b": 8,
+    "i": 9,
+    "v": 11,
+  })
+  c = ut.show_colors()
+  print(c)
+  return HTMLResponse(f"<p>{c}</p>")
 ############################################
 # Font page
 ############################################
