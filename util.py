@@ -5,11 +5,11 @@ from urllib.parse import urlsplit, unquote
 # ASCII FUNCTIONS
 ##########################################
 # Converts a character code to a properly escaped and printable character, maintaining escaping on special markdown characters
-def char(i): 
+def char(i):
   c = '\\' + chr(i)
   return (c[1] if len(c) > 1 and c != '\\#' and c != '\\*' else c)
 # Converts character string to ascii value, taking only the last character, not any escaping
-def asc(c): 
+def asc(c):
   return (ord(c[-1]) if len(c) > 1 else ord(c))
 ##########################################
 # FILE FUNCTIONS
@@ -107,22 +107,48 @@ def set_colors(palette):
       blended_color += format(g_total // num_colors, '02x')
       blended_color += format(b_total // num_colors, '02x')
       color[key] = blended_color
-# Display palette colors and spectrum
+# Get text color and text outline color based on background color
+def get_text_color_and_outline(bg_color: str) -> Tuple[str, str]:
+  text_color = "ivory"
+  text_outline_color = "black"
+  if bg_color.startswith('#'):
+    # Get red, green, blue components from hex color
+    r = int(bg_color[1:3], 16)
+    g = int(bg_color[3:5], 16)
+    b = int(bg_color[5:7], 16)
+    brightness = (r * 0.299 + g * 0.587 + b * 0.114)
+    if brightness > 120:
+      text_color = "black"
+      text_outline_color = "#b0b0b0"
+  return text_color, text_outline_color
+# Display palette and spectrum color blocks
 def show_colors():
-  html = ""
+  blocks = "<h5>symmetric-diatonic</h5><br>"
   if color:
-    html += "<h5>symmetric-diatonic</h5><br>"
     i = 0
-    for key, val in color.items():
-      html += f'<div style="width:100%; text-align:center; color:ivory; background-color:{val}; text-shadow:-1px -1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,1px 1px 0 #000">{key} | {i} | {val}</div><br>'
+    for key, hex_code in color.items():
+      if key.endswith('_hover'):
+        continue
+      text_color, text_outline_color = get_text_color_and_outline(hex_code)
+      blocks += f'<div class="color-block color-{i}">{key} | {i} | {hex_code}</div>'
       i += 1
-  html += '<h5>12-tone</h5><br>'
-  for i in range(0, num_spectrum_colors_in_octave + 1):
-    html += '<div style="width:100%; text-align:center; color:ivory; background-color:{hex}; text-shadow:-1px -1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,1px 1px 0 #000">{index} | {hex} | {nm} nm | {THz} THz | {cents} ¢</div><br>'.format(
-      index=i,
-      hex=spectrum(i),
-      nm=spectrum(i, 'nm'),
-      THz=spectrum(i, 'THz'),
-      cents=spectrum(i, 'cents')
-    )
-  return html
+  return blocks
+# Generate hover styles for color blocks
+def generate_hover_style():
+  styles = "<style>"
+  if color:
+    i = 0
+    for key in color:
+      if key.endswith("_hover"):
+        continue
+      hex_code = color[key]
+      text_color, text_outline_color = get_text_color_and_outline(hex_code)
+      styles += f".color-{i}{{background-color:{hex_code};color:{text_color};text-shadow:-1px -1px 0 {text_outline_color},-1px 1px 0 {text_outline_color},1px -1px 0 {text_outline_color},1px 1px 0 {text_outline_color};transition:all 0.2s ease;}}"
+      hover_key = f"{key}_hover"
+      if hover_key in color:
+        hover_hex = color[hover_key]
+        text_color_hover, text_outline_color_hover = get_text_color_and_outline(hover_hex)
+        styles += f".color-{i}:hover{{background-color:{hover_hex};color:{text_color_hover};text-shadow:-1px -1px 0 {text_outline_color_hover},-1px 1px 0 {text_outline_color_hover},1px -1px 0 {text_outline_color_hover},1px 1px 0 {text_outline_color_hover};}}"
+      i += 1
+  styles += "</style>"
+  return styles
