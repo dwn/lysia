@@ -49,9 +49,49 @@ def get_home_content(request: Request):
   context = {
     "request": request,
     "head_contents": ut.generate_hover_style(),
-    "title": "Lysia - Font",
+    "title": "System Wfo",
     "headline": "system wfo",
     "headline_svg": ut.read("static/images/star-system.svg").replace("#000000", "#f70"),
+    "top_left_pillbox_list": [
+      {"text": "J-001", "url": "/j-001"},
+      {"text": "R-002", "url": "/r-002"},
+      {"text": "R-003", "url": "/r-003"},
+      {"text": "I-004", "url": "/i-004"},
+      {"text": "C-005", "url": "/c-005"},
+      {"text": "A-006", "url": "/a-006"}
+    ],
+    "left_list": [
+      {"text": "Subspace Link: Established"},
+      {"text": "Starfleet Database: Connected"},
+      {"text": "Quantum Memory Field: stable"},
+      {"text": "Optical Data Network: rerouting"}
+    ],
+    "bottom_left_pillbox_list": [
+      {"text": "F12-22", "url": "/f12-22"},
+      {"text": "G24-22", "url": "/g24-22"},
+      {"text": "", "url": "/"},
+      {"text": "H-07AM", "url": "/h-07am"},
+      {"text": "I50-72", "url": "/i50-72"},
+      {"text": "J5369", "url": "/j5369"}
+    ],
+    "leftmost_column_list": [
+      {"text": "AA-1524", "url": "/aa-1524"},
+      {"text": "JS2B-01", "url": "/js2b-01"},
+      {"text": "JS2B-02", "url": "/js2b-02"},
+      {"text": "JS2B-03", "url": "/js2b-03"},
+      {"text": "JS2B-04", "url": "/js2b-04"},
+      {"text": "JS2B-05", "url": "/js2b-05"},
+      {"text": "JS2B-06", "url": "/js2b-06"},
+      {"text": "JS2B-07", "url": "/js2b-07"}
+    ],
+    "menu_pillbox_list": [
+      {"text": "account", "url": "/account"},
+      {"text": "font", "url": "/font"},
+      {"text": "script", "url": "/script"},
+      {"text": "chat", "url": "/chat"},
+      {"text": "book", "url": "/book"}
+    ],
+    "data_cascade_list": [ i for i in range(1, 8*15) ],
     "brief": brief_md
   }
   return templates.TemplateResponse("lcars.html", context)
@@ -96,18 +136,6 @@ async def get_script_content(request: Request):
     "bottom_contents": md.markdown("## Hello, World!")
   }
   return templates.TemplateResponse("layout.html", context)
-############################################
-# Route to serve HTMX content dynamically
-############################################
-@app.get("/data-cascade", response_class=HTMLResponse)
-def get_data_cascade():
-  # Example dynamic content returned for HTMX request
-  return HTMLResponse("""
-    <div>
-      <div>Dynamic Data Row 1</div>
-      <div>Dynamic Data Row 2</div>
-    </div>
-  """)
 ############################################
 # To run the app
 ############################################

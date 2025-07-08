@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LCARS Interface</title>
+  <title>{{ title }}</title>
   <link rel="stylesheet" href="static/css/lcars.css">
   <script src="static/lib/htmx.min.js"></script>
   <script src="static/lib/jquery-3-7-0.min.js"></script>
@@ -26,21 +26,9 @@
         <div class="frame-col-2"></div>
         <!-- Frame Column 3 -->
         <div class="frame-col-3 display-vertical">
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
+          {% for i in range(15) %}
+            <div class="line"></div>
+          {% endfor %}
         </div>
         <!-- Frame Column 4 -->
         <div class="frame-col-4"></div>
@@ -53,44 +41,35 @@
       </div>
       <!-- Pillbox 1 -->
       <div class="pillbox">
-        <div class="pill"><a href="">J-001</a></div>
-        <div class="pill"><a href="">R-002</a></div>
-        <div class="pill"><a href="">R-003</a></div>
-        <div class="pill"><a href="">I-004</a></div>
-        <div class="pill"><a href="">C-005</a></div>
-        <div class="pill"><a href="">A-006</a></div>
+        <!-- Generate from left_pillbox_list -->
+        {% for pill in top_left_pillbox_list %}
+          <div class="pill"><a href="{{ pill.url }}">{{ pill.text }}</a></div>
+        {% endfor %}
       </div>
       <!-- LCARS List 2 -->
       <div class="lcars-list-2 uppercase">
         <ul>
-          <li>Subspace Link: Established</li>
-          <li>Starfleet Database: Connected</li>
-          <li>Quantum Memory Field: stable</li>
-          <li class="oc-almond-creme go-almond-creme">Optical Data Network: rerouting</li>
+          {% for item in left_list %}
+            <li>{{ item.text }}</li>
+          {% endfor %}
         </ul>
       </div>
       <!-- Pillbox 2 -->
       <div class="pillbox">
-        <div class="pill-2"><a href="">F12-22</a></div>
-        <div class="pill-2"><a href="">G24-22</a></div>
-        <div class="pill-2"></div>
-        <div class="pill-2"><a href="">H-07AM</a></div>
-        <div class="pill-2"><a href="">I50-72</a></div>
-        <div class="pill-2"><a href="">J5369</a></div>
+        {% for pill in bottom_left_pillbox_list %}
+          <div class="pill-2"><a href="{{ pill.url }}">{{ pill.text }}</a></div>
+        {% endfor %}
       </div>
     </section>
     <!-- Column 2 -->
     <section id="column-2">
-      <div class="section-2-panel-a">AA-1524</div>
-      <div class="section-2-buttons">
-        <a href="">JS2B-01</a>
-        <a href="">IS2B-02</a>
-        <a href="">MS2B-03</a>
+      <div class="section-2-list">
+        <div class="section-2-buttons">
+          {% for button in leftmost_column_list %}
+            <a href="{{ button.url }}">{{ button.text }}</a>
+          {% endfor %}
+        </div>
       </div>
-      <div class="section-2-panel-b"><a href="">B2-0730</a></div>
-      <div class="section-2-panel-c">C-318</div>
-      <div class="section-2-panel-d">DL-44</div>
-      <div class="section-2-panel-e">E-3504</div>
     </section>
     <!-- Column 3 -->
     <section id="column-3">
@@ -107,7 +86,7 @@
           <!-- Panel 2 -->
           <div class="panel-2">
             <div class="panel-2-contents">
-              <span class="hop">LYSIA</span>
+              <span class="hop">MENU</span>
               <img class="panel-icon" src="static/images/orbit.svg" alt="">
             </div>
           </div>
@@ -126,168 +105,26 @@
             <div class="data-cascade-button-group">
               <div id="cascade-wrapper" class="cascade-wrapper">
                 <div id="default" class="data-cascade">
-                  <div class="row-1">
-                    <div class="dc1">101</div>
-                    <div class="dc2">7109</div>
-                    <div class="dc3">1966</div>
-                    <div class="dc4">36</div>
-                    <div class="dc5">880</div>
-                    <div class="dc6">11.03</div>
-                    <div class="dc7">1954</div>
-                    <div class="dc8">03</div>
-                    <div class="dc9">6.08</div>
-                    <div class="dc10">241</div>
-                    <div class="dc11">309</div>
-                    <div class="dc12">7.08</div>
-                    <div class="dc13">1935</div>
-                    <div class="dc14">12.20</div>
-                    <div class="dc15">53</div>
-                    <div class="dc15">1961</div>
-                    <div class="dc15">2.16</div>
-                  </div>
-                  <div class="row-2">
-                    <div class="dc1">102</div>
-                    <div class="dc2">8102</div>
-                    <div class="dc3">1987</div>
-                    <div class="dc4">044</div>
-                    <div class="dc5">0051</div>
-                    <div class="dc6">1968</div>
-                    <div class="dc7">704</div>
-                    <div class="dc8">10.31</div>
-                    <div class="dc9">1984</div>
-                    <div class="dc10">1954</div>
-                    <div class="dc11">764</div>
-                    <div class="dc12">1940</div>
-                    <div class="dc13">9.9</div>
-                    <div class="dc14">1972</div>
-                    <div class="dc15">815</div>
-                    <div class="dc15">4.12</div>
-                    <div class="dc15">2023</div>
-                  </div>
-                  <div class="row-3">
-                    <div class="dc1">103</div>
-                    <div class="dc2">714</div>
-                    <div class="dc3">1993</div>
-                    <div class="dc4">0222</div>
-                    <div class="dc5">4.4</div>
-                    <div class="dc6">1969</div>
-                    <div class="dc7">2450</div>
-                    <div class="dc8">91</div>
-                    <div class="dc9">56</div>
-                    <div class="dc10">21</div>
-                    <div class="dc11">716</div>
-                    <div class="dc12">801</div>
-                    <div class="dc13">417</div>
-                    <div class="dc14">602</div>
-                    <div class="dc15">5618</div>
-                    <div class="dc15">238</div>
-                    <div class="dc15">1443</div>
-                  </div>
-                  <div class="row-4">
-                    <div class="dc1">104</div>
-                    <div class="dc2">6104</div>
-                    <div class="dc3">1995</div>
-                    <div class="dc4">3.22</div>
-                    <div class="dc5">1931</div>
-                    <div class="dc6">0.0</div>
-                    <div class="dc7">0000</div>
-                    <div class="dc8">1701</div>
-                    <div class="dc9">1984</div>
-                    <div class="dc10">218</div>
-                    <div class="dc11">908</div>
-                    <div class="dc12">10</div>
-                    <div class="dc13">85</div>
-                    <div class="dc14">1888</div>
-                    <div class="dc15">27</div>
-                    <div class="dc15">2879</div>
-                    <div class="dc15">213</div>
-                  </div>
-                  <div class="row-5">
-                    <div class="dc1">105</div>
-                    <div class="dc2">08</div>
-                    <div class="dc3">2001</div>
-                    <div class="dc4">713</div>
-                    <div class="dc5">079</div>
-                    <div class="dc6">1977</div>
-                    <div class="dc7">LV</div>
-                    <div class="dc8">426</div>
-                    <div class="dc9">105</div>
-                    <div class="dc10">10</div>
-                    <div class="dc11">1642</div>
-                    <div class="dc12">1979</div>
-                    <div class="dc13">402</div>
-                    <div class="dc14">795</div>
-                    <div class="dc15">361</div>
-                    <div class="dc15">0852</div>
-                    <div class="dc15">984</div>
-                  </div>
-                  <div class="row-6">
-                    <div class="dc1">106</div>
-                    <div class="dc2">31</div>
-                    <div class="dc3">2017</div>
-                    <div class="dc4">429</div>
-                    <div class="dc5">65</div>
-                    <div class="dc6">871</div>
-                    <div class="dc7">24</div>
-                    <div class="dc8">541</div>
-                    <div class="dc9">656</div>
-                    <div class="dc10">M</div>
-                    <div class="dc11">113</div>
-                    <div class="dc12">12.6</div>
-                    <div class="dc13">27</div>
-                    <div class="dc14">05</div>
-                    <div class="dc15">85</div>
-                    <div class="dc15">12.25</div>
-                    <div class="dc15">7884</div>
-                  </div>
-                  <div class="row-7">
-                    <div class="dc1">107</div>
-                    <div class="dc2">5</div>
-                    <div class="dc3">2022</div>
-                    <div class="dc4">784</div>
-                    <div class="dc5">3304</div>
-                    <div class="dc6">42</div>
-                    <div class="dc7">733</div>
-                    <div class="dc8">1224</div>
-                    <div class="dc9">5801</div>
-                    <div class="dc10">23</div>
-                    <div class="dc11">1015</div>
-                    <div class="dc12">84</div>
-                    <div class="dc13">36</div>
-                    <div class="dc14">029</div>
-                    <div class="dc15">24</div>
-                    <div class="dc15">318</div>
-                    <div class="dc15">12.24</div>
-                  </div>
-                  <div class="row-8">
-                    <div class="dc1">108</div>
-                    <div class="dc2">23</div>
-                    <div class="dc3">174</div>
-                    <div class="dc4">91</div>
-                    <div class="dc5">947</div>
-                    <div class="dc6">28</div>
-                    <div class="dc7">527</div>
-                    <div class="dc8">04</div>
-                    <div class="dc9">0469</div>
-                    <div class="dc10">2200</div>
-                    <div class="dc11">88</div>
-                    <div class="dc12">1985</div>
-                    <div class="dc13">540</div>
-                    <div class="dc14">3121</div>
-                    <div class="dc15">308</div>
-                    <div class="dc15">9571</div>
-                    <div class="dc15">404</div>
-                  </div>
+                  {% for i in range(1, 8) %}
+                    <div class="row-{{ i }}">
+                      {% for j in range(1, 16) %}
+                        <div class="dc{{ j }}">{{ (i-1) * 15 + j }}</div>
+                      {% endfor %}
+                    </div>
+                  {% endfor %}
                 </div>
               </div>
               <nav>
-                <!--<a href="" id="b-one">01 • info</a>-->
-                <button id="b-one" hx-get="/account" hx-target="#main" hx-swap="innerHTML">01 • account</button>
-                <div id="blank"></div>
-                <button id="b-two" hx-get="/font" hx-target="#main" hx-swap="innerHTML">02 • font</button>
-                <button id="b-three" hx-get="/script" hx-target="#main" hx-swap="innerHTML">03 • script</button>
-                <button id="b-four" class="go-away">05 • chat</button>
-                <button id="b-five">04 • book</button>
+                {% for button in menu_pillbox_list %}
+                  {% if loop.index == 2 %}
+                    <div id="blank"></div>
+                  {% endif %}
+                  {% if loop.index == 4 %}
+                    <button id="b-{{ loop.index }}" hx-get="{{ button.url }}" hx-target="#main" hx-swap="innerHTML" class="go-away">{{ button.text }}</button>
+                  {% else %}
+                    <button id="b-{{ loop.index }}" hx-get="{{ button.url }}" hx-target="#main" hx-swap="innerHTML">{{ button.text }}</button>
+                  {% endif %}
+                {% endfor %}
               </nav>
             </div>
           </div>

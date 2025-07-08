@@ -1696,7 +1696,7 @@ nav {
 }
 
 nav button,
-#blank	{
+#blank {
 	display: block;
 	width: 210px;
 	height: 80px;
@@ -1720,28 +1720,28 @@ nav button,
   outline: 0;
 }
 
-#b-one	{
-	background-color: #78f; 
-}
-
-#b-two {
-	background-color: #ffaa90;
-}
-
 #blank {
   color: #c7f;
 	background-color: black;
 }
 
-#b-three	{
+#b-1	{
+	background-color: #78f; 
+}
+
+#b-2 {
+	background-color: #ffaa90;
+}
+
+#b-3	{
 	background-color: #f70;
 }
 
-#b-four {
+#b-4 {
 	background-color: #94f;
 }
 
-#b-five	{
+#b-5	{
 	background-color: #d44;
 }
 
