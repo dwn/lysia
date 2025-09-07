@@ -100,6 +100,83 @@ const defaultSvgBackground =`
       --button-border: #ddd;
     }
     
+    /* Override Pico CSS for dropdown display */
+    #bgColorSelect {
+      color: inherit !important;
+    }
+    
+    #bgColorSelect option {
+      color: inherit !important;
+    }
+    
+    /* 3D flip animation for presentation card */
+    .canvas-only {
+      perspective: 1000px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .canvas-only .grid {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    
+    .canvas-only .grid > div:first-child {
+      transform-style: preserve-3d;
+      animation: cardFlipIn 1.5s ease-out forwards;
+      position: relative;
+    }
+    
+    /* Glow effect emanating from behind the card */
+    .canvas-only .grid > div:first-child::before {
+      content: '';
+      position: absolute;
+      top: -80px;
+      left: -30px;
+      right: -30px;
+      bottom: -80px;
+      background: radial-gradient(ellipse, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 20%, rgba(255, 255, 255, 0.2) 40%, transparent 70%);
+      border-radius: 30px;
+      z-index: -1;
+      opacity: 0;
+      animation: glowAppear 1.5s ease-out forwards;
+      filter: blur(10px);
+    }
+    
+    @keyframes cardFlipIn {
+      0% {
+        transform: rotateX(90deg) rotateY(90deg);
+        opacity: 0;
+      }
+      50% {
+        transform: rotateX(0deg) rotateY(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: rotateX(0deg) rotateY(0deg);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes glowAppear {
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+      20% {
+        opacity: 1;
+        transform: scale(1.5);
+      }
+      100% {
+        opacity: 0.6;
+        transform: scale(1);
+      }
+    }
+    
     :root.dark {
       --canvas-bg: #2a2a2a;
       --grid-color: #555;
@@ -144,6 +221,10 @@ const defaultSvgBackground =`
     .hex-hit {
       background: rgba(255, 230, 0, .6);
       border-radius: 3px;
+    }
+    
+    .current-letter {
+      /* Bold text is handled by <strong> tag, no additional styling needed */
     }
     
     .byte { font-weight: 600; }
@@ -207,6 +288,7 @@ const defaultSvgBackground =`
         inset 0 -2px 4px rgba(0,0,0,0.1),
         0 8px 32px rgba(0,0,0,0.3),
         0 0 0 1px rgba(255,255,255,0.1);
+      filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
       border-radius: 16px;
       padding: 1.5rem;
       position: relative;
@@ -239,7 +321,7 @@ const defaultSvgBackground =`
 </div>
       <aside>
         <details>
-          <summary>Instructions</summary>
+          <summary>Instruction</summary>
       <small>
         <strong>Encoding:</strong> Each byte is <code>axxxbyyy</code> (MSB→LSB), where <code>xxx</code> and <code>yyy</code> are 3-bit values mapped via <code>(v<=4?v:4-v)</code>.
         <br>
@@ -273,19 +355,21 @@ a     xxx    b    yyy</div>
         </details>
         
         <details>
-          <summary>Options</summary>
+          <summary>Option</summary>
           <div class="grid">
-            <div>
-              <input id="cycleColors" type="checkbox"/>
-              <label for="cycleColors">Colors</label>
-            </div>
             <div>
               <input id="italicsCheckbox" type="checkbox" checked/>
               <label for="italicsCheckbox">Italics</label>
             </div>
             <div>
-              <label for="sInput"><sub>Size=</sub><sub id="sValue">5</sub></label>
+              <label for="sInput"><sub>Size </sub><sub id="sValue">5</sub></label>
               <input id="sInput" type="range" min="2" max="20" value="5"/>
+            </div>
+            <div>
+              <label for="bgColorSelect"><sub>Background <span id="bgColorIndicator" style="display: inline-block; width: 12px; height: 12px; background-color: #000000; border: 1px solid #ccc; margin-left: 4px; vertical-align: middle;"></span></sub></label>
+              <select id="bgColorSelect">
+                <option value="transparent">Transparent</option>
+              </select>
             </div>
           </div>
         </details>
@@ -304,17 +388,27 @@ a     xxx    b    yyy</div>
         </details>
         
         <details>
+          <summary>Rule</summary>
+          <div id="strRule" class="ce-editor" contenteditable="true" role="textbox" aria-multiline="true">
+          </div>
+        </details>
+        
+        <details>
           <summary>Input</summary>
           <div id="strInput" class="ce-editor" contenteditable="true" role="textbox" aria-multiline="true">
+          </div>
+        </details>
+        
+        <details>
+          <summary>Output</summary>
+          <div id="strOutput" class="ce-editor" contenteditable="true" role="textbox" aria-multiline="true">
           </div>
         </details>
     </aside>
   </div>
   </main>
   <script>
-    let cycleColorMode = false; // toggled by checkbox
     let italicsMode = true; // toggled by italics checkbox
-    let darkMode = true; // always dark mode
     let editorVisible = false; // toggled by E key
     let maxDrawnY = 0; // track the lowest point of drawn content
     let s=5;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
@@ -332,11 +426,74 @@ a     xxx    b    yyy</div>
     ctx.lineJoin = 'round';
 
     // Color palette (cycles each time a SINGLE '|' is encountered)
-    const COLORS_LIGHT = ['#000000','#8c0004','#f34001','#f8af00','#0ccc0e','#3441fc','#4000c0','#350063','#808080'];
-    const COLORS_DARK = ['#ffffff','#ff4444','#ff8844','#ffdd44','#44ff44','#4488ff','#8844ff','#8844aa','#cccccc'];
+    const COLORS = ['#000000','#8c0004','#f34001','#f8af00','#0ccc0e','#3441fc','#4000c0','#350063','#808080'];
     
     function getColors() {
-      return darkMode ? COLORS_DARK : COLORS_LIGHT;
+      return COLORS;
+    }
+    
+    // Drawing constants
+    const OUTLINE_THICKNESS_MULTIPLIER = 6;
+    const MAIN_THICKNESS_MULTIPLIER = 4;
+    const POINT_OUTLINE_THICKNESS_MULTIPLIER = 2;
+    const POINT_RADIUS_MULTIPLIER = 4;
+    const END_MARKER_RADIUS_MULTIPLIER = 3;
+    
+    // UI constants
+    const DEFAULT_PANEL_COLOR_INDEX = 3;
+    
+    // Helper function to draw outline with consistent styling
+    function drawOutline(isPoint = false) {
+      // Skip outlines in editor mode
+      if (editorVisible) return;
+      
+      const bgColorSelectEl = document.getElementById('bgColorSelect');
+      const backgroundColor = bgColorSelectEl.value;
+      
+      // Blend background color with #404040 (50% interpolation)
+      const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
+      
+      ctx.strokeStyle = blendedColor;
+      ctx.lineWidth = thickness * (isPoint ? POINT_OUTLINE_THICKNESS_MULTIPLIER : OUTLINE_THICKNESS_MULTIPLIER);
+      ctx.stroke();
+    }
+    
+    // Helper function to draw point outline with stroke
+    function drawPointOutline() {
+      // Skip outlines in editor mode
+      if (editorVisible) return;
+      
+      const bgColorSelectEl = document.getElementById('bgColorSelect');
+      const backgroundColor = bgColorSelectEl.value;
+      
+      // Blend background color with #404040 (50% interpolation)
+      const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
+      
+      ctx.strokeStyle = blendedColor;
+      ctx.lineWidth = thickness * POINT_OUTLINE_THICKNESS_MULTIPLIER;
+      ctx.stroke();
+    }
+    
+    // Helper function to blend two colors
+    function blendColors(color1, color2, ratio) {
+      // Convert hex to RGB
+      const hex1 = color1.replace('#', '');
+      const hex2 = color2.replace('#', '');
+      
+      const r1 = parseInt(hex1.substr(0, 2), 16);
+      const g1 = parseInt(hex1.substr(2, 2), 16);
+      const b1 = parseInt(hex1.substr(4, 2), 16);
+      
+      const r2 = parseInt(hex2.substr(0, 2), 16);
+      const g2 = parseInt(hex2.substr(2, 2), 16);
+      const b2 = parseInt(hex2.substr(4, 2), 16);
+      
+      // Interpolate
+      const r = Math.round(r1 + (r2 - r1) * ratio);
+      const g = Math.round(g1 + (g2 - g1) * ratio);
+      const b = Math.round(b1 + (b2 - b1) * ratio);
+      
+      return `rgb(${r}, ${g}, ${b})`;
     }
 
     const toCanvas=(p)=>({x:p.xi*s,y:p.yi*s});
@@ -394,20 +551,15 @@ a     xxx    b    yyy</div>
           // Canvas stays at full height - wrapper clips it
           
           // Reposition SVG background
-          repositionSvgBackground();
         } else {
           // Animation complete
           currentCanvasHeight = targetCanvasHeight;
           const wrapper = document.getElementById('canvasWrapper');
           wrapper.style.height = targetCanvasHeight + 'px';
-          repositionSvgBackground();
         }
       }
     }
     
-    function repositionSvgBackground() {
-      // No complex positioning needed - SVG is a child of the wrapper
-    }
     
     function drawSvgBackground() {
       const svgValue = svgInputEl.value.trim();
@@ -418,12 +570,10 @@ a     xxx    b    yyy</div>
       
       // Remove SVG animations when in edit mode
       if (editorVisible) {
-        processedSvg = processedSvg.replace(/<animate[^>]*\/>/g, '');
-        processedSvg = processedSvg.replace(/<animateTransform[^>]*\/>/g, '');
-        processedSvg = processedSvg.replace(/<animateMotion[^>]*\/>/g, '');
-        processedSvg = processedSvg.replace(/<animate[^>]*>.*?<\/animate>/g, '');
-        processedSvg = processedSvg.replace(/<animateTransform[^>]*>.*?<\/animateTransform>/g, '');
-        processedSvg = processedSvg.replace(/<animateMotion[^>]*>.*?<\/animateMotion>/g, '');
+        // Remove all animation elements (both self-closing and with content)
+        processedSvg = processedSvg.replace(/<animate[^>]*(?:\/>|>.*?<\/animate>)/g, '');
+        processedSvg = processedSvg.replace(/<animateTransform[^>]*(?:\/>|>.*?<\/animateTransform>)/g, '');
+        processedSvg = processedSvg.replace(/<animateMotion[^>]*(?:\/>|>.*?<\/animateMotion>)/g, '');
       }
       
       // Remove explicit width and height attributes to allow proper container sizing
@@ -465,46 +615,55 @@ a     xxx    b    yyy</div>
         if (svgPreview) {
           svgPreview.style.display = 'none';
         }
-        
-        // Create or update background SVG element
-        let svgBackground = document.getElementById('svgBackground');
-        const canvas = document.getElementById('board');
-        
-        if (!svgBackground) {
-          svgBackground = document.createElement('div');
-          svgBackground.id = 'svgBackground';
+      
+      // Create or update background SVG element
+      let svgBackground = document.getElementById('svgBackground');
+      const canvas = document.getElementById('board');
+      
+      if (!svgBackground) {
+        svgBackground = document.createElement('div');
+        svgBackground.id = 'svgBackground';
           svgBackground.style.position = 'absolute';
           svgBackground.style.top = '0';
           svgBackground.style.left = '0';
           svgBackground.style.width = '100%';
           svgBackground.style.height = '100%';
-          svgBackground.style.zIndex = '-1';
+        svgBackground.style.zIndex = '-1';
           svgBackground.style.pointerEvents = 'none';
 
           // Add it as a child of the wrapper
           const wrapper = document.getElementById('canvasWrapper');
           wrapper.appendChild(svgBackground);
-        }
+      }
         
         svgBackground.style.display = 'block';
+      
+      // Position and size exactly like the canvas
+      
+        // Get current background color for glow
+        const bgColorSelectEl = document.getElementById('bgColorSelect');
+        const selectedColor = bgColorSelectEl.value;
         
-        // Position and size exactly like the canvas
-        repositionSvgBackground();
-        
-        svgBackground.innerHTML = `
-          <style>
-            #svgBackground svg {
+        // Convert hex to RGB for glow
+        const hex = selectedColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+      
+      svgBackground.innerHTML = `
+        <style>
+          #svgBackground svg {
               width: 100%;
               height: 100%;
               display: block;
               object-fit: contain;
               object-position: center;
               transform: scale(0.707);
-              filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.4)) drop-shadow(0 0 20px rgba(0, 255, 255, 0.3)) drop-shadow(0 0 30px rgba(0, 255, 255, 0.2));
-            }
-          </style>
-          ${processedSvg}
-        `;
+              filter: drop-shadow(0 0 10px rgba(${r}, ${g}, ${b}, 0.4)) drop-shadow(0 0 20px rgba(${r}, ${g}, ${b}, 0.3)) drop-shadow(0 0 30px rgba(${r}, ${g}, ${b}, 0.2));
+          }
+        </style>
+        ${processedSvg}
+      `;
       }
     }
     
@@ -756,7 +915,7 @@ a     xxx    b    yyy</div>
           const isEvenTextRow = textRowIndex % 2 === 0;
           
           // Slightly adjust brightness for alternating text rows
-          const brightness = isEvenTextRow ? 1.0 : 0.6;
+          const brightness = isEvenTextRow ? 0.15 : 0.1;
           
           ctx.fillStyle = baseColor;
           ctx.globalAlpha = brightness;
@@ -778,9 +937,9 @@ a     xxx    b    yyy</div>
     function anticlockwiseForShortest(a0,a1){const twoPI=Math.PI*2;let cw=(a1-a0)%twoPI;if(cw<0)cw+=twoPI;let ccw=(a0-a1)%twoPI;if(ccw<0)ccw+=twoPI;return ccw<=cw;}
     function angleOnEllipse(cx,cy,rx,ry,x,y){return Math.atan2((y-cy)/ry,(x-cx)/rx);}    
 
-    // Parse while preserving color changes at '|' and newline at '||'
+    // Parse while preserving newline at '||'
     function parseBytesWithColors(str){
-      const out=[]; let colorIndex=0; let buf='';
+      const out=[]; let buf='';
       const isHex = c => /[0-9a-fA-F]/.test(c);
 
       for(let i=0;i<(str?str.length:0);i++){
@@ -805,7 +964,6 @@ a     xxx    b    yyy</div>
             out.push({newline:true});
             i++;
           }else{
-            if (cycleColorMode) colorIndex = (colorIndex + 1) % getColors().length;
             // emit the literal pipe as a non-byte token so caret offsets match textContent
             out.push({pipe:true});
           }
@@ -814,7 +972,7 @@ a     xxx    b    yyy</div>
         if(isHex(ch)){
           buf += ch;
           if(buf.length===2){
-            out.push({byte:parseInt(buf,16), colorIndex, text:buf});
+            out.push({byte:parseInt(buf,16), text:buf});
             buf='';
           }
           continue;
@@ -887,8 +1045,9 @@ a     xxx    b    yyy</div>
       if (editorVisible) {
       drawGridPoints(s);
       }
-      ctx.lineWidth = thickness * 4;
+      // Don't set lineWidth here - let each drawOp set its own thickness
 
+      // First pass: draw all outlines
       for (let i = 0; i < startedCount; i++) {
         const op = ops[i];
         const t0 = firstVisibleAt[i];
@@ -896,7 +1055,18 @@ a     xxx    b    yyy</div>
 
         if (progress <= 0) continue; // not visible yet
 
-        drawOp(op, progress);
+        drawOpOutline(op, progress);
+      }
+      
+      // Second pass: draw all main strokes on top
+      for (let i = 0; i < startedCount; i++) {
+        const op = ops[i];
+        const t0 = firstVisibleAt[i];
+        const progress = Math.max(0, Math.min(1, (now - t0) / DRAW_MS)); // 0→1 over DRAW_MS
+
+        if (progress <= 0) continue; // not visible yet
+
+        drawOpMain(op, progress);
       }
 
       // Show ONLY the red end marker when NOT animating AND in edit mode
@@ -904,13 +1074,227 @@ a     xxx    b    yyy</div>
         const endPix = applyItalicsTransform(toCanvas(visited[visited.length - 1]));
         ctx.fillStyle = 'red';
         ctx.beginPath();
-        ctx.arc(endPix.x, endPix.y, thickness * 3, 0, Math.PI * 2);
+        ctx.arc(endPix.x, endPix.y, thickness * END_MARKER_RADIUS_MULTIPLIER, 0, Math.PI * 2);
         ctx.fill();
       }
       
       // Update canvas height progressively during animation (only in presentation mode)
       if (!editorVisible) {
         updateCanvasHeight();
+      }
+    }
+
+    function drawOpOutline(op, progress = 1){
+      if(op.type==='line'){
+        const p1=applyItalicsTransform(toCanvas(op.from)),p2=applyItalicsTransform(toCanvas(op.to));
+        
+        // Track maximum Y coordinate
+        maxDrawnY = Math.max(maxDrawnY, p1.y, p2.y);
+        
+        if (progress >= 1) {
+          // Draw complete line
+        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+        } else {
+          // Draw partial line
+          const intermediate = {
+            x: p1.x + (p2.x - p1.x) * progress,
+            y: p1.y + (p2.y - p1.y) * progress
+          };
+          maxDrawnY = Math.max(maxDrawnY, intermediate.y);
+          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
+        }
+        
+        // Draw outline only - always black outline
+        drawOutline();
+      }else if(op.type==='arc'){
+        const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
+        
+        // Track maximum Y coordinate for arc
+        maxDrawnY = Math.max(maxDrawnY, transformedCenter.y + op.ry);
+        
+        // Check if this is a complete circle (start=0, end=2π)
+        if(op.start === 0 && op.end === Math.PI * 2){
+          if (progress >= 1) {
+            // For complete circles, just transform the center and draw
+        ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,Math.PI*2,false);
+          } else {
+            // Draw partial circle
+            const endAngle = Math.PI * 2 * progress;
+            ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
+          }
+        
+        // Draw outline only - always black outline
+        drawOutline();
+        } else {
+          // For partial arcs, calculate transformed angles
+          const startX = op.cx + op.rx * Math.cos(op.start);
+          const startY = op.cy + op.ry * Math.sin(op.start);
+          const endX = op.cx + op.rx * Math.cos(op.end);
+          const endY = op.cy + op.ry * Math.sin(op.end);
+          
+          // Transform the start and end points
+          const transformedStart = applyItalicsTransform({x: startX, y: startY});
+          const transformedEnd = applyItalicsTransform({x: endX, y: endY});
+          
+          // Track maximum Y coordinate
+          maxDrawnY = Math.max(maxDrawnY, transformedStart.y, transformedEnd.y);
+          
+          // Calculate new angles based on transformed points
+          const newStartAngle = Math.atan2(transformedStart.y - transformedCenter.y, transformedStart.x - transformedCenter.x);
+          const newEndAngle = Math.atan2(transformedEnd.y - transformedCenter.y, transformedEnd.x - transformedCenter.x);
+          
+          if (progress >= 1) {
+            // Draw complete arc
+            ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,newEndAngle,op.acw);
+          } else {
+            // Draw partial arc - handle angle wrapping correctly
+            let angleDiff;
+            if (op.acw) {
+              // Anticlockwise: go from start to end in negative direction
+              angleDiff = newStartAngle - newEndAngle;
+              if (angleDiff <= 0) angleDiff += Math.PI * 2;
+            } else {
+              // Clockwise: go from start to end in positive direction  
+              angleDiff = newEndAngle - newStartAngle;
+              if (angleDiff <= 0) angleDiff += Math.PI * 2;
+            }
+            
+            const progressAngle = angleDiff * progress;
+            const progressEndAngle = op.acw ? 
+              newStartAngle - progressAngle : 
+              newStartAngle + progressAngle;
+              
+            ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
+          }
+          
+          // Draw outline only
+          drawOutline();
+        }
+      }else if(op.type==='point'){
+        const c=applyItalicsTransform(toCanvas(op));
+        
+        // Track maximum Y coordinate for point
+        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * POINT_RADIUS_MULTIPLIER);
+        
+        if (progress >= 1) {
+          // Draw complete point
+        ctx.beginPath();ctx.arc(c.x,c.y,thickness*POINT_RADIUS_MULTIPLIER,0,Math.PI*2);
+        } else {
+          // Draw growing point
+          const radius = thickness * POINT_RADIUS_MULTIPLIER * progress;
+          ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
+        }
+        
+        // Draw outline only - always black outline (thinner for points)
+        drawPointOutline();
+      }
+    }
+
+    function drawOpMain(op, progress = 1){
+      if(op.type==='line'){
+        const p1=applyItalicsTransform(toCanvas(op.from)),p2=applyItalicsTransform(toCanvas(op.to));
+        
+        if (progress >= 1) {
+          // Draw complete line
+        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+        } else {
+          // Draw partial line
+          const intermediate = {
+            x: p1.x + (p2.x - p1.x) * progress,
+            y: p1.y + (p2.y - p1.y) * progress
+          };
+          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
+        }
+        
+        // Draw main stroke
+        ctx.strokeStyle = op.color;
+        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
+        ctx.stroke();
+      }else if(op.type==='arc'){
+        const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
+        
+        // Check if this is a complete circle (start=0, end=2π)
+        if(op.start === 0 && op.end === Math.PI * 2){
+          if (progress >= 1) {
+            // For complete circles, just transform the center and draw
+        ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,Math.PI*2,false);
+          } else {
+            // Draw partial circle
+            const endAngle = Math.PI * 2 * progress;
+            ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
+          }
+        
+        // Draw main stroke
+        ctx.strokeStyle = op.color;
+        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
+        ctx.stroke();
+        } else {
+          // For partial arcs, calculate transformed angles
+          const startX = op.cx + op.rx * Math.cos(op.start);
+          const startY = op.cy + op.ry * Math.sin(op.start);
+          const endX = op.cx + op.rx * Math.cos(op.end);
+          const endY = op.cy + op.ry * Math.sin(op.end);
+          
+          // Transform the start and end points
+          const transformedStart = applyItalicsTransform({x: startX, y: startY});
+          const transformedEnd = applyItalicsTransform({x: endX, y: endY});
+          
+          // Calculate new angles based on transformed points
+          const newStartAngle = Math.atan2(transformedStart.y - transformedCenter.y, transformedStart.x - transformedCenter.x);
+          const newEndAngle = Math.atan2(transformedEnd.y - transformedCenter.y, transformedEnd.x - transformedCenter.x);
+          
+          if (progress >= 1) {
+            // Draw complete arc
+            ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,newEndAngle,op.acw);
+          } else {
+            // Draw partial arc - handle angle wrapping correctly
+            let angleDiff;
+            if (op.acw) {
+              // Anticlockwise: go from start to end in negative direction
+              angleDiff = newStartAngle - newEndAngle;
+              if (angleDiff <= 0) angleDiff += Math.PI * 2;
+            } else {
+              // Clockwise: go from start to end in positive direction  
+              angleDiff = newEndAngle - newStartAngle;
+              if (angleDiff <= 0) angleDiff += Math.PI * 2;
+            }
+            
+            const progressAngle = angleDiff * progress;
+            const progressEndAngle = op.acw ? 
+              newStartAngle - progressAngle : 
+              newStartAngle + progressAngle;
+              
+            ctx.beginPath();
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
+          }
+          
+          // Draw main stroke
+          ctx.strokeStyle = op.color;
+          ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
+          ctx.stroke();
+        }
+      }else if(op.type==='point'){
+        const c=applyItalicsTransform(toCanvas(op));
+        
+        if (progress >= 1) {
+          // Draw complete point
+        ctx.beginPath();ctx.arc(c.x,c.y,thickness*POINT_RADIUS_MULTIPLIER,0,Math.PI*2);
+        } else {
+          // Draw growing point
+          const radius = thickness * POINT_RADIUS_MULTIPLIER * progress;
+          ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
+        }
+        
+        // Draw main fill
+        ctx.fillStyle = op.color;
+        ctx.fill();
       }
     }
 
@@ -933,20 +1317,13 @@ a     xxx    b    yyy</div>
           maxDrawnY = Math.max(maxDrawnY, intermediate.y);
           ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
         }
-        // Draw shadow first with larger offset to avoid overlap
-        ctx.shadowColor = 'rgba(15,70,97,0.4)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        ctx.strokeStyle = 'rgba(15,70,97,0.4)'; // dark blue stroke for shadow
-        ctx.stroke();
         
-        // Draw text on top without shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // Draw outline for better visibility
+        drawOutline();
+        
+        // Draw main stroke
         ctx.strokeStyle = op.color;
+        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
         ctx.stroke();
       }else if(op.type==='arc'){
         const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
@@ -966,20 +1343,13 @@ a     xxx    b    yyy</div>
             ctx.beginPath();
             ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
           }
-        // Draw shadow first with larger offset to avoid overlap
-        ctx.shadowColor = 'rgba(15,70,97,0.4)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        ctx.strokeStyle = 'rgba(15,70,97,0.4)'; // dark blue stroke for shadow
-        ctx.stroke();
         
-        // Draw text on top without shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // Draw outline for better visibility
+        drawOutline();
+        
+        // Draw main stroke
         ctx.strokeStyle = op.color;
+        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
         ctx.stroke();
         } else {
           // For partial arcs, calculate transformed angles
@@ -1024,49 +1394,35 @@ a     xxx    b    yyy</div>
             ctx.beginPath();
             ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
           }
-          // Draw shadow first with larger offset to avoid overlap
-        ctx.shadowColor = 'rgba(15,70,97,0.4)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        ctx.strokeStyle = 'rgba(15,70,97,0.4)'; // dark blue stroke for shadow
-        ctx.stroke();
+          
+          // Draw outline for better visibility
+          drawOutline();
         
-        // Draw text on top without shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+          // Draw main stroke
         ctx.strokeStyle = op.color;
+          ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
         ctx.stroke();
         }
       }else if(op.type==='point'){
         const c=applyItalicsTransform(toCanvas(op));
         
         // Track maximum Y coordinate for point
-        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * 4);
+        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * POINT_RADIUS_MULTIPLIER);
         
         if (progress >= 1) {
           // Draw complete point
-        ctx.beginPath();ctx.arc(c.x,c.y,thickness*4,0,Math.PI*2);
+        ctx.beginPath();ctx.arc(c.x,c.y,thickness*POINT_RADIUS_MULTIPLIER,0,Math.PI*2);
         } else {
           // Draw growing point
-          const radius = thickness * 4 * progress;
+          const radius = thickness * POINT_RADIUS_MULTIPLIER * progress;
           ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
         }
-        // Draw shadow first with larger offset to avoid overlap
-        ctx.shadowColor = 'rgba(15,70,97,0.4)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        ctx.fillStyle = 'rgba(15,70,97,0.4)'; // dark blue fill for shadow
+        
+        // Draw outline for better visibility
+        ctx.fillStyle = '#000000';
         ctx.fill();
         
-        // Draw text on top without shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // Draw main fill
         ctx.fillStyle = op.color;
         ctx.fill();
       }
@@ -1076,6 +1432,8 @@ a     xxx    b    yyy</div>
     function buildOps(coloredItems){
       let xi=start.xi,yi=start.yi;
       const ops=[]; const visited=[{xi,yi}];
+      let currentLetterIndex = getCurrentLetterIndex();
+      let letterIndex = 0;
 
       for(const item of coloredItems){
         if(item.newline){
@@ -1083,10 +1441,13 @@ a     xxx    b    yyy</div>
           yi = pad.top + 8 * (Math.floor((yi - pad.top) / 8) + 1);
           xi = pad.left; 
           visited.push({xi,yi});
+          // Newline counts as a new letter
+          letterIndex++;
           continue;
         }
         if (item.pipe) {
-          // literal single '|', no move
+          // literal single '|', increment letter index
+          letterIndex++;
           continue;
         }
         if (item.text && item.byte === undefined) {
@@ -1095,7 +1456,11 @@ a     xxx    b    yyy</div>
         }
 
         const b = item.byte;
-        const stroke = getColors()[item.colorIndex];
+        const bgColorSelectEl = document.getElementById('bgColorSelect');
+        const backgroundColor = bgColorSelectEl.value;
+        // Highlight current letter with red color, others with white
+        const isCurrentLetter = letterIndex === currentLetterIndex;
+        const stroke = isCurrentLetter ? '#ff0000' : '#ffffff';
 
         const a=(b>>7)&1;
         const xxx=(b>>4)&0b111;
@@ -1170,8 +1535,13 @@ a     xxx    b    yyy</div>
       if (editorVisible) {
       drawGridPoints(s);
       }
-      ctx.lineWidth=thickness*4;
-      for(const op of ops){ drawOp(op); }
+      // Don't set lineWidth here - let each drawOp set its own thickness
+      
+      // First pass: draw all outlines
+      for(const op of ops){ drawOpOutline(op); }
+      
+      // Second pass: draw all main strokes on top
+      for(const op of ops){ drawOpMain(op); }
       if(visited && visited.length){
         // Show only the ending marker (red) when in edit mode
         if (editorVisible) {
@@ -1188,8 +1558,8 @@ a     xxx    b    yyy</div>
 
     // --- Contenteditable highlighting helpers ---
     const inputEl=document.getElementById('strInput');
-    const cycleColorsEl=document.getElementById('cycleColors');
-    const italicsCheckboxEl=document.getElementById('italicsCheckbox');
+    const ruleEl=document.getElementById('strRule');
+    const outputEl=document.getElementById('strOutput');
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
 
@@ -1230,81 +1600,109 @@ a     xxx    b    yyy</div>
       sel.removeAllRanges(); sel.addRange(r);
     }
 
-    // Byte-colorizing highlighter (uses the same '|' cycling semantics as the renderer)
-    function colorizeToHTML(raw){
+
+    // Basic "hex-hit" highlighter with current letter highlighting
+    const HEX_CHAR_RE = /[0-9A-Fa-f]/;
+    function basicHighlightHTML(raw){
+      const currentLetterIndex = getCurrentLetterIndex();
+      const esc = escapeHTML(raw);
+      
+      let letterIndex = 0;
       let html = '';
-      let buf = '';
-      let colorIndex = 0;
-      const isHex = (c) => /[0-9A-Fa-f]/.test(c);
-
-      for (let i = 0; i < raw.length; i++) {
-        const ch = raw[i];
-
-        // Handle pipes
-        if (ch === '|') {
-          const next = raw[i + 1];
-          if (next === '|') { // newline token, no color change
-            if (buf) { html += escapeHTML(buf); buf = ''; }
+      let i = 0;
+      
+      while(i < esc.length){
+        const ch = esc[i];
+        
+        if(ch === '|'){
+          const next = esc[i+1];
+          if(next === '|'){
+            // Newline token - this counts as a new letter
+            letterIndex++;
             html += '||';
-            i++;
+            i += 2;
           } else {
-            if (cycleColorMode) colorIndex = (colorIndex + 1) % getColors().length;
-            if (buf) { html += escapeHTML(buf); buf = ''; }
-            // Emit literal pipe to preserve textContent
+            // Letter separator
+            letterIndex++;
             html += '|';
+            i++;
           }
-          continue;
-        }
-
-        // Build hex bytes
-        if (isHex(ch)) {
-          buf += ch;
-          if (buf.length === 2) {
-            const byteStr = buf;
-            buf = '';
-            html += `<span class="byte" style="color:${getColors()[colorIndex]}">${byteStr}</span>`;
+        } else if(HEX_CHAR_RE.test(ch) && HEX_CHAR_RE.test(esc[i+1])){
+          // Found a hex pair
+          const pair = esc.substr(i, 2);
+          const isCurrentLetter = letterIndex === currentLetterIndex;
+          
+          // Check if this is an invisible move
+          const byte = parseInt(pair, 16);
+          const a = (byte >> 7) & 1;
+          const xxx = (byte >> 4) & 0b111;
+          const bitB = (byte >> 3) & 1;
+          const yyy = byte & 0b111;
+          const isZero = (xxx === 0 && yyy === 0);
+          const ab = (a << 1) | bitB;
+          
+          // Invisible moves: ab===0b11 (both a and bitB are 1)
+          const isInvisibleMove = ab === 0b11;
+          
+          if(isCurrentLetter){
+            html += `<strong>${pair}</strong>`;
+          } else if(isInvisibleMove){
+            html += `<span class="hex-hit">${pair}</span>`;
+          } else {
+            html += pair;
           }
-          continue;
+          i += 2;
+        } else {
+          html += ch;
+          i++;
         }
-
-        // Non-hex: flush trailing nibble and emit char
-        if (buf) { html += escapeHTML(buf); buf = ''; }
-        html += escapeHTML(ch);
       }
-
-      // Flush any trailing nibble
-      if (buf) html += escapeHTML(buf);
+      
       return html;
     }
 
-    // Basic “hex-hit” highlighter (used when Colors is OFF)
-    const HEX_CHAR_RE = /[0-9A-Fa-f]/;
-    function basicHighlightHTML(raw){
-      const esc = escapeHTML(raw);
-      return esc.replace(/([0-9A-Fa-f]{2})/g, (m, pair, idx, str) => {
-        const prev = str[idx - 1];
-        const next = str[idx + m.length];
-        const hasHexPrev = prev && HEX_CHAR_RE.test(prev);
-        const hasHexNext = next && HEX_CHAR_RE.test(next);
-        const isIsolated = !hasHexPrev && !hasHexNext;
-        const bothHigh = /^[89A-Fa-f]{2}$/.test(pair);
-        return (isIsolated && bothHigh)
-          ? `<span class="hex-hit">${pair}</span>`
-          : pair;
-      });
-    }
-
-    // UPDATED: use colorized spans when Colors is on
+    // Use basic highlighting
     function highlightEditor(){
       const raw = getPlainText(inputEl);
       const caret = getCaretOffset(inputEl);
-      const html = cycleColorMode ? colorizeToHTML(raw) : basicHighlightHTML(raw);
+      const html = basicHighlightHTML(raw);
       inputEl.innerHTML = html;
       setCaretOffset(inputEl, caret);
     }
 
     // Plain-text value getter used by renderer
     function getEditorValue(){ return getPlainText(inputEl); }
+
+    // Get the current letter index (which space between | characters the cursor is in)
+    function getCurrentLetterIndex(){
+      const raw = getPlainText(inputEl);
+      const caret = getCaretOffset(inputEl);
+      
+      let letterIndex = 0;
+      let currentPos = 0;
+      
+      for(let i = 0; i < raw.length && currentPos < caret; i++){
+        const ch = raw[i];
+        
+        if(ch === '|'){
+          const next = raw[i+1];
+          if(next === '|'){
+            // Newline token - this counts as a new letter
+            letterIndex++;
+            i++;
+            currentPos += 2;
+          } else {
+            // This is a letter separator
+            letterIndex++;
+            currentPos++;
+          }
+        } else {
+          currentPos++;
+        }
+      }
+      
+      return letterIndex;
+    }
 
     // Insert plain text at the current caret (collapses selection)
     function insertTextAtCaret(root, text) {
@@ -1429,6 +1827,13 @@ a     xxx    b    yyy</div>
         
         // Always use static rendering in renderNow (animation is handled elsewhere)
         renderInstant(ops, visited);
+        
+        // Delay canvas expansion for 3D flip animation (only on first load)
+        if (!editorVisible && currentCanvasHeight === 200) {
+          setTimeout(() => {
+            animationStartTime = performance.now();
+          }, 1500); // Wait for flip animation to complete
+        }
       }catch(e){
         console.error('Render error:',e);
         stopAnim();
@@ -1442,15 +1847,87 @@ a     xxx    b    yyy</div>
       scheduleSnapshot();  // coalesce undo snapshots
     });
 
-    cycleColorsEl.addEventListener('change', ()=>{
-      cycleColorMode = cycleColorsEl.checked;
-      highlightEditor(); // recolor editor immediately
-      renderNow();       // redraw canvas with new cycle mode
+    // Update highlighting when cursor position changes (click, arrow keys, etc.)
+    document.addEventListener('selectionchange', () => {
+      if (document.activeElement === inputEl) {
+        highlightEditor();
+        renderNow();
+      }
     });
+
     
-    italicsCheckboxEl.addEventListener('change', ()=>{
-      italicsMode = italicsCheckboxEl.checked;
-      renderNow();       // redraw canvas with new italics mode
+    // Background color functionality
+    const bgColorSelectEl = document.getElementById('bgColorSelect');
+    
+    // Populate color options dynamically
+    function populateColorOptions() {
+      const colors = getColors();
+      const initialColor = colors[DEFAULT_PANEL_COLOR_INDEX]; // Default to yellowish color
+      
+      // Clear existing options
+      bgColorSelectEl.innerHTML = '';
+      
+      // Add color options with hex values
+      colors.forEach((color, index) => {
+        const option = document.createElement('option');
+        option.value = color;
+        option.textContent = color; // Show the hex value
+        if (color === initialColor) {
+          option.selected = true;
+        }
+        bgColorSelectEl.appendChild(option);
+      });
+    }
+    
+    // Generate gradient from base color
+    function generateGradientFromColor(baseColor) {
+      // Convert hex to RGB
+      const hex = baseColor.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      // Create gradient with varying opacity
+      return `linear-gradient(135deg, 
+        rgba(${r},${g},${b},0.8) 0%, 
+        rgba(${r},${g},${b},0.6) 25%, 
+        rgba(${r},${g},${b},0.4) 50%, 
+        rgba(${r},${g},${b},0.2) 75%, 
+        rgba(${r},${g},${b},0.1) 100%)`;
+    }
+    
+    // Update canvas background based on editor mode and selected color
+    function updateCanvasBackground(selectedColor) {
+      const canvasElement = document.getElementById('board');
+      if (!editorVisible) {
+        canvasElement.style.background = generateGradientFromColor(selectedColor);
+      } else {
+        canvasElement.style.background = '';
+      }
+    }
+    
+    // Initialize color options and set defaults
+    populateColorOptions();
+    
+    const initialColor = getColors()[DEFAULT_PANEL_COLOR_INDEX];
+    const colorIndicator = document.getElementById('bgColorIndicator');
+    
+    // Set initial values
+    colorIndicator.style.backgroundColor = initialColor;
+    updateCanvasBackground(initialColor);
+    
+    bgColorSelectEl.addEventListener('change', () => {
+      const selectedColor = bgColorSelectEl.value;
+      const colorIndicator = document.getElementById('bgColorIndicator');
+      
+      // Update canvas background
+      updateCanvasBackground(selectedColor);
+      
+      // Update color indicator
+      colorIndicator.style.backgroundColor = selectedColor;
+      
+      // Update SVG glow to match
+      drawSvgBackground();
     });
     
     sInputEl.addEventListener('input', () => {
@@ -1464,7 +1941,7 @@ a     xxx    b    yyy</div>
     const svgInputEl = document.getElementById('svgInput');
     svgInputEl.addEventListener('input', () => {
       // Always update SVG display (preview in editor mode, background in non-editor mode)
-      drawSvgBackground();
+        drawSvgBackground();
     });
     
 
@@ -1472,7 +1949,7 @@ a     xxx    b    yyy</div>
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 'e' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         // Only toggle if not typing in the editor
-        if (document.activeElement !== inputEl) {
+        if (document.activeElement !== inputEl && document.activeElement !== ruleEl && document.activeElement !== outputEl) {
           e.preventDefault();
           editorVisible = !editorVisible;
           
@@ -1480,14 +1957,11 @@ a     xxx    b    yyy</div>
           document.body.classList.toggle('canvas-only', !editorVisible);
           
           // Update canvas background based on new mode
-          if (!editorVisible) {
+          const bgColorSelectEl = document.getElementById('bgColorSelect');
+          const selectedColor = bgColorSelectEl.value;
+          
+          updateCanvasBackground(selectedColor);
             drawSvgBackground();
-          } else {
-            // When switching back to edit mode, reposition SVG if it exists
-            setTimeout(() => repositionSvgBackground(), 0);
-            // Update SVG to pause animations
-            drawSvgBackground();
-          }
           
           // Clear canvas when switching modes to remove any lingering grid points
           ctx.clearRect(0, 0, width, height);
@@ -1514,14 +1988,11 @@ a     xxx    b    yyy</div>
     // Window resize listener to reposition SVG background
     window.addEventListener('resize', () => {
       if (!editorVisible) {
-        repositionSvgBackground();
       }
     });
 
     // Initial
     window.addEventListener('load', () => {
-      // Apply dark theme on load
-      document.documentElement.classList.toggle('dark', darkMode);
       // Start in non-edit mode (canvas-only)
       document.body.classList.add('canvas-only');
       // Load default content
@@ -1529,6 +2000,8 @@ a     xxx    b    yyy</div>
       // Initialize SVG background
       svgInputEl.value = defaultSvgBackground;
       highlightEditor();
+      // Update color options for background
+      populateColorOptions();
       // Pre-calculate height for smooth animation
       preCalculateHeight();
       // Start with animated rendering instead of static
@@ -1539,6 +2012,16 @@ a     xxx    b    yyy</div>
       
       // Initialize background for non-edit mode
       drawSvgBackground();
+      
+      // Add event listeners after DOM is ready
+      const italicsCheckboxEl = document.getElementById('italicsCheckbox');
+      
+      if (italicsCheckboxEl) {
+        italicsCheckboxEl.addEventListener('change', ()=>{
+          italicsMode = italicsCheckboxEl.checked;
+          renderNow();       // redraw canvas with new italics mode
+        });
+      }
     });
   </script>
 </body>
