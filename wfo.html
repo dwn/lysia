@@ -219,7 +219,7 @@ const defaultSvgBackground =`
     }
     
     .hex-hit {
-      background: rgba(255, 230, 0, .6);
+      outline: 1px solid rgba(0, 230, 255, 0.6);
       border-radius: 3px;
     }
     
@@ -1458,8 +1458,9 @@ a     xxx    b    yyy</div>
         const b = item.byte;
         const bgColorSelectEl = document.getElementById('bgColorSelect');
         const backgroundColor = bgColorSelectEl.value;
-        // Highlight current letter with red color, others with white
-        const isCurrentLetter = letterIndex === currentLetterIndex;
+        // Highlight current letter with red color only when Input field is focused, others with white
+        const isInputFocused = document.activeElement === inputEl;
+        const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
         const stroke = isCurrentLetter ? '#ff0000' : '#ffffff';
 
         const a=(b>>7)&1;
@@ -1610,9 +1611,24 @@ a     xxx    b    yyy</div>
       let letterIndex = 0;
       let html = '';
       let i = 0;
+      let inComment = false;
       
       while(i < esc.length){
         const ch = esc[i];
+        
+        // Handle comment detection
+        if(ch === '/' && esc[i+1] === '/'){
+          inComment = true;
+          html += '//';
+          i += 2;
+          continue;
+        }
+        if(inComment && (ch === '\n' || ch === '\r')){
+          inComment = false;
+          html += ch;
+          i++;
+          continue;
+        }
         
         if(ch === '|'){
           const next = esc[i+1];
@@ -1646,7 +1662,7 @@ a     xxx    b    yyy</div>
           
           if(isCurrentLetter){
             html += `<strong>${pair}</strong>`;
-          } else if(isInvisibleMove){
+          } else if(isInvisibleMove && !inComment){
             html += `<span class="hex-hit">${pair}</span>`;
           } else {
             html += pair;
