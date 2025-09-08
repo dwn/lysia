@@ -117,6 +117,20 @@ const defaultSvgBackground =
       min-height: 100vh;
     }
     
+    /* Center canvas vertically in editor mode */
+    body:not(.canvas-only) .grid {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    
+    /* Ensure canvas doesn't go off-screen in editor mode */
+    body:not(.canvas-only) #canvasWrapper {
+      max-height: calc(100vh - 200px); /* Leave room for other elements */
+      margin: 20px 0;
+    }
+    
     .canvas-only .grid > div:first-child {
       transform-style: preserve-3d;
       animation: cardFlipIn 1.5s ease-out forwards;
@@ -215,6 +229,18 @@ const defaultSvgBackground =
       -webkit-user-select: text;
       -moz-user-select: text;
       -ms-user-select: text;
+    }
+    
+    /* Non-editable output styling */
+    #strOutput {
+      background: #6c757d;
+      border: 1px solid #495057;
+      color: #ffffff;
+      cursor: default;
+    }
+    
+    #strOutput:hover {
+      background: #5a6268;
     }
     
     .hex-hit {
@@ -436,15 +462,15 @@ a     xxx    b    yyy</div>
           </div>
         </details>
         
-        <details>
+        <details open>
           <summary>Input</summary>
           <div id="strInput" class="ce-editor" contenteditable="true" role="textbox" aria-multiline="true">
           </div>
         </details>
         
-        <details>
+        <details open>
           <summary>Output</summary>
-          <div id="strOutput" class="ce-editor" contenteditable="true" role="textbox" aria-multiline="true">
+          <div id="strOutput" class="ce-editor">
           </div>
         </details>
     </aside>
@@ -467,7 +493,7 @@ a     xxx    b    yyy</div>
       // Configure canvas for optimal text rendering
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-      
+
       // Enable subpixel rendering and anti-aliasing
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
@@ -479,8 +505,7 @@ a     xxx    b    yyy</div>
       let currentLetterHexPairIndex = 0;
 
     // Color palette (cycles each time a SINGLE '|' is encountered)
-    const COLORS = ['#000000','#8c0004','#f00007','#f34001','#f8af00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
-    
+    const COLORS = ['#000000','#8c0004','#f80007','#f34001','#faaf00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
     function getColors() {
       return COLORS;
     }

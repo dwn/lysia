@@ -36,11 +36,11 @@ color = {}
 spectrum_anchors = [
   (380, '000000'), # Black
   (421, '8000f0'), # Violet
-  (446, '4000c0'), # Indigo
+  (446, '5020e0'), # Indigo
   (473, '3444ff'), # Blue
   (499, '00e0e0'), # Cyan
   (528, '00cc10'), # Green
-  (559, 'c6d000'), # Lemon
+  (559, 'd9ce00'), # Lemon
   (590, 'fac000'), # Amber
   (623, 'f05000'), # Orange
   (658, 'ff0007'), # Red
