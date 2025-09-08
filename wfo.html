@@ -6,7 +6,7 @@ const defaultContent = `
 //t d
 04|88 ca 05 d5 59 91 10 02|
 //k g
-88 c8 62 88 04|88 c8 01 a5 19 d1 6a
+88 c8 62 88 04|88 b8 01 a5 19 01 e2 59|
 //m n
 88 c8 40 60 04
 
@@ -184,6 +184,9 @@ const defaultSvgBackground =
       display: block;
       position: relative;
       z-index: 1;
+      /* Enable hardware acceleration */
+      transform: translateZ(0);
+      will-change: transform;
     }
     
     /* Specific class for custom backgrounds */
@@ -461,13 +464,23 @@ a     xxx    b    yyy</div>
     if(dpr!==1){canvas.width=cssW*dpr;canvas.height=cssH*dpr;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';ctx.scale(dpr,dpr);}    
     const width=cssW,height=cssH;let gridX=Math.floor(width/s);
     
-    // Configure canvas for round line caps
+      // Configure canvas for optimal text rendering
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+      
+      // Enable subpixel rendering and anti-aliasing
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      
+      // Enable text rendering optimizations
+      ctx.textRenderingOptimization = 'optimizeQuality';
+      
+      // Track hex pair index within current letter
+      let currentLetterHexPairIndex = 0;
 
     // Color palette (cycles each time a SINGLE '|' is encountered)
     const COLORS = ['#000000','#8c0004','#f00007','#f34001','#f8af00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
-
+    
     function getColors() {
       return COLORS;
     }
@@ -1515,11 +1528,13 @@ a     xxx    b    yyy</div>
           visited.push({xi,yi});
           // Newline counts as a new letter
           letterIndex++;
+          currentLetterHexPairIndex = 0; // Reset hex pair counter
           continue;
         }
         if (item.pipe) {
           // literal single '|', increment letter index
           letterIndex++;
+          currentLetterHexPairIndex = 0; // Reset hex pair counter
           continue;
         }
         if (item.text && item.byte === undefined) {
@@ -1535,7 +1550,6 @@ a     xxx    b    yyy</div>
         const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
         // In editor mode, always use pure white. In presentation mode, blend with background
         const textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.62);
-        const stroke = isCurrentLetter ? '#ff0000' : textColor;
 
         const a=(b>>7)&1;
         const xxx=(b>>4)&0b111;
@@ -1543,6 +1557,18 @@ a     xxx    b    yyy</div>
         const yyy=b&0b111;
         const isZero=(xxx===0&&yyy===0);
         const ab=(a<<1)|bitB;
+        const isInvisibleMove = ab === 0b11;
+
+        // For current letter, use different colors for each hex pair (skip invisible moves)
+        let stroke;
+        if (isCurrentLetter && !isInvisibleMove) {
+          // Use the tracked hex pair index within current letter
+          const colorIndex = currentLetterHexPairIndex % HEX_PAIR_COLORS.length;
+          stroke = HEX_PAIR_COLORS[colorIndex];
+          currentLetterHexPairIndex++; // Increment for next hex pair
+        } else {
+          stroke = textColor;
+        }
 
         if(isZero){
           if(ab===0b00){ ops.push({type:'point', xi, yi, color:stroke}); }
@@ -1676,6 +1702,13 @@ a     xxx    b    yyy</div>
     }
 
 
+    // Color palette for hex pairs in current letter
+    const HEX_PAIR_COLORS = [
+      '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', 
+      '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43',
+      '#10ac84', '#ee5a24', '#0984e3', '#6c5ce7', '#a29bfe'
+    ];
+
     // Basic "hex-hit" highlighter with current letter highlighting
     const HEX_CHAR_RE = /[0-9A-Fa-f]/;
     function basicHighlightHTML(raw){
@@ -1683,6 +1716,7 @@ a     xxx    b    yyy</div>
       const esc = escapeHTML(raw);
       
       let letterIndex = 0;
+      let hexPairIndex = 0; // Track hex pairs within current letter
       let html = '';
       let i = 0;
       let inComment = false;
@@ -1692,7 +1726,7 @@ a     xxx    b    yyy</div>
         
         // Handle comment detection
         if(ch === '/' && esc[i+1] === '/'){
-          inComment = true;
+inComment = true;
           html += '//';
           i += 2;
           continue;
@@ -1709,18 +1743,21 @@ a     xxx    b    yyy</div>
           if(next === '|'){
             // Newline token - this counts as a new letter
             letterIndex++;
+            hexPairIndex = 0; // Reset hex pair counter for new letter
             html += '||';
             i += 2;
           } else {
             // Letter separator
             letterIndex++;
+            hexPairIndex = 0; // Reset hex pair counter for new letter
             html += '|';
             i++;
           }
         } else if(HEX_CHAR_RE.test(ch) && HEX_CHAR_RE.test(esc[i+1])){
           // Found a hex pair
           const pair = esc.substr(i, 2);
-          const isCurrentLetter = letterIndex === currentLetterIndex;
+          const isInputFocused = document.activeElement === inputEl;
+          const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
           
           // Check if this is an invisible move
           const byte = parseInt(pair, 16);
@@ -1734,8 +1771,12 @@ a     xxx    b    yyy</div>
           // Invisible moves: ab===0b11 (both a and bitB are 1)
           const isInvisibleMove = ab === 0b11;
           
-          if(isCurrentLetter){
-            html += `<strong>${pair}</strong>`;
+          if(isCurrentLetter && !isInvisibleMove){
+            // Color each hex pair in current letter differently (skip invisible moves)
+            const colorIndex = hexPairIndex % HEX_PAIR_COLORS.length;
+            const hexColor = HEX_PAIR_COLORS[colorIndex];
+            html += `<strong style="color: ${hexColor};">${pair}</strong>`;
+            hexPairIndex++;
           } else if(isInvisibleMove && !inComment){
             html += `<span class="hex-hit">${pair}</span>`;
           } else {
@@ -1906,9 +1947,9 @@ a     xxx    b    yyy</div>
       insertTextAtCaret(inputEl, text);
       // Delay highlighting to allow selection to be preserved
       setTimeout(() => {
-        highlightEditor();
-        renderNow();
-        scheduleSnapshot();
+      highlightEditor();
+      renderNow();
+      scheduleSnapshot();
       }, 0);
     });
 
