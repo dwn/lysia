@@ -101,6 +101,17 @@ const defaultSvgBackground =
       color: inherit !important;
     }
     
+    /* Hide page initially to prevent flash */
+    body {
+      opacity: 0;
+      transition: opacity 0.15s ease-in;
+    }
+    
+    /* Show page when ready */
+    body.page-ready {
+      opacity: 1;
+    }
+    
     /* 3D flip animation for presentation card */
     .canvas-only {
       perspective: 1000px;
@@ -2138,15 +2149,29 @@ inComment = true;
           e.preventDefault();
           editorVisible = !editorVisible;
           
-          // Toggle canvas-only mode for proper centering
-          document.body.classList.toggle('canvas-only', !editorVisible);
-          
-          // Update canvas background based on new mode
-          const bgColorSelectEl = document.getElementById('bgColorSelect');
-          const selectedColor = bgColorSelectEl.value;
-          
-          updateCanvasBackground(selectedColor);
+          // If switching to presentation mode, wait for SVG to load before starting animation
+          if (!editorVisible) {
+            // Update canvas background first
+            const bgColorSelectEl = document.getElementById('bgColorSelect');
+            const selectedColor = bgColorSelectEl.value;
+            updateCanvasBackground(selectedColor);
+            
+            // Wait for SVG to load before starting presentation animation
             await drawSvgBackground();
+            
+            // Now start the presentation animation with fade-in
+            document.body.classList.toggle('canvas-only', !editorVisible);
+            document.body.classList.add('page-ready');
+          } else {
+            // Switching to editor mode - immediate toggle
+            document.body.classList.toggle('canvas-only', !editorVisible);
+            
+            // Update canvas background
+            const bgColorSelectEl = document.getElementById('bgColorSelect');
+            const selectedColor = bgColorSelectEl.value;
+            updateCanvasBackground(selectedColor);
+            await drawSvgBackground();
+          }
           
           // Clear canvas when switching modes to remove any lingering grid points
           ctx.clearRect(0, 0, width, height);
@@ -2189,14 +2214,18 @@ inComment = true;
       populateColorOptions();
       // Pre-calculate height for smooth animation
       preCalculateHeight();
+      
+      // Wait for SVG to load before showing the page
+      await drawSvgBackground();
+      
+      // Now show the page with fade-in
+      document.body.classList.add('page-ready');
+      
       // Start with animated rendering instead of static
       const coloredItems = parseBytesWithColors(getEditorValue());
       const { ops, visited } = buildOps(coloredItems);
       startAnim(ops, visited);
       pushHistory(); // seed history
-      
-      // Initialize background for non-edit mode
-      await drawSvgBackground();
       
       // Add event listeners after DOM is ready
       const italicsCheckboxEl = document.getElementById('italicsCheckbox');
