@@ -6,7 +6,7 @@ const defaultContent = `
 //t d
 04|88 ca 05 d5 59 91 10 02|
 //k g
-88 c8 62 88 04|88 c8 02 38 e2
+88 c8 62 88 04|88 b8 01 a5 19 d1 6a
 
 ||88
 //trinity
@@ -204,6 +204,10 @@ const defaultSvgBackground = `https://vault.biltmoretoday.com/storage/v1/object/
       background: var(--bg-color);
       color: var(--text-color);
       overflow: auto;
+      user-select: text; /* Ensure text selection is enabled */
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
     }
     
     .hex-hit {
@@ -418,8 +422,8 @@ a     xxx    b    yyy</div>
     ctx.lineJoin = 'round';
 
     // Color palette (cycles each time a SINGLE '|' is encountered)
-    const COLORS = ['#000000','#8c0004','#f34001','#f8af00','#0ccc0e','#3441fc','#4000c0','#350063','#808080'];
-    
+    const COLORS = ['#000000','#8c0004','#f00007','#f34001','#f8af00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
+
     function getColors() {
       return COLORS;
     }
@@ -432,7 +436,7 @@ a     xxx    b    yyy</div>
     const END_MARKER_RADIUS_MULTIPLIER = 3;
     
     // UI constants
-    const DEFAULT_PANEL_COLOR_INDEX = 3;
+    const DEFAULT_PANEL_COLOR_INDEX = 1;
     
     // Helper function to draw outline with consistent styling
     function drawOutline(isPoint = false) {
@@ -1852,10 +1856,14 @@ a     xxx    b    yyy</div>
     inputEl.addEventListener('paste', (e) => {
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text');
-      document.execCommand('insertText', false, text);
-      highlightEditor();
-      renderNow();
-      scheduleSnapshot();
+      console.log('Pasting text:', text);
+      insertTextAtCaret(inputEl, text);
+      // Delay highlighting to allow selection to be preserved
+      setTimeout(() => {
+        highlightEditor();
+        renderNow();
+        scheduleSnapshot();
+      }, 0);
     });
 
     // --- Wiring (render + highlight) ---
@@ -1890,8 +1898,12 @@ a     xxx    b    yyy</div>
     // Update highlighting when cursor position changes (click, arrow keys, etc.)
     document.addEventListener('selectionchange', () => {
       if (document.activeElement === inputEl) {
-        highlightEditor();
-        renderNow();
+        // Only update if there's no active selection (just cursor movement)
+        const sel = getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+          highlightEditor();
+          renderNow();
+        }
       }
     });
 
