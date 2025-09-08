@@ -1,4 +1,5 @@
 <svg
+   viewbox="0 0 1600 1200"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -30,8 +31,6 @@
      inkscape:cy="489.36072"
      inkscape:document-units="px"
      inkscape:current-layer="g1956"
-     width="1533px"
-     height="975px"
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:window-width="1280"
