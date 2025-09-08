@@ -319,10 +319,10 @@ const defaultSvgBackground = `https://vault.biltmoretoday.com/storage/v1/object/
     body.canvas-only::before {
       content: '';
       position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       background: 
         radial-gradient(ellipse 400px 200px at 30% 40%, rgba(109,191,232,0.06) 0%, transparent 60%),
         radial-gradient(ellipse 300px 150px at 70% 20%, rgba(40,161,222,0.04) 0%, transparent 60%),
@@ -1531,9 +1531,9 @@ a     xxx    b    yyy</div>
         // Highlight current letter with red color only when Input field is focused, others with white
         const isInputFocused = document.activeElement === inputEl;
         const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
-        // Blend background color with white at 75% toward white
-        const blendedTextColor = blendColors(backgroundColor, '#ffffff', 0.75);
-        const stroke = isCurrentLetter ? '#ff0000' : blendedTextColor;
+        // In editor mode, always use pure white. In presentation mode, blend with background
+        const textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.75);
+        const stroke = isCurrentLetter ? '#ff0000' : textColor;
 
         const a=(b>>7)&1;
         const xxx=(b>>4)&0b111;
