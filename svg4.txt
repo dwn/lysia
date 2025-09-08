@@ -1,5 +1,5 @@
 <svg
-   viewbox="0 0 1600 1200"
+   viewbox="0 0 1533 977"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -67,7 +67,7 @@
          height="976.86072"
          width="1533.2061"
          id="rect1872"
-         style="fill:#dd0000;fill-opacity:1;fill-rule:nonzero;stroke-opacity:1;stroke:none" />
+         style="fill:transparent;fill-opacity:1;fill-rule:nonzero;stroke-opacity:1;stroke:none" />
       <path
          transform="matrix(1.207407,0,0,1.171533,-277.7523,-130.1734)"
          d="m 1123.855,558.20612 a 251.19275,254.91412 0 1 1 -502.38552,0 251.19275,254.91412 0 1 1 502.38552,0 z"

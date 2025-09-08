@@ -577,8 +577,24 @@ a     xxx    b    yyy</div>
       }
       
       // Remove explicit width and height attributes to allow proper container sizing
+      // But preserve dimensions for rect elements that define backgrounds
       processedSvg = processedSvg.replace(/width="[^"]*"/g, '');
       processedSvg = processedSvg.replace(/height="[^"]*"/g, '');
+      
+      // Restore width and height for rect elements that have fill colors (backgrounds)
+      // More flexible approach: find any rect with fill and extract width/height separately
+      const originalSvg = svgValue;
+      const widthMatch = originalSvg.match(/<rect[^>]*?width="([^"]*)"[^>]*?>/);
+      const heightMatch = originalSvg.match(/<rect[^>]*?height="([^"]*)"[^>]*?>/);
+      const fillMatch = originalSvg.match(/<rect[^>]*?style="[^"]*fill:[^"]*"[^>]*?>/);
+      
+      if (widthMatch && heightMatch && fillMatch) {
+        processedSvg = processedSvg.replace(/<rect([^>]*?)style="([^"]*fill:[^"]*)"([^>]*?)>/g, 
+          `<rect$1width="${widthMatch[1]}" height="${heightMatch[1]}" style="$2"$3>`);
+      }
+      
+      // Normalize viewBox attribute (fix lowercase viewbox to proper viewBox)
+      processedSvg = processedSvg.replace(/viewbox="([^"]*)"/g, 'viewBox="$1"');
       
       // Keep original viewBox - CSS object-fit will handle the scaling
       //processedSvg = processedSvg.replace(/viewBox="[^"]*"/g, `viewBox="0 0 1200 1200"`);
@@ -659,7 +675,7 @@ a     xxx    b    yyy</div>
               object-fit: contain;
               object-position: center;
               transform: scale(0.707);
-              filter: drop-shadow(0 0 10px rgba(${r}, ${g}, ${b}, 0.4)) drop-shadow(0 0 20px rgba(${r}, ${g}, ${b}, 0.3)) drop-shadow(0 0 30px rgba(${r}, ${g}, ${b}, 0.2));
+              /* filter: drop-shadow(0 0 10px rgba(${r}, ${g}, ${b}, 0.4)) drop-shadow(0 0 20px rgba(${r}, ${g}, ${b}, 0.3)) drop-shadow(0 0 30px rgba(${r}, ${g}, ${b}, 0.2)); */
           }
         </style>
         ${processedSvg}
