@@ -486,7 +486,7 @@ a     xxx    b    yyy</div>
     }
     
     // Drawing constants
-    const OUTLINE_THICKNESS_MULTIPLIER = 6;
+    const OUTLINE_THICKNESS_MULTIPLIER = 12;
     const MAIN_THICKNESS_MULTIPLIER = 4;
     const POINT_OUTLINE_THICKNESS_MULTIPLIER = 2;
     const POINT_RADIUS_MULTIPLIER = 4;
@@ -614,6 +614,22 @@ a     xxx    b    yyy</div>
     }
     
     
+    function checkForZAxisRotation(svgContent) {
+      // Check for animated z-axis rotations (spinning) in SVG content
+      const patterns = [
+        // Animation transforms with rotate
+        /animateTransform[^>]*type\s*=\s*["']rotate["'][^>]*>/gi,
+        // CSS animations with rotate
+        /@keyframes[^}]*{[^}]*rotate\s*\([^)]+\)/gi,
+        // Animation properties with rotate
+        /animation[^;]*rotate/gi,
+        // Animate elements with rotate
+        /<animate[^>]*rotate/gi
+      ];
+      
+      return patterns.some(pattern => pattern.test(svgContent));
+    }
+    
     async function drawSvgBackground() {
       const svgValue = svgInputEl.value.trim();
       if (!svgValue) return;
@@ -664,6 +680,10 @@ a     xxx    b    yyy</div>
       
       // Normalize viewBox attribute (fix lowercase viewbox to proper viewBox)
       processedSvg = processedSvg.replace(/viewbox="([^"]*)"/g, 'viewBox="$1"');
+      
+      // Check if SVG contains z-axis rotations (spins)
+      const hasZRotation = checkForZAxisRotation(svgContent);
+      console.log('SVG has animated rotation (spinning):', hasZRotation);
       
       // Keep original viewBox - CSS object-fit will handle the scaling
       //processedSvg = processedSvg.replace(/viewBox="[^"]*"/g, `viewBox="0 0 1200 1200"`);
@@ -743,7 +763,7 @@ a     xxx    b    yyy</div>
               display: block;
               object-fit: contain;
               object-position: center;
-              transform: scale(0.707);
+              transform: scale(${hasZRotation ? '0.707' : '1'});
               /* filter: drop-shadow(0 0 10px rgba(${r}, ${g}, ${b}, 0.4)) drop-shadow(0 0 20px rgba(${r}, ${g}, ${b}, 0.3)) drop-shadow(0 0 30px rgba(${r}, ${g}, ${b}, 0.2)); */
           }
         </style>
