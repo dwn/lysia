@@ -1532,7 +1532,7 @@ a     xxx    b    yyy</div>
         const isInputFocused = document.activeElement === inputEl;
         const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
         // In editor mode, always use pure white. In presentation mode, blend with background
-        const textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.75);
+        const textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.62);
         const stroke = isCurrentLetter ? '#ff0000' : textColor;
 
         const a=(b>>7)&1;
