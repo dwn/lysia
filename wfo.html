@@ -309,6 +309,46 @@ const defaultSvgBackground = `https://vault.biltmoretoday.com/storage/v1/object/
       border-radius: 16px 16px 0 0;
       pointer-events: none;
     }
+    
+    /* Soft roaming light effect on page background - only in presentation mode */
+    body {
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    body.canvas-only::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: 
+        radial-gradient(ellipse 400px 200px at 30% 40%, rgba(109,191,232,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 300px 150px at 70% 20%, rgba(40,161,222,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 350px 180px at 20% 80%, rgba(109,191,232,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: -1;
+      animation: fluidRoamLight 25s ease-in-out infinite;
+    }
+    
+    @keyframes fluidRoamLight {
+      0% {
+        transform: translate(0%, 0%) rotate(0deg) scale(1);
+      }
+      25% {
+        transform: translate(15%, -10%) rotate(90deg) scale(1.1);
+      }
+      50% {
+        transform: translate(-10%, 20%) rotate(180deg) scale(0.9);
+      }
+      75% {
+        transform: translate(20%, 5%) rotate(270deg) scale(1.05);
+      }
+      100% {
+        transform: translate(0%, 0%) rotate(360deg) scale(1);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1491,7 +1531,9 @@ a     xxx    b    yyy</div>
         // Highlight current letter with red color only when Input field is focused, others with white
         const isInputFocused = document.activeElement === inputEl;
         const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
-        const stroke = isCurrentLetter ? '#ff0000' : '#ffffff';
+        // Blend background color with white at 75% toward white
+        const blendedTextColor = blendColors(backgroundColor, '#ffffff', 0.75);
+        const stroke = isCurrentLetter ? '#ff0000' : blendedTextColor;
 
         const a=(b>>7)&1;
         const xxx=(b>>4)&0b111;
