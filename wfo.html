@@ -205,8 +205,8 @@ const defaultSvgBackground =
     
     /* Canvas-specific styles only */
     canvas { 
-      width: 400px; 
-      height: 1000px; 
+      width: 1000px; 
+      height: 2000px; 
       display: block;
       position: relative;
       z-index: 1;
@@ -291,7 +291,7 @@ const defaultSvgBackground =
     
     /* Ensure canvas doesn't shrink below its natural width */
     canvas {
-      min-width: 400px;
+      min-width: 1000px;
     }
     
     /* Better grid behavior for wider screens */
@@ -399,7 +399,7 @@ const defaultSvgBackground =
     <div class="grid">
       <div>
         <div id="canvasWrapper" style="position: relative; overflow: hidden; padding-bottom: 1.5rem; border-radius: 16px;">
-          <canvas id="board" width="400" height="1000" aria-label="drawing canvas"></canvas>
+          <canvas id="board" width="1000" height="2000" aria-label="drawing canvas"></canvas>
         </div>
 </div>
       <aside>
@@ -441,7 +441,7 @@ a     xxx    b    yyy</div>
           <summary>Option</summary>
           <div class="grid">
             <div>
-              <label for="sInput">Size <span id="sValue">5</span></label>
+              <label for="sInput">Size <span id="sValue">8</span></label>
               <input id="sInput" type="range" min="2" max="20" value="5"/>
             </div>
             <div>
@@ -492,9 +492,9 @@ a     xxx    b    yyy</div>
     let italicsMode = true; // toggled by italics checkbox
     let editorVisible = false; // toggled by E key
     let maxDrawnY = 0; // track the lowest point of drawn content
-    let s=5;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
+    let s=8;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
     const canvas=document.getElementById('board');const ctx=canvas.getContext('2d', { alpha: true });
-    const cssW=400,cssH=1000;
+    const cssW=1000,cssH=2000;
     let currentCanvasHeight = 200; // start small for smooth expansion
     let targetCanvasHeight = cssH; // target height for smooth animation
     let animationStartTime = 0; // when height animation started
