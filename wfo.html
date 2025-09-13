@@ -230,6 +230,36 @@ const defaultSvgBackground =
       }
     }
     
+    @keyframes cardFlipOutRight {
+      0% {
+        transform: translateX(0) rotateY(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: translateX(50vw) rotateY(45deg);
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateX(100vw) rotateY(90deg);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes cardFlipInRight {
+      0% {
+        transform: translateX(-100vw) rotateY(-90deg);
+        opacity: 0;
+      }
+      50% {
+        transform: translateX(-50vw) rotateY(-45deg);
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateX(0) rotateY(0deg);
+        opacity: 1;
+      }
+    }
+    
     @keyframes glowAppear {
       0% {
         opacity: 0;
@@ -1866,35 +1896,64 @@ inComment = true;
     // Handle SPACE key for card flip-out animation
     let isFlippingOut = false;
     
-    document.addEventListener('keydown', async (e) => {
-      // Handle SPACE key for card flip-out animation
-      if (e.code === 'Space' && !editorVisible && !isFlippingOut) {
-        e.preventDefault();
-        isFlippingOut = true;
+    // Mouse and touch support for card flip animations
+    function handleCardFlip(direction = 'left') {
+      if (editorVisible || isFlippingOut) return;
+      
+      isFlippingOut = true;
+      
+      // Determine flip direction
+      const flipOutAnimation = direction === 'right' ? 'cardFlipOutRight' : 'cardFlipOut';
+      const flipInAnimation = direction === 'right' ? 'cardFlipInRight' : 'cardFlipIn';
+      
+      // Add flip-out animation class
+      const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      if (cardElement) {
+        cardElement.style.animation = `${flipOutAnimation} 1.5s linear forwards`;
         
-        // Add flip-out animation class
-        const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
-        if (cardElement) {
-          cardElement.style.animation = 'cardFlipOut 1.5s linear forwards';
+        // After animation completes, restart the presentation
+        setTimeout(() => {
+          // Reset animation and restart
+          cardElement.style.animation = `${flipInAnimation} 1.5s linear forwards`;
+          isFlippingOut = false;
           
-          // After animation completes, restart the presentation
-          setTimeout(() => {
-            // Reset animation and restart
-            cardElement.style.animation = 'cardFlipIn 1.5s linear forwards';
-            isFlippingOut = false;
-            
-            // Restart the drawing animation
-            const coloredItems = parseBytesWithColors(getEditorValue());
-            const { ops, visited } = buildOps(coloredItems);
-            
-            // Check if animation is enabled
-            if (animateCheckbox.checked) {
-              startAnim(ops, visited);
-            } else {
-              renderInstant(ops, visited);
-            }
-          }, 1500);
-        }
+          // Restart the drawing animation
+          const coloredItems = parseBytesWithColors(getEditorValue());
+          const { ops, visited } = buildOps(coloredItems);
+          
+          // Check if animation is enabled
+          if (animateCheckbox.checked) {
+            startAnim(ops, visited);
+          } else {
+            renderInstant(ops, visited);
+          }
+        }, 1500);
+      }
+    }
+    
+    // Mouse click support
+    document.addEventListener('click', (e) => {
+      if (!editorVisible && !isFlippingOut) {
+        handleCardFlip('left'); // Default to left direction for clicks
+      }
+    });
+    
+    // Touch support
+    document.addEventListener('touchstart', (e) => {
+      if (!editorVisible && !isFlippingOut) {
+        e.preventDefault();
+        handleCardFlip('left'); // Default to left direction for touches
+      }
+    });
+
+    document.addEventListener('keydown', async (e) => {
+      // Handle SPACE, LEFT arrow, and RIGHT arrow keys for card flip animations
+      if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && !isFlippingOut) {
+        e.preventDefault();
+        
+        // Determine flip direction based on key
+        const direction = e.code === 'ArrowRight' ? 'right' : 'left';
+        handleCardFlip(direction);
         return;
       }
       
