@@ -85,12 +85,10 @@ const defaultSvgBackground =
   <meta charset="utf-8" />
   <title>Wfo Writer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23000'/><circle cx='50' cy='50' r='25' fill='%23fff'/></svg>">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" id="pico-css">
   <style>
     /* Force dark theme for both light and dark modes */
     :root, :root:not([data-theme="light"]) {
-      --canvas-bg: #2a2a2a;
-      --grid-color: #555;
       --border-color: #666;
       --button-bg: #333;
       --button-border: #666;
@@ -143,7 +141,22 @@ const defaultSvgBackground =
       overflow: hidden;
     }
     
-    .canvas-only .grid {
+    /* Dark mode styling for presentation mode (when Pico CSS is removed) */
+    body.canvas-only {
+      background-color: #1a1a1a;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      zoom: 0.75;
+      transform-origin: top left;
+    }
+    
+    body.canvas-only main {
+      background-color: #1a1a1a;
+      color: #ffffff;
+    }
+    
+    body.canvas-only .grid {
+      background-color: #1a1a1a;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -168,8 +181,6 @@ const defaultSvgBackground =
       transform-style: preserve-3d;
       animation: cardFlipIn 1.5s ease-out forwards;
       position: relative;
-      max-width: 80vw;
-      max-height: 80vh;
       object-fit: contain;
     }
     
@@ -240,10 +251,6 @@ const defaultSvgBackground =
       will-change: transform;
     }
     
-    /* Specific class for custom backgrounds */
-    canvas.has-custom-background {
-      background: var(--custom-bg) !important;
-    }
     
     .mono-grid{ 
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
@@ -391,32 +398,10 @@ const defaultSvgBackground =
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: 
-        radial-gradient(ellipse 400px 200px at 30% 40%, var(--roving-light-1, rgba(109,191,232,0.06)) 0%, transparent 60%),
-        radial-gradient(ellipse 300px 150px at 70% 20%, var(--roving-light-2, rgba(40,161,222,0.04)) 0%, transparent 60%),
-        radial-gradient(ellipse 350px 180px at 20% 80%, var(--roving-light-3, rgba(109,191,232,0.05)) 0%, transparent 60%);
       pointer-events: none;
       z-index: -1;
-      animation: fluidRoamLight 12.5s linear infinite;
     }
     
-    @keyframes fluidRoamLight {
-      0% {
-        transform: translate(0%, 0%) rotate(0deg) scale(1);
-      }
-      25% {
-        transform: translate(15%, -10%) rotate(90deg) scale(1.1);
-      }
-      50% {
-        transform: translate(-10%, 20%) rotate(180deg) scale(0.9);
-      }
-      75% {
-        transform: translate(20%, 5%) rotate(270deg) scale(1.05);
-      }
-      100% {
-        transform: translate(0%, 0%) rotate(360deg) scale(1);
-      }
-    }
   </style>
 </head>
 <body>
@@ -511,9 +496,31 @@ a     xxx    b    yyy</div>
   </div>
   </main>
   <script>
-    let italicsMode = true;
+    // Toggle Pico CSS based on mode
+    function togglePicoCSS(editorMode) {
+      const picoCSS = document.getElementById('pico-css');
+      if (editorMode) {
+        // Load Pico CSS for editor mode
+        if (!picoCSS) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css';
+          link.id = 'pico-css';
+          document.head.appendChild(link);
+        }
+      } else {
+        // Remove Pico CSS for presentation mode
+        if (picoCSS) {
+          picoCSS.remove();
+        }
+      }
+    }
+    
+    // Initialize Pico CSS state
     let editorVisible = false;
+    let italicsMode = true;
     let s=8;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
+    togglePicoCSS(editorVisible);
     // DOM element references
     const canvas=document.getElementById('board');const ctx=canvas.getContext('2d', { alpha: true });
     const bgColorSelectEl = document.getElementById('bgColorSelect');
@@ -730,7 +737,6 @@ a     xxx    b    yyy</div>
       // Position and size exactly like the canvas
       
         // Get current background color for glow
-        const bgColorSelectEl = document.getElementById('bgColorSelect');
         const selectedColor = bgColorSelectEl.value;
         
         // Convert hex to RGB for glow
@@ -1776,19 +1782,9 @@ inComment = true;
       }
     }
     
-    // Update roving lights and card glow to match the selected color
+    // Update card glow to match the selected color
     function updateRovingLights(selectedColor) {
       const rgb = hexToRgb(selectedColor);
-      
-      // Create three variations of the color with higher opacities for better visibility
-      const light1 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
-      const light2 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)`;
-      const light3 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`;
-      
-      // Update CSS custom properties for roving lights
-      document.documentElement.style.setProperty('--roving-light-1', light1);
-      document.documentElement.style.setProperty('--roving-light-2', light2);
-      document.documentElement.style.setProperty('--roving-light-3', light3);
       
       // Create card glow variations with much higher opacity for strong visibility
       const glow1 = `rgba(${rgb.r},${rgb.g},${rgb.b},1.0)`;
@@ -1818,9 +1814,6 @@ inComment = true;
       
       // Update canvas background
       updateCanvasBackground(selectedColor);
-      
-      // Update roving lights to match
-      updateRovingLights(selectedColor);
       
       // Update color indicator
       colorIndicator.style.backgroundColor = selectedColor;
@@ -1852,13 +1845,17 @@ inComment = true;
           e.preventDefault();
           editorVisible = !editorVisible;
           
+          // Toggle Pico CSS based on mode
+          togglePicoCSS(editorVisible);
+          
+          // Toggle body class for styling
+          document.body.classList.toggle('canvas-only', !editorVisible);
+          
           // If switching to presentation mode, wait for SVG to load before starting animation
           if (!editorVisible) {
             // Update canvas background first
-            const bgColorSelectEl = document.getElementById('bgColorSelect');
             const selectedColor = bgColorSelectEl.value;
             updateCanvasBackground(selectedColor);
-            updateRovingLights(selectedColor);
             
             // Wait for SVG to load before starting presentation animation
             await drawSvgBackground();
@@ -1871,7 +1868,6 @@ inComment = true;
             document.body.classList.toggle('canvas-only', !editorVisible);
             
             // Update canvas background
-            const bgColorSelectEl = document.getElementById('bgColorSelect');
             const selectedColor = bgColorSelectEl.value;
             updateCanvasBackground(selectedColor);
             updateRovingLights(selectedColor);
