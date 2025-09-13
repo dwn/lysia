@@ -179,7 +179,7 @@ const defaultSvgBackground =
     
     .canvas-only .grid > div:first-child {
       transform-style: preserve-3d;
-      animation: cardFlipIn 1.5s ease-out forwards;
+      animation: none; /* Remove default animation */
       position: relative;
       object-fit: contain;
     }
@@ -192,7 +192,7 @@ const defaultSvgBackground =
       left: -60px;
       right: -60px;
       bottom: -120px;
-      background: radial-gradient(ellipse, var(--card-glow-1, rgba(255, 255, 255, 0.8)) 0%, var(--card-glow-2, rgba(255, 255, 255, 0.4)) 20%, var(--card-glow-3, rgba(255, 255, 255, 0.2)) 40%, transparent 70%);
+      background: radial-gradient(ellipse, var(--card-glow-1, rgba(255, 255, 255, 0.6)) 0%, var(--card-glow-2, rgba(255, 255, 255, 0.4)) 20%, var(--card-glow-3, rgba(255, 255, 255, 0.2)) 40%, transparent 70%);
       border-radius: 50px;
       z-index: -1;
       opacity: 0;
@@ -202,38 +202,53 @@ const defaultSvgBackground =
     
     @keyframes cardFlipIn {
       0% {
-        transform: rotateX(90deg) rotateY(90deg);
+        transform: translateX(100vw) rotateY(90deg);
         opacity: 0;
       }
       50% {
-        transform: rotateX(0deg) rotateY(0deg);
-        opacity: 1;
+        transform: translateX(50vw) rotateY(45deg);
+        opacity: 0.5;
       }
       100% {
-        transform: rotateX(0deg) rotateY(0deg);
+        transform: translateX(0) rotateY(0deg);
         opacity: 1;
+      }
+    }
+    
+    @keyframes cardFlipOut {
+      0% {
+        transform: translateX(0) rotateY(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: translateX(-50vw) rotateY(-45deg);
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateX(-100vw) rotateY(-90deg);
+        opacity: 0;
       }
     }
     
     @keyframes glowAppear {
       0% {
         opacity: 0;
-        transform: scaleX(3) scaleY(0.2);
+        transform: scaleX(4) scaleY(2);
       }
       15% {
-        opacity: 0.8;
-        transform: scaleX(2.5) scaleY(0.4);
+        opacity: 0.6;
+        transform: scaleX(3) scaleY(1.5);
       }
       30% {
-        opacity: 1;
-        transform: scaleX(1.8) scaleY(0.8);
+        opacity: 0.8;
+        transform: scaleX(2) scaleY(1.2);
       }
       60% {
-        opacity: 0.8;
-        transform: scaleX(1.2) scaleY(1.1);
+        opacity: 0.9;
+        transform: scaleX(1.5) scaleY(1.1);
       }
       100% {
-        opacity: 0.6;
+        opacity: 0.7;
         transform: scale(1);
       }
     }
@@ -464,6 +479,10 @@ a     xxx    b    yyy</div>
               <input id="italicsCheckbox" type="checkbox" checked/>
               <label for="italicsCheckbox">Italics</label>
             </div>
+            <div>
+              <input id="animateCheckbox" type="checkbox"/>
+              <label for="animateCheckbox">Animate</label>
+            </div>
           </div>
           <div style="margin-top: 1rem;">
             <label for="svgInput">Background Svg</label>
@@ -533,6 +552,7 @@ a     xxx    b    yyy</div>
     const outputEl=document.getElementById('strOutput');
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
+    const animateCheckbox = document.getElementById('animateCheckbox');
     
     const cssW=600,cssH=1000;
     const dpr=window.devicePixelRatio||1;
@@ -1786,10 +1806,10 @@ inComment = true;
     function updateRovingLights(selectedColor) {
       const rgb = hexToRgb(selectedColor);
       
-      // Create card glow variations with much higher opacity for strong visibility
-      const glow1 = `rgba(${rgb.r},${rgb.g},${rgb.b},1.0)`;
-      const glow2 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.8)`;
-      const glow3 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`;
+      // Create lighter, more whitish glow variations
+      const glow1 = `rgba(${Math.min(255, rgb.r + 100)}, ${Math.min(255, rgb.g + 100)}, ${Math.min(255, rgb.b + 100)}, 0.6)`;
+      const glow2 = `rgba(${Math.min(255, rgb.r + 80)}, ${Math.min(255, rgb.g + 80)}, ${Math.min(255, rgb.b + 80)}, 0.4)`;
+      const glow3 = `rgba(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)}, 0.2)`;
       
       // Update CSS custom properties for card glow
       document.documentElement.style.setProperty('--card-glow-1', glow1);
@@ -1808,18 +1828,23 @@ inComment = true;
     updateCanvasBackground(initialColor);
     updateRovingLights(initialColor);
     
-    bgColorSelectEl.addEventListener('change', async () => {
-      const selectedColor = bgColorSelectEl.value;
-      const colorIndicator = document.getElementById('bgColorIndicator');
-      
-      // Update canvas background
-      updateCanvasBackground(selectedColor);
-      
-      // Update color indicator
-      colorIndicator.style.backgroundColor = selectedColor;
-      
-      // Update SVG glow to match
-      await drawSvgBackground();
+    // Animate checkbox event listener
+    animateCheckbox.addEventListener('change', () => {
+      if (!editorVisible) {
+        // Update the current presentation based on checkbox state
+        const coloredItems = parseBytesWithColors(getEditorValue());
+        const { ops, visited } = buildOps(coloredItems);
+        
+        // Stop any current animation
+        stopAnim();
+        
+        // Render based on checkbox state
+        if (animateCheckbox.checked) {
+          startAnim(ops, visited);
+        } else {
+          renderInstant(ops, visited);
+        }
+      }
     });
     
     sInputEl.addEventListener('input', () => {
@@ -1838,7 +1863,42 @@ inComment = true;
     
 
     // Hotkey listener for editor toggle (Ctrl+E or Cmd+E)
+    // Handle SPACE key for card flip-out animation
+    let isFlippingOut = false;
+    
     document.addEventListener('keydown', async (e) => {
+      // Handle SPACE key for card flip-out animation
+      if (e.code === 'Space' && !editorVisible && !isFlippingOut) {
+        e.preventDefault();
+        isFlippingOut = true;
+        
+        // Add flip-out animation class
+        const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+        if (cardElement) {
+          cardElement.style.animation = 'cardFlipOut 1.5s linear forwards';
+          
+          // After animation completes, restart the presentation
+          setTimeout(() => {
+            // Reset animation and restart
+            cardElement.style.animation = 'cardFlipIn 1.5s linear forwards';
+            isFlippingOut = false;
+            
+            // Restart the drawing animation
+            const coloredItems = parseBytesWithColors(getEditorValue());
+            const { ops, visited } = buildOps(coloredItems);
+            
+            // Check if animation is enabled
+            if (animateCheckbox.checked) {
+              startAnim(ops, visited);
+            } else {
+              renderInstant(ops, visited);
+            }
+          }, 1500);
+        }
+        return;
+      }
+      
+      // Handle Ctrl+E or Cmd+E for editor toggle
       if (e.key.toLowerCase() === 'e' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         // Only toggle if not typing in the editor
         if (document.activeElement !== inputEl && document.activeElement !== ruleEl && document.activeElement !== outputEl) {
@@ -1850,6 +1910,14 @@ inComment = true;
           
           // Toggle body class for styling
           document.body.classList.toggle('canvas-only', !editorVisible);
+          
+          // Add initial flip-in animation when switching to presentation mode
+          if (!editorVisible) {
+            const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+            if (cardElement) {
+              cardElement.style.animation = 'cardFlipIn 1.5s linear forwards';
+            }
+          }
           
           // If switching to presentation mode, wait for SVG to load before starting animation
           if (!editorVisible) {
@@ -1882,7 +1950,13 @@ inComment = true;
           if (!editorVisible) {
             const coloredItems = parseBytesWithColors(getEditorValue());
             const { ops, visited } = buildOps(coloredItems);
-            startAnim(ops, visited);
+            
+            // Check if animation is enabled
+            if (animateCheckbox.checked) {
+              startAnim(ops, visited);
+            } else {
+              renderInstant(ops, visited);
+            }
           } else {
             renderNow(); // redraw canvas (grid visibility will be handled in drawGridPoints)
           }
