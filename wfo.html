@@ -1863,6 +1863,22 @@ inComment = true;
       }
     });
     
+    // Background color select event listener
+    bgColorSelectEl.addEventListener('change', () => {
+      const selectedColor = bgColorSelectEl.value;
+      
+      // Update color indicator
+      if (selectedColor === 'transparent') {
+        colorIndicator.style.backgroundColor = '#000000'; // Default for transparent
+      } else {
+        colorIndicator.style.backgroundColor = selectedColor;
+      }
+      
+      // Update canvas background and glow
+      updateCanvasBackground(selectedColor);
+      updateRovingLights(selectedColor);
+    });
+    
     sInputEl.addEventListener('input', () => {
       s = parseInt(sInputEl.value, 10);
       thickness = s/10;
