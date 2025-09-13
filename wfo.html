@@ -193,8 +193,8 @@ const defaultSvgBackground =
       background: radial-gradient(ellipse, var(--card-glow-1, rgba(255, 255, 255, 0.6)) 0%, var(--card-glow-2, rgba(255, 255, 255, 0.4)) 20%, var(--card-glow-3, rgba(255, 255, 255, 0.2)) 40%, transparent 70%);
       border-radius: 50px;
       z-index: -1;
-      opacity: 0;
-      animation: glowAppear 1.5s ease-out forwards;
+      opacity: 0.7;
+      animation: glowPulse 3s ease-in-out infinite;
       filter: blur(5px);
     }
     
@@ -258,29 +258,16 @@ const defaultSvgBackground =
       }
     }
     
-    @keyframes glowAppear {
-      0% {
-        opacity: 0;
-        transform: scaleX(4) scaleY(2);
-      }
-      15% {
-        opacity: 0.6;
-        transform: scaleX(3) scaleY(1.5);
-      }
-      30% {
-        opacity: 0.8;
-        transform: scaleX(2) scaleY(1.2);
-      }
-      60% {
-        opacity: 0.9;
-        transform: scaleX(1.5) scaleY(1.1);
-      }
-      100% {
+    @keyframes glowPulse {
+      0%, 100% {
         opacity: 0.7;
         transform: scale(1);
       }
+      50% {
+        opacity: 0.9;
+        transform: scale(1.05);
+      }
     }
-    
     
     /* Canvas-specific styles only */
     canvas { 
@@ -692,7 +679,7 @@ a     xxx    b    yyy</div>
           console.error('Failed to fetch SVG from URL:', error);
           return;
         }
-      } else {
+        } else {
         // It's SVG code directly
         svgContent = svgValue;
       }
@@ -1228,7 +1215,7 @@ a     xxx    b    yyy</div>
         // Track maximum Y coordinate
         
         if (progress >= 1) {
-          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
         } else {
           const intermediate = {
             x: p1.x + (p2.x - p1.x) * progress,
@@ -1240,9 +1227,9 @@ a     xxx    b    yyy</div>
         if (mode === 'outline') {
           drawOutline();
         } else if (mode === 'main') {
-          ctx.strokeStyle = op.color;
+        ctx.strokeStyle = op.color;
           ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-          ctx.stroke();
+        ctx.stroke();
         } else { // 'both'
           drawOutline();
           ctx.strokeStyle = op.color;
@@ -1253,9 +1240,9 @@ a     xxx    b    yyy</div>
         const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
         
         if(op.start === 0 && op.end === Math.PI * 2){
-          ctx.beginPath();
+        ctx.beginPath();
           const endAngle = progress >= 1 ? Math.PI*2 : Math.PI * 2 * progress;
-          ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
+            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
         } else {
           const startX = op.cx + op.rx * Math.cos(op.start);
           const startY = op.cy + op.ry * Math.sin(op.start);
@@ -1273,11 +1260,11 @@ a     xxx    b    yyy</div>
             ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,newEndAngle,op.acw);
           } else {
             let angleDiff = op.acw ? newStartAngle - newEndAngle : newEndAngle - newStartAngle;
-            if (angleDiff <= 0) angleDiff += Math.PI * 2;
+              if (angleDiff <= 0) angleDiff += Math.PI * 2;
             
             const progressAngle = angleDiff * progress;
             const progressEndAngle = op.acw ? newStartAngle - progressAngle : newStartAngle + progressAngle;
-            
+              
             ctx.beginPath();
             ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
           }
@@ -1286,20 +1273,20 @@ a     xxx    b    yyy</div>
         if (mode === 'outline') {
           drawOutline();
         } else if (mode === 'main') {
-          ctx.strokeStyle = op.color;
+        ctx.strokeStyle = op.color;
           ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
           ctx.stroke();
         } else { // 'both'
           drawOutline();
           ctx.strokeStyle = op.color;
           ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-          ctx.stroke();
+        ctx.stroke();
         }
       }else if(op.type==='point'){
         const c=applyItalicsTransform(toCanvas(op));
         
         const radius = progress >= 1 ? thickness*POINT_RADIUS_MULTIPLIER : thickness * POINT_RADIUS_MULTIPLIER * progress;
-        ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
+          ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
         
         if (mode === 'outline') {
           drawPointOutline();
@@ -1309,8 +1296,8 @@ a     xxx    b    yyy</div>
         } else { // 'both'
           ctx.fillStyle = '#000000';
           ctx.fill();
-          ctx.fillStyle = op.color;
-          ctx.fill();
+        ctx.fillStyle = op.color;
+        ctx.fill();
         }
       }
     }
@@ -1835,10 +1822,10 @@ inComment = true;
     function updateRovingLights(selectedColor) {
       const rgb = hexToRgb(selectedColor);
       
-      // Create lighter, more whitish glow variations
-      const glow1 = `rgba(${Math.min(255, rgb.r + 100)}, ${Math.min(255, rgb.g + 100)}, ${Math.min(255, rgb.b + 100)}, 0.6)`;
-      const glow2 = `rgba(${Math.min(255, rgb.r + 80)}, ${Math.min(255, rgb.g + 80)}, ${Math.min(255, rgb.b + 80)}, 0.4)`;
-      const glow3 = `rgba(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)}, 0.2)`;
+      // Create lighter, more whitish glow variations (brighter)
+      const glow1 = `rgba(${Math.min(255, rgb.r + 100)}, ${Math.min(255, rgb.g + 100)}, ${Math.min(255, rgb.b + 100)}, 0.8)`;
+      const glow2 = `rgba(${Math.min(255, rgb.r + 80)}, ${Math.min(255, rgb.g + 80)}, ${Math.min(255, rgb.b + 80)}, 0.6)`;
+      const glow3 = `rgba(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)}, 0.4)`;
       
       // Update CSS custom properties for card glow
       document.documentElement.style.setProperty('--card-glow-1', glow1);
@@ -2001,7 +1988,7 @@ inComment = true;
             
             // Check if animation is enabled
             if (animateCheckbox.checked) {
-              startAnim(ops, visited);
+            startAnim(ops, visited);
             } else {
               renderInstant(ops, visited);
             }
