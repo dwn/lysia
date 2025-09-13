@@ -90,8 +90,6 @@ const defaultSvgBackground =
     /* Force dark theme for both light and dark modes */
     :root, :root:not([data-theme="light"]) {
       --border-color: #666;
-      --button-bg: #333;
-      --button-border: #666;
       
       /* Override Pico CSS variables to force dark theme */
       --pico-background-color: #1a1a1a;
@@ -583,6 +581,7 @@ a     xxx    b    yyy</div>
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
+    let cardElement = null; // Will be set when needed
     
     const cssW=600,cssH=1000;
     const dpr=window.devicePixelRatio||1;
@@ -1893,35 +1892,31 @@ inComment = true;
     
 
     // Hotkey listener for editor toggle (Ctrl+E or Cmd+E)
-    // Handle SPACE key for card flip-out animation
     let isFlippingOut = false;
     
-    // Mouse and touch support for card flip animations
+    // Consolidated card flip handler
     function handleCardFlip(direction = 'left') {
       if (editorVisible || isFlippingOut) return;
       
       isFlippingOut = true;
-      
-      // Determine flip direction
       const flipOutAnimation = direction === 'right' ? 'cardFlipOutRight' : 'cardFlipOut';
       const flipInAnimation = direction === 'right' ? 'cardFlipInRight' : 'cardFlipIn';
       
-      // Add flip-out animation class
-      const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      // Cache card element if not already cached
+      if (!cardElement) {
+        cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      }
+      
       if (cardElement) {
         cardElement.style.animation = `${flipOutAnimation} 1.5s linear forwards`;
         
-        // After animation completes, restart the presentation
         setTimeout(() => {
-          // Reset animation and restart
           cardElement.style.animation = `${flipInAnimation} 1.5s linear forwards`;
           isFlippingOut = false;
           
-          // Restart the drawing animation
           const coloredItems = parseBytesWithColors(getEditorValue());
           const { ops, visited } = buildOps(coloredItems);
           
-          // Check if animation is enabled
           if (animateCheckbox.checked) {
             startAnim(ops, visited);
           } else {
@@ -1931,27 +1926,19 @@ inComment = true;
       }
     }
     
-    // Mouse click support
-    document.addEventListener('click', (e) => {
-      if (!editorVisible && !isFlippingOut) {
-        handleCardFlip('left'); // Default to left direction for clicks
-      }
-    });
-    
-    // Touch support
+    // Consolidated input handlers
+    document.addEventListener('click', () => !editorVisible && !isFlippingOut && handleCardFlip('left'));
     document.addEventListener('touchstart', (e) => {
       if (!editorVisible && !isFlippingOut) {
         e.preventDefault();
-        handleCardFlip('left'); // Default to left direction for touches
+        handleCardFlip('left');
       }
     });
 
     document.addEventListener('keydown', async (e) => {
-      // Handle SPACE, LEFT arrow, and RIGHT arrow keys for card flip animations
+      // Handle flip animations
       if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && !isFlippingOut) {
         e.preventDefault();
-        
-        // Determine flip direction based on key
         const direction = e.code === 'ArrowRight' ? 'right' : 'left';
         handleCardFlip(direction);
         return;
@@ -1972,7 +1959,9 @@ inComment = true;
           
           // Add initial flip-in animation when switching to presentation mode
           if (!editorVisible) {
-            const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+            if (!cardElement) {
+              cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+            }
             if (cardElement) {
               cardElement.style.animation = 'cardFlipIn 1.5s linear forwards';
             }
