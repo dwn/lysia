@@ -87,13 +87,30 @@ const defaultSvgBackground =
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23000'/><circle cx='50' cy='50' r='25' fill='%23fff'/></svg>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
-    /* CSS Variables for dark mode support */
-    :root { 
-      --canvas-bg: #fff;
-      --grid-color: #ddd;
-      --border-color: #ccc;
-      --button-bg: #f8f8f8;
-      --button-border: #ddd;
+    /* Force dark theme for both light and dark modes */
+    :root, :root:not([data-theme="light"]) {
+      --canvas-bg: #2a2a2a;
+      --grid-color: #555;
+      --border-color: #666;
+      --button-bg: #333;
+      --button-border: #666;
+      
+      /* Override Pico CSS variables to force dark theme */
+      --pico-background-color: #1a1a1a;
+      --pico-color: #ffffff;
+      --pico-muted-border-color: #666666;
+      --pico-muted-color: #aaaaaa;
+      --pico-primary-background: #333333;
+      --pico-primary-color: #ffffff;
+      --pico-secondary-background: #2a2a2a;
+      --pico-secondary-color: #ffffff;
+      --pico-form-element-background-color: #333333;
+      --pico-form-element-border-color: #666666;
+      --pico-form-element-color: #ffffff;
+      --pico-form-element-placeholder-color: #aaaaaa;
+      --pico-form-element-selected-background-color: #444444;
+      --pico-form-element-selected-border-color: #777777;
+      --pico-form-element-selected-color: #ffffff;
     }
     
     /* Override Pico CSS for dropdown display */
@@ -157,16 +174,16 @@ const defaultSvgBackground =
     .canvas-only .grid > div:first-child::before {
       content: '';
       position: absolute;
-      top: -80px;
-      left: -30px;
-      right: -30px;
-      bottom: -80px;
-      background: radial-gradient(ellipse, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 20%, rgba(255, 255, 255, 0.2) 40%, transparent 70%);
-      border-radius: 30px;
+      top: -120px;
+      left: -60px;
+      right: -60px;
+      bottom: -120px;
+      background: radial-gradient(ellipse, var(--card-glow-1, rgba(255, 255, 255, 0.8)) 0%, var(--card-glow-2, rgba(255, 255, 255, 0.4)) 20%, var(--card-glow-3, rgba(255, 255, 255, 0.2)) 40%, transparent 70%);
+      border-radius: 50px;
       z-index: -1;
       opacity: 0;
       animation: glowAppear 1.5s ease-out forwards;
-      filter: blur(10px);
+      filter: blur(5px);
     }
     
     @keyframes cardFlipIn {
@@ -187,11 +204,19 @@ const defaultSvgBackground =
     @keyframes glowAppear {
       0% {
         opacity: 0;
-        transform: scale(0.3);
+        transform: scaleX(3) scaleY(0.2);
       }
-      20% {
+      15% {
+        opacity: 0.8;
+        transform: scaleX(2.5) scaleY(0.4);
+      }
+      30% {
         opacity: 1;
-        transform: scale(1.5);
+        transform: scaleX(1.8) scaleY(0.8);
+      }
+      60% {
+        opacity: 0.8;
+        transform: scaleX(1.2) scaleY(1.1);
       }
       100% {
         opacity: 0.6;
@@ -199,13 +224,6 @@ const defaultSvgBackground =
       }
     }
     
-    :root.dark {
-      --canvas-bg: #2a2a2a;
-      --grid-color: #555;
-      --border-color: #666;
-      --button-bg: #333;
-      --button-border: #666;
-    }
     
     /* Canvas-specific styles only */
     canvas { 
@@ -371,9 +389,9 @@ const defaultSvgBackground =
       width: 100vw;
       height: 100vh;
       background: 
-        radial-gradient(ellipse 400px 200px at 30% 40%, rgba(109,191,232,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 300px 150px at 70% 20%, rgba(40,161,222,0.04) 0%, transparent 60%),
-        radial-gradient(ellipse 350px 180px at 20% 80%, rgba(109,191,232,0.05) 0%, transparent 60%);
+        radial-gradient(ellipse 400px 200px at 30% 40%, var(--roving-light-1, rgba(109,191,232,0.06)) 0%, transparent 60%),
+        radial-gradient(ellipse 300px 150px at 70% 20%, var(--roving-light-2, rgba(40,161,222,0.04)) 0%, transparent 60%),
+        radial-gradient(ellipse 350px 180px at 20% 80%, var(--roving-light-3, rgba(109,191,232,0.05)) 0%, transparent 60%);
       pointer-events: none;
       z-index: -1;
       animation: fluidRoamLight 12.5s linear infinite;
@@ -490,58 +508,42 @@ a     xxx    b    yyy</div>
   </div>
   </main>
   <script>
-    let italicsMode = true; // toggled by italics checkbox
-    let editorVisible = false; // toggled by E key
-    let maxDrawnY = 0; // track the lowest point of drawn content
+    let italicsMode = true;
+    let editorVisible = false;
+    let maxDrawnY = 0;
     let s=8;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
     const canvas=document.getElementById('board');const ctx=canvas.getContext('2d', { alpha: true });
     const cssW=1000,cssH=2000;
-    let currentCanvasHeight = 200; // start small for smooth expansion
-    let targetCanvasHeight = cssH; // target height for smooth animation
-    let animationStartTime = 0; // when height animation started
+    let currentCanvasHeight = 200;
+    let targetCanvasHeight = cssH;
+    let animationStartTime = 0;
     const dpr=window.devicePixelRatio||1;
     if(dpr!==1){canvas.width=cssW*dpr;canvas.height=cssH*dpr;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';ctx.scale(dpr,dpr);}    
     const width=cssW,height=cssH;let gridX=Math.floor(width/s);
     
-      // Configure canvas for optimal text rendering
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
-      // Enable subpixel rendering and anti-aliasing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      
-      // Enable text rendering optimizations
-      ctx.textRenderingOptimization = 'optimizeQuality';
-      
-      // Track hex pair index within current letter
-      let currentLetterHexPairIndex = 0;
-
-    // Color palette (cycles each time a SINGLE '|' is encountered)
-    const COLORS = ['#000000','#8c0004','#f80007','#f34001','#faaf00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
-    function getColors() {
-      return COLORS;
-    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.textRenderingOptimization = 'optimizeQuality';
     
-    // Drawing constants
+    let currentLetterHexPairIndex = 0;
+
+    const COLORS = ['#000000','#8c0004','#f80007','#f34001','#faaf00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
+    function getColors() { return COLORS; }
+    
     const OUTLINE_THICKNESS_MULTIPLIER = 12;
     const MAIN_THICKNESS_MULTIPLIER = 4;
     const POINT_OUTLINE_THICKNESS_MULTIPLIER = 6;
     const POINT_RADIUS_MULTIPLIER = 4;
     const END_MARKER_RADIUS_MULTIPLIER = 3;
-    
-    // UI constants
     const DEFAULT_PANEL_COLOR_INDEX = 1;
     
-    // Helper function to draw outline with consistent styling
     function drawOutline(isPoint = false) {
-      // Skip outlines in editor mode
       if (editorVisible) return;
       
       const bgColorSelectEl = document.getElementById('bgColorSelect');
       const backgroundColor = bgColorSelectEl.value;
-      
-      // Blend background color with #404040 (50% interpolation)
       const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
       
       ctx.strokeStyle = blendedColor;
@@ -549,15 +551,11 @@ a     xxx    b    yyy</div>
       ctx.stroke();
     }
     
-    // Helper function to draw point outline with stroke
     function drawPointOutline() {
-      // Skip outlines in editor mode
       if (editorVisible) return;
       
       const bgColorSelectEl = document.getElementById('bgColorSelect');
       const backgroundColor = bgColorSelectEl.value;
-      
-      // Blend background color with #404040 (50% interpolation)
       const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
       
       ctx.strokeStyle = blendedColor;
@@ -565,26 +563,21 @@ a     xxx    b    yyy</div>
       ctx.stroke();
     }
     
-    // Helper function to blend two colors
+    // Utility functions for color operations
+    function hexToRgb(hex) {
+      const h = hex.replace('#', '');
+      return {
+        r: parseInt(h.substr(0, 2), 16),
+        g: parseInt(h.substr(2, 2), 16),
+        b: parseInt(h.substr(4, 2), 16)
+      };
+    }
+    
     function blendColors(color1, color2, ratio) {
-      // Convert hex to RGB
-      const hex1 = color1.replace('#', '');
-      const hex2 = color2.replace('#', '');
+      const rgb1 = hexToRgb(color1);
+      const rgb2 = hexToRgb(color2);
       
-      const r1 = parseInt(hex1.substr(0, 2), 16);
-      const g1 = parseInt(hex1.substr(2, 2), 16);
-      const b1 = parseInt(hex1.substr(4, 2), 16);
-      
-      const r2 = parseInt(hex2.substr(0, 2), 16);
-      const g2 = parseInt(hex2.substr(2, 2), 16);
-      const b2 = parseInt(hex2.substr(4, 2), 16);
-      
-      // Interpolate
-      const r = Math.round(r1 + (r2 - r1) * ratio);
-      const g = Math.round(g1 + (g2 - g1) * ratio);
-      const b = Math.round(b1 + (b2 - b1) * ratio);
-      
-      return `rgb(${r}, ${g}, ${b})`;
+      return `rgb(${Math.round(rgb1.r + (rgb2.r - rgb1.r) * ratio)}, ${Math.round(rgb1.g + (rgb2.g - rgb1.g) * ratio)}, ${Math.round(rgb1.b + (rgb2.b - rgb1.b) * ratio)})`;
     }
 
     const toCanvas=(p)=>({x:p.xi*s,y:p.yi*s});
@@ -788,10 +781,7 @@ a     xxx    b    yyy</div>
         const selectedColor = bgColorSelectEl.value;
         
         // Convert hex to RGB for glow
-        const hex = selectedColor.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
+        const rgb = hexToRgb(selectedColor);
       
       svgBackground.innerHTML = `
         <style>
@@ -802,7 +792,7 @@ a     xxx    b    yyy</div>
               object-fit: contain;
               object-position: center;
               transform: scale(${hasZRotation ? '0.707' : '1'});
-              /* filter: drop-shadow(0 0 10px rgba(${r}, ${g}, ${b}, 0.4)) drop-shadow(0 0 20px rgba(${r}, ${g}, ${b}, 0.3)) drop-shadow(0 0 30px rgba(${r}, ${g}, ${b}, 0.2)); */
+              /* filter: drop-shadow(0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)) drop-shadow(0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)) drop-shadow(0 0 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)); */
           }
         </style>
         ${processedSvg}
@@ -1227,7 +1217,8 @@ a     xxx    b    yyy</div>
       }
     }
 
-    function drawOpOutline(op, progress = 1){
+    // Unified drawing function with mode parameter
+    function drawOpUnified(op, progress = 1, mode = 'outline'){
       if(op.type==='line'){
         const p1=applyItalicsTransform(toCanvas(op.from)),p2=applyItalicsTransform(toCanvas(op.to));
         
@@ -1235,10 +1226,8 @@ a     xxx    b    yyy</div>
         maxDrawnY = Math.max(maxDrawnY, p1.y, p2.y);
         
         if (progress >= 1) {
-          // Draw complete line
-        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
         } else {
-          // Draw partial line
           const intermediate = {
             x: p1.x + (p2.x - p1.x) * progress,
             y: p1.y + (p2.y - p1.y) * progress
@@ -1247,329 +1236,92 @@ a     xxx    b    yyy</div>
           ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
         }
         
-        // Draw outline only - always black outline
-        drawOutline();
+        if (mode === 'outline') {
+          drawOutline();
+        } else if (mode === 'main') {
+          ctx.strokeStyle = op.color;
+          ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
+          ctx.stroke();
+        } else { // 'both'
+          drawOutline();
+          ctx.strokeStyle = op.color;
+          ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
+          ctx.stroke();
+        }
       }else if(op.type==='arc'){
         const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
-        
-        // Track maximum Y coordinate for arc
         maxDrawnY = Math.max(maxDrawnY, transformedCenter.y + op.ry);
         
-        // Check if this is a complete circle (start=0, end=2π)
         if(op.start === 0 && op.end === Math.PI * 2){
-          if (progress >= 1) {
-            // For complete circles, just transform the center and draw
-        ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,Math.PI*2,false);
-          } else {
-            // Draw partial circle
-            const endAngle = Math.PI * 2 * progress;
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
-          }
-        
-        // Draw outline only - always black outline
-        drawOutline();
+          ctx.beginPath();
+          const endAngle = progress >= 1 ? Math.PI*2 : Math.PI * 2 * progress;
+          ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
         } else {
-          // For partial arcs, calculate transformed angles
           const startX = op.cx + op.rx * Math.cos(op.start);
           const startY = op.cy + op.ry * Math.sin(op.start);
           const endX = op.cx + op.rx * Math.cos(op.end);
           const endY = op.cy + op.ry * Math.sin(op.end);
           
-          // Transform the start and end points
           const transformedStart = applyItalicsTransform({x: startX, y: startY});
           const transformedEnd = applyItalicsTransform({x: endX, y: endY});
-          
-          // Track maximum Y coordinate
           maxDrawnY = Math.max(maxDrawnY, transformedStart.y, transformedEnd.y);
           
-          // Calculate new angles based on transformed points
           const newStartAngle = Math.atan2(transformedStart.y - transformedCenter.y, transformedStart.x - transformedCenter.x);
           const newEndAngle = Math.atan2(transformedEnd.y - transformedCenter.y, transformedEnd.x - transformedCenter.x);
           
           if (progress >= 1) {
-            // Draw complete arc
             ctx.beginPath();
             ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,newEndAngle,op.acw);
           } else {
-            // Draw partial arc - handle angle wrapping correctly
-            let angleDiff;
-            if (op.acw) {
-              // Anticlockwise: go from start to end in negative direction
-              angleDiff = newStartAngle - newEndAngle;
-              if (angleDiff <= 0) angleDiff += Math.PI * 2;
-            } else {
-              // Clockwise: go from start to end in positive direction  
-              angleDiff = newEndAngle - newStartAngle;
-              if (angleDiff <= 0) angleDiff += Math.PI * 2;
-            }
+            let angleDiff = op.acw ? newStartAngle - newEndAngle : newEndAngle - newStartAngle;
+            if (angleDiff <= 0) angleDiff += Math.PI * 2;
             
             const progressAngle = angleDiff * progress;
-            const progressEndAngle = op.acw ? 
-              newStartAngle - progressAngle : 
-              newStartAngle + progressAngle;
-              
+            const progressEndAngle = op.acw ? newStartAngle - progressAngle : newStartAngle + progressAngle;
+            
             ctx.beginPath();
             ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
           }
-          
-          // Draw outline only
+        }
+        
+        if (mode === 'outline') {
           drawOutline();
-        }
-      }else if(op.type==='point'){
-        const c=applyItalicsTransform(toCanvas(op));
-        
-        // Track maximum Y coordinate for point
-        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * POINT_RADIUS_MULTIPLIER);
-        
-        if (progress >= 1) {
-          // Draw complete point
-        ctx.beginPath();ctx.arc(c.x,c.y,thickness*POINT_RADIUS_MULTIPLIER,0,Math.PI*2);
-        } else {
-          // Draw growing point
-          const radius = thickness * POINT_RADIUS_MULTIPLIER * progress;
-          ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
-        }
-        
-        // Draw outline only - always black outline (thinner for points)
-        drawPointOutline();
-      }
-    }
-
-    function drawOpMain(op, progress = 1){
-      if(op.type==='line'){
-        const p1=applyItalicsTransform(toCanvas(op.from)),p2=applyItalicsTransform(toCanvas(op.to));
-        
-        if (progress >= 1) {
-          // Draw complete line
-        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
-        } else {
-          // Draw partial line
-          const intermediate = {
-            x: p1.x + (p2.x - p1.x) * progress,
-            y: p1.y + (p2.y - p1.y) * progress
-          };
-          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
-        }
-        
-        // Draw main stroke
-        ctx.strokeStyle = op.color;
-        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-        ctx.stroke();
-      }else if(op.type==='arc'){
-        const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
-        
-        // Check if this is a complete circle (start=0, end=2π)
-        if(op.start === 0 && op.end === Math.PI * 2){
-          if (progress >= 1) {
-            // For complete circles, just transform the center and draw
-        ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,Math.PI*2,false);
-          } else {
-            // Draw partial circle
-            const endAngle = Math.PI * 2 * progress;
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
-          }
-        
-        // Draw main stroke
-        ctx.strokeStyle = op.color;
-        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-        ctx.stroke();
-        } else {
-          // For partial arcs, calculate transformed angles
-          const startX = op.cx + op.rx * Math.cos(op.start);
-          const startY = op.cy + op.ry * Math.sin(op.start);
-          const endX = op.cx + op.rx * Math.cos(op.end);
-          const endY = op.cy + op.ry * Math.sin(op.end);
-          
-          // Transform the start and end points
-          const transformedStart = applyItalicsTransform({x: startX, y: startY});
-          const transformedEnd = applyItalicsTransform({x: endX, y: endY});
-          
-          // Calculate new angles based on transformed points
-          const newStartAngle = Math.atan2(transformedStart.y - transformedCenter.y, transformedStart.x - transformedCenter.x);
-          const newEndAngle = Math.atan2(transformedEnd.y - transformedCenter.y, transformedEnd.x - transformedCenter.x);
-          
-          if (progress >= 1) {
-            // Draw complete arc
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,newEndAngle,op.acw);
-          } else {
-            // Draw partial arc - handle angle wrapping correctly
-            let angleDiff;
-            if (op.acw) {
-              // Anticlockwise: go from start to end in negative direction
-              angleDiff = newStartAngle - newEndAngle;
-              if (angleDiff <= 0) angleDiff += Math.PI * 2;
-            } else {
-              // Clockwise: go from start to end in positive direction  
-              angleDiff = newEndAngle - newStartAngle;
-              if (angleDiff <= 0) angleDiff += Math.PI * 2;
-            }
-            
-            const progressAngle = angleDiff * progress;
-            const progressEndAngle = op.acw ? 
-              newStartAngle - progressAngle : 
-              newStartAngle + progressAngle;
-              
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
-          }
-          
-          // Draw main stroke
+        } else if (mode === 'main') {
+          ctx.strokeStyle = op.color;
+          ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
+          ctx.stroke();
+        } else { // 'both'
+          drawOutline();
           ctx.strokeStyle = op.color;
           ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
           ctx.stroke();
         }
       }else if(op.type==='point'){
         const c=applyItalicsTransform(toCanvas(op));
+        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * POINT_RADIUS_MULTIPLIER);
         
-        if (progress >= 1) {
-          // Draw complete point
-        ctx.beginPath();ctx.arc(c.x,c.y,thickness*POINT_RADIUS_MULTIPLIER,0,Math.PI*2);
-        } else {
-          // Draw growing point
-          const radius = thickness * POINT_RADIUS_MULTIPLIER * progress;
-          ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
+        const radius = progress >= 1 ? thickness*POINT_RADIUS_MULTIPLIER : thickness * POINT_RADIUS_MULTIPLIER * progress;
+        ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
+        
+        if (mode === 'outline') {
+          drawPointOutline();
+        } else if (mode === 'main') {
+          ctx.fillStyle = op.color;
+          ctx.fill();
+        } else { // 'both'
+          ctx.fillStyle = '#000000';
+          ctx.fill();
+          ctx.fillStyle = op.color;
+          ctx.fill();
         }
-        
-        // Draw main fill
-        ctx.fillStyle = op.color;
-        ctx.fill();
       }
     }
 
-    function drawOp(op, progress = 1){
-      if(op.type==='line'){
-        const p1=applyItalicsTransform(toCanvas(op.from)),p2=applyItalicsTransform(toCanvas(op.to));
-        
-        // Track maximum Y coordinate
-        maxDrawnY = Math.max(maxDrawnY, p1.y, p2.y);
-        
-        if (progress >= 1) {
-          // Draw complete line
-        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
-        } else {
-          // Draw partial line
-          const intermediate = {
-            x: p1.x + (p2.x - p1.x) * progress,
-            y: p1.y + (p2.y - p1.y) * progress
-          };
-          maxDrawnY = Math.max(maxDrawnY, intermediate.y);
-          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
-        }
-        
-        // Draw outline for better visibility
-        drawOutline();
-        
-        // Draw main stroke
-        ctx.strokeStyle = op.color;
-        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-        ctx.stroke();
-      }else if(op.type==='arc'){
-        const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
-        
-        // Track maximum Y coordinate for arc
-        maxDrawnY = Math.max(maxDrawnY, transformedCenter.y + op.ry);
-        
-        // Check if this is a complete circle (start=0, end=2π)
-        if(op.start === 0 && op.end === Math.PI * 2){
-          if (progress >= 1) {
-            // For complete circles, just transform the center and draw
-        ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,Math.PI*2,false);
-          } else {
-            // Draw partial circle
-            const endAngle = Math.PI * 2 * progress;
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,0,endAngle,false);
-          }
-        
-        // Draw outline for better visibility
-        drawOutline();
-        
-        // Draw main stroke
-        ctx.strokeStyle = op.color;
-        ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-        ctx.stroke();
-        } else {
-          // For partial arcs, calculate transformed angles
-          const startX = op.cx + op.rx * Math.cos(op.start);
-          const startY = op.cy + op.ry * Math.sin(op.start);
-          const endX = op.cx + op.rx * Math.cos(op.end);
-          const endY = op.cy + op.ry * Math.sin(op.end);
-          
-          // Transform the start and end points
-          const transformedStart = applyItalicsTransform({x: startX, y: startY});
-          const transformedEnd = applyItalicsTransform({x: endX, y: endY});
-          
-          // Track maximum Y coordinate
-          maxDrawnY = Math.max(maxDrawnY, transformedStart.y, transformedEnd.y);
-          
-          // Calculate new angles based on transformed points
-          const newStartAngle = Math.atan2(transformedStart.y - transformedCenter.y, transformedStart.x - transformedCenter.x);
-          const newEndAngle = Math.atan2(transformedEnd.y - transformedCenter.y, transformedEnd.x - transformedCenter.x);
-          
-          if (progress >= 1) {
-            // Draw complete arc
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,newEndAngle,op.acw);
-          } else {
-            // Draw partial arc - handle angle wrapping correctly
-            let angleDiff;
-            if (op.acw) {
-              // Anticlockwise: go from start to end in negative direction
-              angleDiff = newStartAngle - newEndAngle;
-              if (angleDiff <= 0) angleDiff += Math.PI * 2;
-            } else {
-              // Clockwise: go from start to end in positive direction  
-              angleDiff = newEndAngle - newStartAngle;
-              if (angleDiff <= 0) angleDiff += Math.PI * 2;
-            }
-            
-            const progressAngle = angleDiff * progress;
-            const progressEndAngle = op.acw ? 
-              newStartAngle - progressAngle : 
-              newStartAngle + progressAngle;
-              
-            ctx.beginPath();
-            ctx.ellipse(transformedCenter.x,transformedCenter.y,op.rx,op.ry,0,newStartAngle,progressEndAngle,op.acw);
-          }
-          
-          // Draw outline for better visibility
-          drawOutline();
-        
-          // Draw main stroke
-        ctx.strokeStyle = op.color;
-          ctx.lineWidth = thickness * MAIN_THICKNESS_MULTIPLIER;
-        ctx.stroke();
-        }
-      }else if(op.type==='point'){
-        const c=applyItalicsTransform(toCanvas(op));
-        
-        // Track maximum Y coordinate for point
-        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * POINT_RADIUS_MULTIPLIER);
-        
-        if (progress >= 1) {
-          // Draw complete point
-        ctx.beginPath();ctx.arc(c.x,c.y,thickness*POINT_RADIUS_MULTIPLIER,0,Math.PI*2);
-        } else {
-          // Draw growing point
-          const radius = thickness * POINT_RADIUS_MULTIPLIER * progress;
-          ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
-        }
-        
-        // Draw outline for better visibility
-        ctx.fillStyle = '#000000';
-        ctx.fill();
-        
-        // Draw main fill
-        ctx.fillStyle = op.color;
-        ctx.fill();
-      }
-    }
+    // Legacy wrapper functions for compatibility
+    function drawOpOutline(op, progress = 1) { drawOpUnified(op, progress, 'outline'); }
+    function drawOpMain(op, progress = 1) { drawOpUnified(op, progress, 'main'); }
+
+    function drawOp(op, progress = 1) { drawOpUnified(op, progress, 'both'); }
 
     // Build ops (line/arc/point) in encounter order
     function buildOps(coloredItems){
@@ -2078,19 +1830,15 @@ inComment = true;
     
     // Generate gradient from base color
     function generateGradientFromColor(baseColor) {
-      // Convert hex to RGB
-      const hex = baseColor.replace('#', '');
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
+      const rgb = hexToRgb(baseColor);
       
       // Create gradient with varying opacity
       return `linear-gradient(135deg, 
-        rgba(${r},${g},${b},0.8) 0%, 
-        rgba(${r},${g},${b},0.6) 25%, 
-        rgba(${r},${g},${b},0.4) 50%, 
-        rgba(${r},${g},${b},0.2) 75%, 
-        rgba(${r},${g},${b},0.1) 100%)`;
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.8) 0%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.6) 25%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.4) 50%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.2) 75%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.1) 100%)`;
     }
     
     // Update canvas background based on editor mode and selected color
@@ -2103,6 +1851,31 @@ inComment = true;
       }
     }
     
+    // Update roving lights and card glow to match the selected color
+    function updateRovingLights(selectedColor) {
+      const rgb = hexToRgb(selectedColor);
+      
+      // Create three variations of the color with higher opacities for better visibility
+      const light1 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
+      const light2 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)`;
+      const light3 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`;
+      
+      // Update CSS custom properties for roving lights
+      document.documentElement.style.setProperty('--roving-light-1', light1);
+      document.documentElement.style.setProperty('--roving-light-2', light2);
+      document.documentElement.style.setProperty('--roving-light-3', light3);
+      
+      // Create card glow variations with much higher opacity for strong visibility
+      const glow1 = `rgba(${rgb.r},${rgb.g},${rgb.b},1.0)`;
+      const glow2 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.8)`;
+      const glow3 = `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`;
+      
+      // Update CSS custom properties for card glow
+      document.documentElement.style.setProperty('--card-glow-1', glow1);
+      document.documentElement.style.setProperty('--card-glow-2', glow2);
+      document.documentElement.style.setProperty('--card-glow-3', glow3);
+    }
+    
     // Initialize color options and set defaults
     populateColorOptions();
     
@@ -2112,6 +1885,7 @@ inComment = true;
     // Set initial values
     colorIndicator.style.backgroundColor = initialColor;
     updateCanvasBackground(initialColor);
+    updateRovingLights(initialColor);
     
     bgColorSelectEl.addEventListener('change', async () => {
       const selectedColor = bgColorSelectEl.value;
@@ -2119,6 +1893,9 @@ inComment = true;
       
       // Update canvas background
       updateCanvasBackground(selectedColor);
+      
+      // Update roving lights to match
+      updateRovingLights(selectedColor);
       
       // Update color indicator
       colorIndicator.style.backgroundColor = selectedColor;
@@ -2156,6 +1933,7 @@ inComment = true;
             const bgColorSelectEl = document.getElementById('bgColorSelect');
             const selectedColor = bgColorSelectEl.value;
             updateCanvasBackground(selectedColor);
+            updateRovingLights(selectedColor);
             
             // Wait for SVG to load before starting presentation animation
             await drawSvgBackground();
@@ -2171,6 +1949,7 @@ inComment = true;
             const bgColorSelectEl = document.getElementById('bgColorSelect');
             const selectedColor = bgColorSelectEl.value;
             updateCanvasBackground(selectedColor);
+            updateRovingLights(selectedColor);
             await drawSvgBackground();
           }
           
