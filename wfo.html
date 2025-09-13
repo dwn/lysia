@@ -168,6 +168,9 @@ const defaultSvgBackground =
       transform-style: preserve-3d;
       animation: cardFlipIn 1.5s ease-out forwards;
       position: relative;
+      max-width: 80vw;
+      max-height: 80vh;
+      object-fit: contain;
     }
     
     /* Glow effect emanating from behind the card */
@@ -227,8 +230,8 @@ const defaultSvgBackground =
     
     /* Canvas-specific styles only */
     canvas { 
-      width: 1000px; 
-      height: 2000px; 
+      width: 600px; 
+      height: 1000px; 
       display: block;
       position: relative;
       z-index: 1;
@@ -313,7 +316,7 @@ const defaultSvgBackground =
     
     /* Ensure canvas doesn't shrink below its natural width */
     canvas {
-      min-width: 1000px;
+      min-width: 600px;
     }
     
     /* Better grid behavior for wider screens */
@@ -421,7 +424,7 @@ const defaultSvgBackground =
     <div class="grid">
       <div>
         <div id="canvasWrapper" style="position: relative; overflow: hidden; padding-bottom: 1.5rem; border-radius: 16px;">
-          <canvas id="board" width="1000" height="2000" aria-label="drawing canvas"></canvas>
+          <canvas id="board" width="600" height="1000" aria-label="drawing canvas"></canvas>
         </div>
 </div>
       <aside>
@@ -510,13 +513,21 @@ a     xxx    b    yyy</div>
   <script>
     let italicsMode = true;
     let editorVisible = false;
-    let maxDrawnY = 0;
     let s=8;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
+    // DOM element references
     const canvas=document.getElementById('board');const ctx=canvas.getContext('2d', { alpha: true });
-    const cssW=1000,cssH=2000;
-    let currentCanvasHeight = 200;
-    let targetCanvasHeight = cssH;
-    let animationStartTime = 0;
+    const bgColorSelectEl = document.getElementById('bgColorSelect');
+    const svgPreview = document.getElementById('svgPreview');
+    const svgPreviewContent = document.getElementById('svgPreviewContent');
+    let svgBackground = document.getElementById('svgBackground');
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const inputEl=document.getElementById('strInput');
+    const ruleEl=document.getElementById('strRule');
+    const outputEl=document.getElementById('strOutput');
+    const sInputEl = document.getElementById('sInput');
+    const sValueEl = document.getElementById('sValue');
+    
+    const cssW=600,cssH=1000;
     const dpr=window.devicePixelRatio||1;
     if(dpr!==1){canvas.width=cssW*dpr;canvas.height=cssH*dpr;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';ctx.scale(dpr,dpr);}    
     const width=cssW,height=cssH;let gridX=Math.floor(width/s);
@@ -530,7 +541,6 @@ a     xxx    b    yyy</div>
     let currentLetterHexPairIndex = 0;
 
     const COLORS = ['#000000','#8c0004','#f80007','#f34001','#faaf00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
-    function getColors() { return COLORS; }
     
     const OUTLINE_THICKNESS_MULTIPLIER = 12;
     const MAIN_THICKNESS_MULTIPLIER = 4;
@@ -542,7 +552,6 @@ a     xxx    b    yyy</div>
     function drawOutline(isPoint = false) {
       if (editorVisible) return;
       
-      const bgColorSelectEl = document.getElementById('bgColorSelect');
       const backgroundColor = bgColorSelectEl.value;
       const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
       
@@ -552,15 +561,7 @@ a     xxx    b    yyy</div>
     }
     
     function drawPointOutline() {
-      if (editorVisible) return;
-      
-      const bgColorSelectEl = document.getElementById('bgColorSelect');
-      const backgroundColor = bgColorSelectEl.value;
-      const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
-      
-      ctx.strokeStyle = blendedColor;
-      ctx.lineWidth = thickness * POINT_OUTLINE_THICKNESS_MULTIPLIER;
-      ctx.stroke();
+      drawOutline(true);
     }
     
     // Utility functions for color operations
@@ -602,47 +603,6 @@ a     xxx    b    yyy</div>
       };
     }
     
-    function preCalculateHeight() {
-      // Count the number of "||" to determine how many text lines we have
-      const text = getEditorValue();
-      const lineCount = (text.match(/\|\|/g) || []).length;
-      
-      // Calculate target height: (number of "||" + 1) * 8 * s
-      targetCanvasHeight = (lineCount + 1) * 8 * s + 24; // +24px for padding-bottom
-      currentCanvasHeight = 200; // Start small for smooth expansion
-      animationStartTime = performance.now();
-      
-      // Set initial wrapper height
-      const wrapper = document.getElementById('canvasWrapper');
-      wrapper.style.height = currentCanvasHeight + 'px';
-    }
-    
-    function updateCanvasHeight() {
-      if (!editorVisible && targetCanvasHeight > 0) {
-        // Smooth S-curve animation from current to target height
-        const now = performance.now();
-        const elapsed = now - animationStartTime;
-        const duration = 4000;
-        
-        if (elapsed < duration) {
-          // S-curve easing function (smooth acceleration and deceleration)
-          const t = elapsed / duration;
-          const sCurve = t * t * (3 - 2 * t); // smoothstep function
-          
-          const newHeight = currentCanvasHeight + (targetCanvasHeight - currentCanvasHeight) * sCurve;
-          const wrapper = document.getElementById('canvasWrapper');
-          wrapper.style.height = newHeight + 'px';
-          // Canvas stays at full height - wrapper clips it
-          
-          // Reposition SVG background
-        } else {
-          // Animation complete
-          currentCanvasHeight = targetCanvasHeight;
-          const wrapper = document.getElementById('canvasWrapper');
-          wrapper.style.height = targetCanvasHeight + 'px';
-        }
-      }
-    }
     
     
     function checkForZAxisRotation(svgContent) {
@@ -721,9 +681,6 @@ a     xxx    b    yyy</div>
       
       if (editorVisible) {
         // Show SVG in preview box when in editor mode
-        const svgPreview = document.getElementById('svgPreview');
-        const svgPreviewContent = document.getElementById('svgPreviewContent');
-        
         if (svgPreview && svgPreviewContent) {
           svgPreview.style.display = 'block';
           svgPreviewContent.innerHTML = `
@@ -741,19 +698,16 @@ a     xxx    b    yyy</div>
         }
         
         // Hide background SVG when in editor mode
-        const svgBackground = document.getElementById('svgBackground');
         if (svgBackground) {
           svgBackground.style.display = 'none';
         }
       } else {
         // Show SVG as background when not in editor mode
-        const svgPreview = document.getElementById('svgPreview');
         if (svgPreview) {
           svgPreview.style.display = 'none';
         }
       
       // Create or update background SVG element
-      let svgBackground = document.getElementById('svgBackground');
       const canvas = document.getElementById('board');
       
       if (!svgBackground) {
@@ -768,8 +722,7 @@ a     xxx    b    yyy</div>
           svgBackground.style.pointerEvents = 'none';
 
           // Add it as a child of the wrapper
-          const wrapper = document.getElementById('canvasWrapper');
-          wrapper.appendChild(svgBackground);
+          canvasWrapper.appendChild(svgBackground);
       }
         
         svgBackground.style.display = 'block';
@@ -1172,7 +1125,6 @@ a     xxx    b    yyy</div>
 
     function drawFrameProgressive(now, startedCount, ops, firstVisibleAt, visited, isAnimating = true){
       // Reset max Y tracking
-      maxDrawnY = 0;
       
       // Only draw grid points in edit mode
       if (editorVisible) {
@@ -1211,10 +1163,6 @@ a     xxx    b    yyy</div>
         ctx.fill();
       }
       
-      // Update canvas height progressively during animation (only in presentation mode)
-      if (!editorVisible) {
-        updateCanvasHeight();
-      }
     }
 
     // Unified drawing function with mode parameter
@@ -1223,7 +1171,6 @@ a     xxx    b    yyy</div>
         const p1=applyItalicsTransform(toCanvas(op.from)),p2=applyItalicsTransform(toCanvas(op.to));
         
         // Track maximum Y coordinate
-        maxDrawnY = Math.max(maxDrawnY, p1.y, p2.y);
         
         if (progress >= 1) {
           ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
@@ -1232,7 +1179,6 @@ a     xxx    b    yyy</div>
             x: p1.x + (p2.x - p1.x) * progress,
             y: p1.y + (p2.y - p1.y) * progress
           };
-          maxDrawnY = Math.max(maxDrawnY, intermediate.y);
           ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(intermediate.x,intermediate.y);
         }
         
@@ -1250,7 +1196,6 @@ a     xxx    b    yyy</div>
         }
       }else if(op.type==='arc'){
         const transformedCenter = applyItalicsTransform({x: op.cx, y: op.cy});
-        maxDrawnY = Math.max(maxDrawnY, transformedCenter.y + op.ry);
         
         if(op.start === 0 && op.end === Math.PI * 2){
           ctx.beginPath();
@@ -1264,7 +1209,6 @@ a     xxx    b    yyy</div>
           
           const transformedStart = applyItalicsTransform({x: startX, y: startY});
           const transformedEnd = applyItalicsTransform({x: endX, y: endY});
-          maxDrawnY = Math.max(maxDrawnY, transformedStart.y, transformedEnd.y);
           
           const newStartAngle = Math.atan2(transformedStart.y - transformedCenter.y, transformedStart.x - transformedCenter.x);
           const newEndAngle = Math.atan2(transformedEnd.y - transformedCenter.y, transformedEnd.x - transformedCenter.x);
@@ -1298,7 +1242,6 @@ a     xxx    b    yyy</div>
         }
       }else if(op.type==='point'){
         const c=applyItalicsTransform(toCanvas(op));
-        maxDrawnY = Math.max(maxDrawnY, c.y + thickness * POINT_RADIUS_MULTIPLIER);
         
         const radius = progress >= 1 ? thickness*POINT_RADIUS_MULTIPLIER : thickness * POINT_RADIUS_MULTIPLIER * progress;
         ctx.beginPath();ctx.arc(c.x,c.y,radius,0,Math.PI*2);
@@ -1353,7 +1296,6 @@ a     xxx    b    yyy</div>
         }
 
         const b = item.byte;
-        const bgColorSelectEl = document.getElementById('bgColorSelect');
         const backgroundColor = bgColorSelectEl.value;
         // Highlight current letter with red color only when Input field is focused, others with white
         const isInputFocused = document.activeElement === inputEl;
@@ -1440,7 +1382,6 @@ a     xxx    b    yyy</div>
 
     function renderInstant(ops, visited, skipHeightUpdate = false){
       // Reset max Y tracking
-      maxDrawnY = 0;
       
       // Only draw grid points in edit mode
       if (editorVisible) {
@@ -1461,18 +1402,9 @@ a     xxx    b    yyy</div>
         }
       }
       
-      // Update canvas height based on drawn content (only in presentation mode and when not skipping)
-      if (!editorVisible && !skipHeightUpdate) {
-        updateCanvasHeight();
-      }
     }
 
     // --- Contenteditable highlighting helpers ---
-    const inputEl=document.getElementById('strInput');
-    const ruleEl=document.getElementById('strRule');
-    const outputEl=document.getElementById('strOutput');
-    const sInputEl = document.getElementById('sInput');
-    const sValueEl = document.getElementById('sValue');
 
     const escapeHTML = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     function getPlainText(el){ return el.textContent.replace(/\r/g,''); }
@@ -1773,12 +1705,6 @@ inComment = true;
         // Always use static rendering in renderNow (animation is handled elsewhere)
         renderInstant(ops, visited);
         
-        // Delay canvas expansion for 3D flip animation (only on first load)
-        if (!editorVisible && currentCanvasHeight === 200) {
-          setTimeout(() => {
-            animationStartTime = performance.now();
-          }, 1500); // Wait for flip animation to complete
-        }
       }catch(e){
         console.error('Render error:',e);
         stopAnim();
@@ -1806,11 +1732,10 @@ inComment = true;
 
     
     // Background color functionality
-    const bgColorSelectEl = document.getElementById('bgColorSelect');
     
     // Populate color options dynamically
     function populateColorOptions() {
-      const colors = getColors();
+      const colors = COLORS;
       const initialColor = colors[DEFAULT_PANEL_COLOR_INDEX]; // Default to yellowish color
       
       // Clear existing options
@@ -1879,7 +1804,7 @@ inComment = true;
     // Initialize color options and set defaults
     populateColorOptions();
     
-    const initialColor = getColors()[DEFAULT_PANEL_COLOR_INDEX];
+    const initialColor = COLORS[DEFAULT_PANEL_COLOR_INDEX];
     const colorIndicator = document.getElementById('bgColorIndicator');
     
     // Set initial values
@@ -1956,15 +1881,9 @@ inComment = true;
           // Clear canvas when switching modes to remove any lingering grid points
           ctx.clearRect(0, 0, width, height);
           
-          // Reset wrapper height when switching modes  
-          const wrapper = document.getElementById('canvasWrapper');
-          if (editorVisible) {
-            wrapper.style.height = cssH + 'px'; // Full height in edit mode
-          }
           
           // Always animate in non-edit mode, static in edit mode
           if (!editorVisible) {
-            preCalculateHeight(); // Pre-calculate height for smooth animation
             const coloredItems = parseBytesWithColors(getEditorValue());
             const { ops, visited } = buildOps(coloredItems);
             startAnim(ops, visited);
@@ -1992,8 +1911,6 @@ inComment = true;
       highlightEditor();
       // Update color options for background
       populateColorOptions();
-      // Pre-calculate height for smooth animation
-      preCalculateHeight();
       
       // Wait for SVG to load before showing the page
       await drawSvgBackground();
