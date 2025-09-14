@@ -549,6 +549,16 @@ const defaultSvgBackground =
     ✏️
   </button>
 
+  <!-- Export button -->
+  <button id="exportButton" class="editor-toggle" title="Export Settings" style="left: 80px;">
+    📁
+  </button>
+
+  <!-- Card indicator -->
+  <div id="cardIndicator" class="editor-toggle" style="left: 160px; font-size: 12px; padding: 4px 8px;">
+    Card 0/0
+  </div>
+
   <main class="container-fluid">
     <div class="grid">
       <div>
@@ -672,6 +682,11 @@ a     xxx    b    yyy</div>
     const pad = { left: 1, top: 1, right: 1 };
     const start = { xi: pad.left, yi: pad.top };
     
+    // ===== CARD SYSTEM =====
+    const CARD_BASE_URL = 'https://vault.biltmoretoday.com/storage/v1/object/public/card/';
+    let currentCardIndex = 0;
+    let maxCardIndex = 0; // Will be determined by checking available cards
+    
     togglePicoCSS(editorVisible);
     
     // ===== DOM REFERENCES =====
@@ -689,6 +704,8 @@ a     xxx    b    yyy</div>
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
     const editorToggleBtn = document.getElementById('editorToggle');
+    const exportButton = document.getElementById('exportButton');
+    const cardIndicator = document.getElementById('cardIndicator');
     let cardElement = null;
     
     // ===== CANVAS SETUP =====
@@ -2150,6 +2167,128 @@ inComment = true;
       }
     }
 
+    // ===== CARD SYSTEM FUNCTIONS =====
+    async function loadCard(cardIndex) {
+      try {
+        const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json`);
+        if (!response.ok) {
+          throw new Error(`Card ${cardIndex} not found`);
+        }
+        const cardData = await response.json();
+        
+        // Apply the loaded settings
+        if (cardData.options) {
+          sInputEl.value = cardData.options.size || 5;
+          s = cardData.options.size || 5;
+          thickness = s / 10;
+          sValueEl.textContent = s;
+          
+          bgColorSelectEl.value = cardData.options.backgroundColor || '#8c0004';
+          const colorIndicator = document.getElementById('bgColorIndicator');
+          colorIndicator.style.backgroundColor = cardData.options.backgroundColor || '#8c0004';
+          
+          italicsCheckbox.checked = cardData.options.italics !== false;
+          italicsMode = cardData.options.italics !== false;
+          
+          animateCheckbox.checked = cardData.options.animate === true;
+          
+          svgInputEl.value = cardData.options.svgBackground || '';
+        }
+        
+        // Load content
+        if (cardData.rule !== undefined) {
+          ruleEl.textContent = cardData.rule;
+        }
+        if (cardData.input !== undefined) {
+          inputEl.textContent = cardData.input;
+        }
+        
+        // Update UI
+        updateCanvasBackground(bgColorSelectEl.value);
+        updateRovingLights(bgColorSelectEl.value);
+        highlightEditor();
+        
+        // Load and display SVG background
+        await drawSvgBackground();
+        
+        // Render the new content
+        renderNow();
+        
+        // Update card indicator
+        updateCardIndicator();
+        
+        return true;
+      } catch (error) {
+        console.error(`Failed to load card ${cardIndex}:`, error);
+        return false;
+      }
+    }
+    
+    async function findMaxCardIndex() {
+      // Try to find the highest available card index
+      let maxIndex = 0;
+      for (let i = 0; i < 100; i++) { // Check up to 100 cards
+        try {
+          const response = await fetch(`${CARD_BASE_URL}${i}.json`, { method: 'HEAD' });
+          if (response.ok) {
+            maxIndex = i;
+          } else {
+            break; // Stop at first missing card
+          }
+        } catch (error) {
+          break; // Stop on error
+        }
+      }
+      return maxIndex;
+    }
+    
+    function canFlipLeft() {
+      return currentCardIndex < maxCardIndex;
+    }
+    
+    function canFlipRight() {
+      return currentCardIndex > 0;
+    }
+    
+    function updateCardIndicator() {
+      if (cardIndicator) {
+        cardIndicator.textContent = `${currentCardIndex}/${maxCardIndex}`;
+      }
+    }
+
+    function exportSettings() {
+      // Collect all settings
+      const settings = {
+        options: {
+          size: parseInt(sInputEl.value, 10),
+          backgroundColor: bgColorSelectEl.value,
+          italics: italicsCheckbox.checked,
+          animate: animateCheckbox.checked,
+          svgBackground: svgInputEl.value.trim()
+        },
+        rule: getPlainText(ruleEl),
+        input: getPlainText(inputEl)
+      };
+
+      // Create JSON string
+      const jsonString = JSON.stringify(settings, null, 2);
+      
+      // Create blob and download
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create temporary download link
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'card.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+    }
+
     function updateEditorToggleState() {
       const now = performance.now();
       const isInCooldown = now < animationCooldownEnd;
@@ -2311,6 +2450,11 @@ inComment = true;
       updateRovingLights(selectedColor);
     });
     
+    // Export button event listener
+    exportButton.addEventListener('click', () => {
+      exportSettings();
+    });
+    
     sInputEl.addEventListener('input', () => {
       s = parseInt(sInputEl.value, 10);
       thickness = s/10;
@@ -2334,8 +2478,18 @@ inComment = true;
     let isFlippingOut = false;
     
     // Consolidated card flip handler
-    function handleCardFlip(direction = 'left') {
+    async function handleCardFlip(direction = 'left') {
       if (editorVisible || isFlippingOut) return;
+      
+      // Check boundaries
+      if (direction === 'left' && !canFlipLeft()) {
+        console.log('Cannot flip left - at last card');
+        return;
+      }
+      if (direction === 'right' && !canFlipRight()) {
+        console.log('Cannot flip right - at first card');
+        return;
+      }
       
       isFlippingOut = true;
       const flipOutAnimation = direction === 'right' ? 'cardFlipOutRight' : 'cardFlipOut';
@@ -2349,17 +2503,28 @@ inComment = true;
       if (cardElement) {
         cardElement.style.animation = `${flipOutAnimation} 0.8s linear forwards`;
         
-        setTimeout(() => {
-          cardElement.style.animation = `${flipInAnimation} 0.8s linear forwards`;
-          
-          const coloredItems = parseBytesWithColors(getEditorValue());
-          const { ops, visited } = buildOps(coloredItems);
-          
-          if (animateCheckbox.checked) {
-            startAnim(ops, visited);
+        setTimeout(async () => {
+          // Update card index
+          if (direction === 'left') {
+            currentCardIndex++;
           } else {
-            renderInstant(ops, visited);
+            currentCardIndex--;
           }
+          
+          // Load the new card
+          const loadSuccess = await loadCard(currentCardIndex);
+          if (!loadSuccess) {
+            // Revert index if load failed
+            if (direction === 'left') {
+              currentCardIndex--;
+            } else {
+              currentCardIndex++;
+            }
+            isFlippingOut = false;
+            return;
+          }
+          
+          cardElement.style.animation = `${flipInAnimation} 0.8s linear forwards`;
           
           // Re-enable interactions after flip in completes
           setTimeout(() => {
@@ -2439,16 +2604,24 @@ inComment = true;
     window.addEventListener('load', async () => {
       // Start in non-edit mode (canvas-only)
       document.body.classList.add('canvas-only');
-      // Load default content
-      inputEl.textContent = defaultContent;
-      // Initialize SVG background
-      svgInputEl.value = defaultSvgBackground;
-      highlightEditor();
-      // Update color options for background
-      populateColorOptions();
       
-      // Wait for SVG to load before showing the page
-      await drawSvgBackground();
+      // Initialize card system
+      maxCardIndex = await findMaxCardIndex();
+      console.log(`Found ${maxCardIndex + 1} cards (0-${maxCardIndex})`);
+      
+      // Update card indicator with max count
+      updateCardIndicator();
+      
+      // Load the first card (index 0)
+      const loadSuccess = await loadCard(0);
+      if (!loadSuccess) {
+        // Fallback to default content if card loading fails
+        inputEl.textContent = defaultContent;
+        svgInputEl.value = defaultSvgBackground;
+        highlightEditor();
+        populateColorOptions();
+        await drawSvgBackground();
+      }
       
       // Now show the page with fade-in
       document.body.classList.add('page-ready');
