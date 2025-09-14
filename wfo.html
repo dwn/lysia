@@ -128,6 +128,11 @@ const defaultSvgBackground =
     }
     
     /* ===== EDITOR MODE ===== */
+    body:not(.canvas-only) {
+      zoom: 0.75;
+      transform-origin: top left;
+    }
+    
     body:not(.canvas-only) .grid {
       display: flex;
       align-items: center;
@@ -501,9 +506,49 @@ const defaultSvgBackground =
       z-index: -1;
     }
     
+    /* ===== EDITOR TOGGLE BUTTON ===== */
+    .editor-toggle {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+    }
+    
+    .editor-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+    
+    .editor-toggle:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+      pointer-events: auto; /* Still absorb clicks when disabled */
+    }
+    
+    .editor-toggle:disabled:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: none;
+    }
+    
   </style>
 </head>
 <body>
+  <!-- Editor toggle button -->
+  <button id="editorToggle" class="editor-toggle" title="Toggle Editor Mode (⌘E)">
+    ✏️
+  </button>
+
   <main class="container-fluid">
     <div class="grid">
       <div>
@@ -643,6 +688,7 @@ a     xxx    b    yyy</div>
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
+    const editorToggleBtn = document.getElementById('editorToggle');
     let cardElement = null;
     
     // ===== CANVAS SETUP =====
@@ -1875,6 +1921,165 @@ inComment = true;
     }
 
     // ===== EVENT HANDLERS =====
+    // Editor toggle button
+    editorToggleBtn.addEventListener('click', (e) => {
+      // Always prevent default to stop card flip
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Check if we can toggle (same conditions as CMD+E)
+      const now = performance.now();
+      const isInCooldown = now < animationCooldownEnd;
+      const canToggle = document.activeElement !== inputEl && 
+                       document.activeElement !== ruleEl && 
+                       document.activeElement !== outputEl && 
+                       !isFlipping && 
+                       !currentAnim && 
+                       !isInCooldown;
+      
+      if (!canToggle) return;
+      
+      // Trigger the same logic as CMD+E
+      editorVisible = !editorVisible;
+      console.log('Editor toggle:', editorVisible, 'Card element:', cardElement);
+      
+      // Toggle Pico CSS based on mode
+      togglePicoCSS(editorVisible);
+      
+      // Handle card flip animation based on mode
+      if (!cardElement) {
+        cardElement = document.querySelector('.grid > div:first-child');
+      }
+      
+      if (!editorVisible) {
+        // Switching to presentation mode
+        console.log('Switching to presentation mode');
+        
+        // Start page fade out
+        fadeOutPage();
+        
+        // Step 1: Start first 90° rotation with fade out
+        isFlipping = true; // Disable key listeners during flip
+        if (cardElement) {
+          cardElement.style.animation = 'cardFlipOutOnly 0.4s linear forwards';
+        }
+        
+        // Step 2: Wait for first half to complete, then switch to presentation mode
+        setTimeout(async () => {
+          console.log('First 90° complete, switching to presentation');
+          
+          // Switch to presentation mode
+          document.body.classList.toggle('canvas-only', !editorVisible);
+          
+          // Update canvas background and SVG
+          const selectedColor = bgColorSelectEl.value;
+          updateCanvasBackground(selectedColor);
+          updateRovingLights(selectedColor);
+          await drawSvgBackground();
+          
+          // Clear canvas and render the content (ensure editorVisible is properly set)
+          setTimeout(() => {
+            ctx.clearRect(0, 0, width, height); // Clear any grid points from editor mode
+            const coloredItems = parseBytesWithColors(getEditorValue());
+            const { ops, visited } = buildOps(coloredItems);
+            
+            if (animateCheckbox.checked) {
+              startAnim(ops, visited);
+            } else {
+              renderInstant(ops, visited);
+            }
+          }, 10); // Small delay to ensure mode change is complete
+          
+          // Step 3: Wait for rendering to complete, then start second half flip
+          setTimeout(() => {
+            console.log('Presentation loaded, starting fade-in flip');
+            
+            // Start second half: fade in while rotating final 90°
+            if (cardElement) {
+              cardElement.style.animation = 'cardFlipIn 0.75s linear forwards';
+            }
+            
+            // Step 4: Wait for second half to complete, then finish setup
+            setTimeout(() => {
+              console.log('Second 90° complete, finishing presentation setup');
+              
+              // Final setup
+              if (cardElement) {
+                cardElement.style.opacity = '1';
+                cardElement.style.transform = 'rotateY(0deg)';
+                cardElement.style.animation = 'none';
+              }
+              
+              const canvasElement = document.getElementById('board');
+              if (canvasElement) {
+                canvasElement.style.opacity = '1';
+                canvasElement.style.visibility = 'visible';
+                canvasElement.style.display = 'block';
+              }
+              
+              fadeInPage();
+              
+              isFlipping = false; // Re-enable key listeners
+            }, 750); // Wait for second half animation
+          }, 100); // Small delay to ensure rendering completes
+        }, 400); // Wait for first half animation
+      } else {
+        // Switching to editor mode
+        console.log('Switching to editor mode');
+        
+        // Start page fade out
+        fadeOutPage();
+        
+        // Start flip-out animation (0 to 90 degrees)
+        isFlipping = true; // Disable key listeners during flip
+        if (cardElement) {
+          cardElement.style.animation = 'cardFlipToEditor 0.75s linear forwards';
+        }
+        
+        // Wait for flip-out to complete, then switch content
+        setTimeout(() => {
+          console.log('Flip-out complete, switching to editor mode');
+          
+          // Clear canvas and switch to editor mode
+          ctx.clearRect(0, 0, width, height);
+          document.body.classList.toggle('canvas-only', !editorVisible);
+          
+          // Update canvas background and SVG
+          const selectedColor = bgColorSelectEl.value;
+          updateCanvasBackground(selectedColor);
+          updateRovingLights(selectedColor);
+          drawSvgBackground();
+          gridFadeStartTime = null;
+          gridFadeComplete = false;
+          
+          // Wait a moment for setup to complete, then fade in
+          setTimeout(() => {
+            console.log('Editor mode ready, fading in');
+            
+            // Reset card element to final position (no flip-in needed)
+            if (cardElement) {
+              cardElement.style.opacity = '1';
+              cardElement.style.transform = 'rotateY(0deg)';
+              cardElement.style.animation = 'none'; // No flip-in animation
+            }
+            
+            const canvasElement = document.getElementById('board');
+            if (canvasElement) {
+              canvasElement.style.opacity = '1';
+              canvasElement.style.visibility = 'visible';
+              canvasElement.style.display = 'block';
+            }
+            
+            fadeInPage();
+            isFlipping = false;
+            
+            // Render grid immediately after flipping is complete
+            renderNow();
+          }, 100);
+        }, 750);
+      }
+    });
+    
     // Intercept default paragraph for plain newline
     inputEl.addEventListener('beforeinput', (e) => {
       if (e.inputType === 'insertParagraph') {
@@ -1925,6 +2130,19 @@ inComment = true;
     });
 
     // ===== UI FUNCTIONS =====
+    function updateEditorToggleState() {
+      const now = performance.now();
+      const isInCooldown = now < animationCooldownEnd;
+      const canToggle = document.activeElement !== inputEl && 
+                       document.activeElement !== ruleEl && 
+                       document.activeElement !== outputEl && 
+                       !isFlipping && 
+                       !currentAnim && 
+                       !isInCooldown;
+      
+      editorToggleBtn.disabled = !canToggle;
+    }
+
     function renderNow(){
       try{
         const coloredItems = parseBytesWithColors(getEditorValue());
@@ -2366,6 +2584,13 @@ inComment = true;
         });
       }
     });
+
+    // Update editor toggle button state periodically
+    setInterval(updateEditorToggleState, 100);
+    
+    // Update button state on focus changes
+    document.addEventListener('focusin', updateEditorToggleState);
+    document.addEventListener('focusout', updateEditorToggleState);
   </script>
 </body>
 </html>
