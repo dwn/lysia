@@ -114,6 +114,11 @@ const defaultSvgBackground =
       overflow-x: hidden;
     }
     
+    /* Page fade effect during mode transitions */
+    body.page-transitioning {
+      transition: opacity 0.4s ease-in-out;
+    }
+    
     body.page-ready {
       opacity: 1;
     }
@@ -607,6 +612,19 @@ a     xxx    b    yyy</div>
     function togglePicoCSS(editorMode) {
       // Pico CSS is now always loaded via the <link> tag in the head
       // No need to toggle it anymore
+    }
+    
+    // Page fade effect functions
+    function fadeOutPage() {
+      document.body.classList.add('page-transitioning');
+      document.body.style.opacity = '0';
+    }
+    
+    function fadeInPage() {
+      document.body.style.opacity = '1';
+      setTimeout(() => {
+        document.body.classList.remove('page-transitioning');
+      }, 400); // Wait for transition to complete
     }
     
     // ===== INITIALIZATION =====
@@ -2124,6 +2142,9 @@ inComment = true;
             // Switching to presentation mode
             console.log('Switching to presentation mode');
             
+            // Start page fade out
+            fadeOutPage();
+            
             // Step 1: Start first 90° rotation with fade out
             isFlipping = true; // Disable key listeners during flip
             if (cardElement) {
@@ -2174,6 +2195,10 @@ inComment = true;
                     cardElement.style.transform = 'rotateY(0deg)';
                     cardElement.style.animation = 'none';
                   }
+                  
+                  // Fade in the page
+                  fadeInPage();
+                  
                   isFlipping = false; // Re-enable key listeners
                 }, 750); // Wait for second half animation
               }, 100); // Small delay to ensure rendering completes
@@ -2182,15 +2207,18 @@ inComment = true;
             // Switching to editor mode
             console.log('Switching to editor mode');
             
-            // Start first half of flip animation (0 to 90 degrees)
+            // Start page fade out
+            fadeOutPage();
+            
+            // Start flip-out animation (0 to 90 degrees)
             isFlipping = true; // Disable key listeners during flip
             if (cardElement) {
               cardElement.style.animation = 'cardFlipToEditor 0.75s linear forwards';
             }
             
-            // Wait for first half to complete, then switch content
+            // Wait for flip-out to complete, then switch content
             setTimeout(() => {
-              console.log('First half complete, switching content');
+              console.log('Flip-out complete, switching to editor mode');
               
               // Clear canvas and switch to editor mode
               ctx.clearRect(0, 0, width, height);
@@ -2202,47 +2230,39 @@ inComment = true;
               updateRovingLights(selectedColor);
               drawSvgBackground();
               
-              // Render editor mode with grid first
-              renderNow();
-              
-              // Wait a moment for rendering to complete, then start second half of flip
+              // Wait a moment for setup to complete, then fade in
               setTimeout(() => {
-                console.log('Editor canvas loaded, starting second half flip');
+                console.log('Editor mode ready, fading in');
                 
-                // Start second half of flip animation (90 to 180 degrees)
+                // Reset card element to final position (no flip-in needed)
                 if (cardElement) {
-                  cardElement.style.animation = 'cardFlipToEditorSecondHalf 0.75s linear forwards';
+                  cardElement.style.opacity = '1';
+                  cardElement.style.transform = 'rotateY(0deg)';
+                  cardElement.style.animation = 'none';
                 }
                 
-                // Wait for second half to complete, then finish editor setup
-                setTimeout(() => {
-                  console.log('Second half complete, finishing editor setup');
-              
-                  // Reset card element to final position (0 degrees - not flipped, so text appears correctly)
-                  if (cardElement) {
-                    cardElement.style.opacity = '1';
-                    cardElement.style.transform = 'rotateY(0deg)';
-                    cardElement.style.animation = 'none';
-                  }
-                  
-                  // Also ensure canvas is visible
-                  const canvasElement = document.getElementById('board');
-                  if (canvasElement) {
-                    canvasElement.style.opacity = '1';
-                    canvasElement.style.visibility = 'visible';
-                    canvasElement.style.display = 'block';
-                  }
-                  isFlipping = false; // Re-enable key listeners
-                  
-                  // Reset grid fade state for new fade-in
-                  gridFadeStartTime = null;
-                  gridFadeComplete = false;
-                  
-                  // Now render editor mode with grid points
-                  renderNow();
-              }, 750); // Wait for second half animation
-            }, 100); // Small delay to ensure rendering completes
-          }, 750); // Wait for first half animation
+                // Also ensure canvas is visible
+                const canvasElement = document.getElementById('board');
+                if (canvasElement) {
+                  canvasElement.style.opacity = '1';
+                  canvasElement.style.visibility = 'visible';
+                  canvasElement.style.display = 'block';
+                }
+                
+                // Reset grid fade state for new fade-in
+                gridFadeStartTime = null;
+                gridFadeComplete = false;
+                
+                // Re-enable key listeners (needed for grid drawing)
+                isFlipping = false;
+                
+                // Render editor mode with grid (this will trigger grid fade-in)
+                renderNow();
+                
+                // Fade in the page
+                fadeInPage();
+              }, 100); // Small delay to ensure setup completes
+            }, 750); // Wait for flip-out animation
           }
         }
       }
