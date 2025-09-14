@@ -2022,6 +2022,10 @@ inComment = true;
       s = parseInt(sInputEl.value, 10);
       thickness = s/10;
       sValueEl.textContent = s;
+      
+      // Clear canvas before redraw to avoid visual artifacts
+      ctx.clearRect(0, 0, width, height);
+      
       renderNow();
     });
 
