@@ -711,6 +711,18 @@ a     xxx    b    yyy</div>
       };
     }
     
+    function rgbToHex(r, g, b) {
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+    
+    function adjustBrightness(hexColor, brightnessFactor) {
+      const rgb = hexToRgb(hexColor);
+      const r = Math.min(255, Math.round(rgb.r * brightnessFactor));
+      const g = Math.min(255, Math.round(rgb.g * brightnessFactor));
+      const b = Math.min(255, Math.round(rgb.b * brightnessFactor));
+      return rgbToHex(r, g, b);
+    }
+    
     function blendColors(color1, color2, ratio) {
       const rgb1 = hexToRgb(color1);
       const rgb2 = hexToRgb(color2);
@@ -1473,7 +1485,33 @@ a     xxx    b    yyy</div>
         const isInputFocused = document.activeElement === inputEl;
         const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
         // In editor mode, always use pure white. In presentation mode, blend with background
-        const textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.62);
+        let textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.62);
+        
+        // Adjust brightness based on size - smaller text needs to be brighter for readability
+        if (editorVisible) {
+          // For editor mode, use much brighter colors based on size
+          // All colors should be very bright for visibility
+          if (s <= 3) {
+            textColor = '#ffffff'; // Pure white for very small sizes
+          } else if (s <= 5) {
+            textColor = '#ffffff'; // Pure white for small sizes too
+          } else if (s <= 7) {
+            textColor = '#ffffff'; // Pure white for medium sizes
+          } else {
+            textColor = '#ffffff'; // Pure white for all sizes in editor mode
+          }
+        } else {
+          // For presentation mode, use much brighter blended colors
+          if (s <= 3) {
+            textColor = blendColors(backgroundColor, '#ffffff', 0.9); // Much more white
+          } else if (s <= 5) {
+            textColor = blendColors(backgroundColor, '#ffffff', 0.8); // More white
+          } else if (s <= 7) {
+            textColor = blendColors(backgroundColor, '#ffffff', 0.7); // Still more white
+          } else {
+            textColor = blendColors(backgroundColor, '#ffffff', 0.6); // Original ratio
+          }
+        }
 
         const a=(b>>7)&1;
         const xxx=(b>>4)&0b111;
