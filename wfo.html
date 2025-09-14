@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <script>
 const defaultContent = `
@@ -87,11 +87,9 @@ const defaultSvgBackground =
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23000'/><circle cx='50' cy='50' r='25' fill='%23fff'/></svg>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" id="pico-css">
   <style>
-    /* Force dark theme for both light and dark modes */
+    /* ===== THEME & LAYOUT ===== */
     :root, :root:not([data-theme="light"]) {
       --border-color: #666;
-      
-      /* Override Pico CSS variables to force dark theme */
       --pico-background-color: #1a1a1a;
       --pico-color: #ffffff;
       --pico-muted-border-color: #666666;
@@ -109,59 +107,22 @@ const defaultSvgBackground =
       --pico-form-element-selected-color: #ffffff;
     }
     
-    /* Override Pico CSS for dropdown display */
-    #bgColorSelect {
-      color: inherit !important;
-    }
-    
-    #bgColorSelect option {
-      color: inherit !important;
-    }
-    
-    /* Hide page initially to prevent flash */
     body {
       opacity: 0;
       transition: opacity 0.15s ease-in;
+      position: relative;
+      overflow-x: hidden;
     }
     
-    /* Show page when ready */
     body.page-ready {
       opacity: 1;
     }
     
-    /* 3D flip animation for presentation card */
-    .canvas-only {
-      perspective: 1000px;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+    #bgColorSelect, #bgColorSelect option {
+      color: inherit !important;
     }
     
-    /* Dark mode styling for presentation mode (when Pico CSS is removed) */
-    body.canvas-only {
-      background-color: #1a1a1a;
-      color: #ffffff;
-      font-family: system-ui, -apple-system, sans-serif;
-      zoom: 0.75;
-      transform-origin: top left;
-    }
-    
-    body.canvas-only main {
-      background-color: #1a1a1a;
-      color: #ffffff;
-    }
-    
-    body.canvas-only .grid {
-      background-color: #1a1a1a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    
-    /* Center canvas vertically in editor mode */
+    /* ===== EDITOR MODE ===== */
     body:not(.canvas-only) .grid {
       display: flex;
       align-items: center;
@@ -169,20 +130,12 @@ const defaultSvgBackground =
       min-height: 100vh;
     }
     
-    /* Ensure canvas doesn't go off-screen in editor mode */
     body:not(.canvas-only) #canvasWrapper {
-      max-height: calc(100vh - 200px); /* Leave room for other elements */
+      max-height: calc(100vh - 200px);
       margin: 20px 0;
     }
     
-    .canvas-only .grid > div:first-child {
-      transform-style: preserve-3d;
-      animation: none; /* Remove default animation */
-      position: relative;
-      object-fit: contain;
-    }
-    
-    /* Glow effect emanating from behind the card */
+    /* ===== ANIMATIONS ===== */
     .canvas-only .grid > div:first-child::before {
       content: '';
       position: absolute;
@@ -203,9 +156,17 @@ const defaultSvgBackground =
         transform: translateX(100vw) rotateY(90deg);
         opacity: 0;
       }
+      25% {
+        transform: translateX(75vw) rotateY(67.5deg);
+        opacity: 0.25;
+      }
       50% {
         transform: translateX(50vw) rotateY(45deg);
         opacity: 0.5;
+      }
+      75% {
+        transform: translateX(25vw) rotateY(22.5deg);
+        opacity: 0.75;
       }
       100% {
         transform: translateX(0) rotateY(0deg);
@@ -218,9 +179,17 @@ const defaultSvgBackground =
         transform: translateX(0) rotateY(0deg);
         opacity: 1;
       }
+      25% {
+        transform: translateX(-25vw) rotateY(-22.5deg);
+        opacity: 0.75;
+      }
       50% {
         transform: translateX(-50vw) rotateY(-45deg);
         opacity: 0.5;
+      }
+      75% {
+        transform: translateX(-75vw) rotateY(-67.5deg);
+        opacity: 0.25;
       }
       100% {
         transform: translateX(-100vw) rotateY(-90deg);
@@ -233,9 +202,17 @@ const defaultSvgBackground =
         transform: translateX(0) rotateY(0deg);
         opacity: 1;
       }
+      25% {
+        transform: translateX(25vw) rotateY(22.5deg);
+        opacity: 0.75;
+      }
       50% {
         transform: translateX(50vw) rotateY(45deg);
         opacity: 0.5;
+      }
+      75% {
+        transform: translateX(75vw) rotateY(67.5deg);
+        opacity: 0.25;
       }
       100% {
         transform: translateX(100vw) rotateY(90deg);
@@ -248,9 +225,17 @@ const defaultSvgBackground =
         transform: translateX(-100vw) rotateY(-90deg);
         opacity: 0;
       }
+      25% {
+        transform: translateX(-75vw) rotateY(-67.5deg);
+        opacity: 0.25;
+      }
       50% {
         transform: translateX(-50vw) rotateY(-45deg);
         opacity: 0.5;
+      }
+      75% {
+        transform: translateX(-25vw) rotateY(-22.5deg);
+        opacity: 0.75;
       }
       100% {
         transform: translateX(0) rotateY(0deg);
@@ -258,31 +243,106 @@ const defaultSvgBackground =
       }
     }
     
-    @keyframes glowPulse {
-      0%, 100% {
-        opacity: 0.7;
-        transform: scale(1);
+    @keyframes cardFlipToEditor {
+      0% {
+        transform: rotateY(0deg);
+        opacity: 1;
       }
       50% {
-        opacity: 0.9;
-        transform: scale(1.05);
+        transform: rotateY(-90deg);
+        opacity: 0;
+      }
+      100% {
+        transform: rotateY(-90deg);
+        opacity: 0;
       }
     }
     
-    /* Canvas-specific styles only */
+    @keyframes cardFlipToEditorSecondHalf {
+      0% {
+        transform: rotateY(-90deg);
+        opacity: 0;
+      }
+      100% {
+        transform: rotateY(0deg);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes cardFlipFromEditorFirstHalf {
+      0% {
+        transform: rotateY(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: rotateY(90deg);
+        opacity: 0;
+      }
+      100% {
+        transform: rotateY(90deg);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes cardFlipFromEditorSecondHalf {
+      0% {
+        transform: rotateY(90deg);
+        opacity: 0;
+      }
+      100% {
+        transform: rotateY(0deg);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes cardFadeIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.85);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    @keyframes cardFlipFromEditor {
+      0% {
+        transform: rotateY(-90deg);
+        opacity: 0;
+      }
+      25% {
+        transform: rotateY(-67.5deg);
+        opacity: 0.25;
+      }
+      50% {
+        transform: rotateY(-45deg);
+        opacity: 0.5;
+      }
+      75% {
+        transform: rotateY(-22.5deg);
+        opacity: 0.75;
+      }
+      100% {
+        transform: rotateY(0deg);
+        opacity: 1;
+      }
+    }
+    
+    /* ===== CANVAS STYLES ===== */
     canvas { 
       width: 600px; 
       height: 1000px; 
+      min-width: 600px;
       display: block;
       position: relative;
       z-index: 1;
-      /* Enable hardware acceleration */
       transform: translateZ(0);
       will-change: transform;
     }
     
-    
-    .mono-grid{ 
+    /* ===== EDITOR STYLES ===== */
+    .mono-grid { 
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
       white-space: pre; 
     }
@@ -299,13 +359,12 @@ const defaultSvgBackground =
       background: var(--bg-color);
       color: var(--text-color);
       overflow: auto;
-      user-select: text; /* Ensure text selection is enabled */
+      user-select: text;
       -webkit-user-select: text;
       -moz-user-select: text;
       -ms-user-select: text;
     }
     
-    /* Non-editable output styling */
     #strOutput {
       background: #6c757d;
       border: 1px solid #495057;
@@ -322,16 +381,15 @@ const defaultSvgBackground =
       border-radius: 3px;
     }
     
-    .current-letter {
-      /* Bold text is handled by <strong> tag, no additional styling needed */
-    }
-    
     .byte { font-weight: 600; }
-    
-    /* Size subscript alignment */
     sub { vertical-align: sub; font-size: 0.8em; }
     
-    /* Responsive layout fixes */
+    /* ===== RESPONSIVE LAYOUT ===== */
+    .grid {
+      height: auto !important;
+      min-height: auto !important;
+    }
+    
     @media (max-width: 768px) {
       .grid {
         grid-template-columns: 1fr;
@@ -339,24 +397,16 @@ const defaultSvgBackground =
       }
     }
     
-    /* Prevent overlap in edit mode at medium widths */
     @media (max-width: 1000px) and (min-width: 769px) {
       .grid {
         grid-template-columns: auto 1fr;
         gap: 1rem;
       }
-      
       aside {
         min-width: 300px;
       }
     }
     
-    /* Ensure canvas doesn't shrink below its natural width */
-    canvas {
-      min-width: 600px;
-    }
-    
-    /* Better grid behavior for wider screens */
     @media (min-width: 1001px) {
       .grid {
         grid-template-columns: auto 1fr;
@@ -364,16 +414,39 @@ const defaultSvgBackground =
       }
     }
     
-    /* Fix grid height to prevent scroll */
-    .grid {
-      height: auto !important;
-      min-height: auto !important;
+    /* ===== PRESENTATION MODE ===== */
+    .canvas-only {
+      perspective: 1000px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
     
-    /* Canvas centering when sidebar is hidden */
-    .canvas-only .grid {
+    body.canvas-only {
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      zoom: 0.75;
+      transform-origin: top left;
+    }
+    
+    body.canvas-only main,
+    body.canvas-only .grid {
+      color: #ffffff;
       display: flex;
+      align-items: center;
       justify-content: center;
+      min-height: 100vh;
+    }
+    
+    .canvas-only .grid > div:first-child {
+      transform-style: preserve-3d;
+      animation: none;
+      position: relative;
+      object-fit: contain;
+      transform-origin: center center;
+      perspective: 1500px;
     }
     
     .canvas-only aside {
@@ -503,7 +576,7 @@ a     xxx    b    yyy</div>
             <label for="svgInput">Background Svg</label>
             <input id="svgInput" type="url" placeholder="https://example.com/image.svg or paste SVG code directly">
             <div id="svgPreview" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; border-radius: 4px; background: white; min-height: 100px; display: none;">
-              <div id="svgPreviewContent" style="background: linear-gradient(135deg, #f8f8f8 0%, #d0d0d0 100%); padding: 10px; border-radius: 4px;"></div>
+              <div id="svgPreviewContent" style="background: linear-gradient(135deg, #f8f8f8 0%, #a0a0a0 100%); padding: 10px; border-radius: 4px;"></div>
             </div>
           </div>
         </details>
@@ -530,61 +603,54 @@ a     xxx    b    yyy</div>
   </div>
   </main>
   <script>
-    // Toggle Pico CSS based on mode
+    // Keep Pico CSS loaded at all times for consistent dark mode
     function togglePicoCSS(editorMode) {
-      const picoCSS = document.getElementById('pico-css');
-      if (editorMode) {
-        // Load Pico CSS for editor mode
-        if (!picoCSS) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css';
-          link.id = 'pico-css';
-          document.head.appendChild(link);
-        }
-      } else {
-        // Remove Pico CSS for presentation mode
-        if (picoCSS) {
-          picoCSS.remove();
-        }
-      }
+      // Pico CSS is now always loaded via the <link> tag in the head
+      // No need to toggle it anymore
     }
     
-    // Initialize Pico CSS state
+    // ===== INITIALIZATION =====
     let editorVisible = false;
+    let isFlipping = false; // Flag to track if card is currently flipping
     let italicsMode = true;
-    let s=8;let thickness=s/10;const pad={left:1,top:1,right:1};const start={xi:pad.left,yi:pad.top};
+    let s = 8;
+    let thickness = s / 10;
+    const pad = { left: 1, top: 1, right: 1 };
+    const start = { xi: pad.left, yi: pad.top };
+    
     togglePicoCSS(editorVisible);
-    // DOM element references
-    const canvas=document.getElementById('board');const ctx=canvas.getContext('2d', { alpha: true });
+    
+    // ===== DOM REFERENCES =====
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d', { alpha: true });
     const bgColorSelectEl = document.getElementById('bgColorSelect');
     const svgPreview = document.getElementById('svgPreview');
     const svgPreviewContent = document.getElementById('svgPreviewContent');
     let svgBackground = document.getElementById('svgBackground');
     const canvasWrapper = document.getElementById('canvasWrapper');
-    const inputEl=document.getElementById('strInput');
-    const ruleEl=document.getElementById('strRule');
-    const outputEl=document.getElementById('strOutput');
+    const inputEl = document.getElementById('strInput');
+    const ruleEl = document.getElementById('strRule');
+    const outputEl = document.getElementById('strOutput');
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
-    let cardElement = null; // Will be set when needed
+    let cardElement = null;
     
-    const cssW=600,cssH=1000;
-    const dpr=window.devicePixelRatio||1;
-    if(dpr!==1){canvas.width=cssW*dpr;canvas.height=cssH*dpr;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';ctx.scale(dpr,dpr);}    
-    const width=cssW,height=cssH;let gridX=Math.floor(width/s);
+    // ===== CANVAS SETUP =====
+    const cssW = 600, cssH = 1000;
+    const dpr = window.devicePixelRatio || 1;
+    if (dpr !== 1) {
+      canvas.width = cssW * dpr;
+      canvas.height = cssH * dpr;
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      ctx.scale(dpr, dpr);
+    }
+    const width = cssW, height = cssH;
+    let gridX = Math.floor(width / s);
     
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.textRenderingOptimization = 'optimizeQuality';
-    
-    let currentLetterHexPairIndex = 0;
-
+    // ===== CONSTANTS =====
     const COLORS = ['#000000','#8c0004','#f80007','#f34001','#faaf00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
-    
     const OUTLINE_THICKNESS_MULTIPLIER = 12;
     const MAIN_THICKNESS_MULTIPLIER = 4;
     const POINT_OUTLINE_THICKNESS_MULTIPLIER = 6;
@@ -592,6 +658,16 @@ a     xxx    b    yyy</div>
     const END_MARKER_RADIUS_MULTIPLIER = 3;
     const DEFAULT_PANEL_COLOR_INDEX = 1;
     
+    let currentLetterHexPairIndex = 0;
+    
+    // ===== CANVAS CONTEXT SETUP =====
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.textRenderingOptimization = 'optimizeQuality';
+    
+    // ===== DRAWING FUNCTIONS =====
     function drawOutline(isPoint = false) {
       if (editorVisible) return;
       
@@ -1029,36 +1105,67 @@ a     xxx    b    yyy</div>
       return commands;
     }
     
+    let gridFadeStartTime = null;
+    let gridFadeComplete = false;
+    
     function drawGridPoints(spacing=s){
-      // Only clear the canvas content if we're drawing grid points (edit mode)
-      if (editorVisible) {
-        ctx.clearRect(0,0,width,height);
+      // Only draw grid points in edit mode and not currently flipping
+      if (editorVisible && !isFlipping) {
         ctx.save();
-        const baseColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-color').trim();
-        const r=thickness*3;
+        const baseColor = '#666666';
+        const r = thickness * 3;
         
-        for(let y=0;y<=height;y+=spacing){
+        // Calculate fade-in opacity
+        let fadeOpacity = 1;
+        if (!gridFadeComplete) {
+          if (gridFadeStartTime === null) {
+            gridFadeStartTime = performance.now();
+            fadeOpacity = 0; // Start invisible
+          } else {
+            const fadeDuration = 1200; // 1.2s fade-in
+            const elapsed = performance.now() - gridFadeStartTime;
+            fadeOpacity = Math.min(elapsed / fadeDuration, 1);
+            
+            // If fade is complete, mark it as done
+            if (fadeOpacity >= 1) {
+              gridFadeComplete = true;
+            }
+          }
+        }
+        
+        for(let y = 0; y <= height; y += spacing){
           // Determine if this row is in an even or odd text row space
           const textRowIndex = Math.floor(y / (8 * s));
           const isEvenTextRow = textRowIndex % 2 === 0;
           
-          // Slightly adjust brightness for alternating text rows
-          const brightness = isEvenTextRow ? 0.15 : 0.1;
+          // Use different colors for alternating text rows
+          const rowColor = isEvenTextRow ? '#6e6e6e' : '#565656';
           
-          ctx.fillStyle = baseColor;
-          ctx.globalAlpha = brightness;
+          ctx.fillStyle = rowColor;
+          ctx.globalAlpha = fadeOpacity;
           
-          ctx.beginPath();
-          for(let x=0;x<=width;x+=spacing){
-            const point = applyItalicsTransform({x,y});
-            ctx.moveTo(point.x+r,point.y);
-            ctx.arc(point.x,point.y,r,0,Math.PI*2);
+          for(let x = 0; x <= width; x += spacing){
+            const point = applyItalicsTransform({x, y});
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
+            ctx.fill();
           }
-          ctx.fill();
         }
         ctx.restore();
+        
+        // If fade is not complete, schedule another render
+        if (!gridFadeComplete) {
+          requestAnimationFrame(() => {
+            renderNow();
+          });
+        }
+      } else {
+        // Reset fade state when not in editor mode or when flipping
+        gridFadeStartTime = null;
+        gridFadeComplete = false;
       }
     }
+    
     function preMoveWrap(xi,yi,dx){const maxX=gridX-pad.right;if(dx>0&&(xi+dx)>maxX){xi=pad.left;yi+=8;}return{xi,yi};}
     function snapToLineTop(yi){return pad.top+8*Math.floor((yi-pad.top)/8);}    
     function normAngle(a){const twoPI=Math.PI*2;while(a<=-Math.PI)a+=twoPI;while(a>Math.PI)a-=twoPI;return a;}
@@ -1119,12 +1226,16 @@ a     xxx    b    yyy</div>
 
     // --- Animation state ---
     let currentAnim = null; // { timer, ops, idx, visited }
+    let animationCooldownEnd = 0; // timestamp when animation cooldown ends
+    const ANIMATION_COOLDOWN_MS = 1000; // 1 second cooldown after animation finishes
     const STEP_DELAY_MS = 20; // delay between each drawing command
     const DRAW_MS = STEP_DELAY_MS;       // how long each piece takes to draw
     
     function stopAnim(){
       if (currentAnim && currentAnim.rafId) cancelAnimationFrame(currentAnim.rafId);
       currentAnim = null;
+      // Start cooldown period after animation finishes
+      animationCooldownEnd = performance.now() + ANIMATION_COOLDOWN_MS;
     }
     
     function startAnim(ops, visited){
@@ -1168,10 +1279,11 @@ a     xxx    b    yyy</div>
     function drawFrameProgressive(now, startedCount, ops, firstVisibleAt, visited, isAnimating = true){
       // Reset max Y tracking
       
-      // Only draw grid points in edit mode
-      if (editorVisible) {
-      drawGridPoints(s);
+      // Only draw grid points in edit mode and not flipping
+      if (editorVisible && !isFlipping) {
+        drawGridPoints(s);
       }
+      
       // Don't set lineWidth here - let each drawOp set its own thickness
 
       // First pass: draw all outlines
@@ -1355,8 +1467,8 @@ a     xxx    b    yyy</div>
 
         // For current letter, use different colors for each hex pair (skip invisible moves)
         let stroke;
-        if (isCurrentLetter && !isInvisibleMove) {
-          // Use the tracked hex pair index within current letter
+        if (isCurrentLetter && !isInvisibleMove && !editorVisible) {
+          // Use the tracked hex pair index within current letter (only in presentation mode)
           const colorIndex = currentLetterHexPairIndex % HEX_PAIR_COLORS.length;
           stroke = HEX_PAIR_COLORS[colorIndex];
           currentLetterHexPairIndex++; // Increment for next hex pair
@@ -1425,10 +1537,11 @@ a     xxx    b    yyy</div>
     function renderInstant(ops, visited, skipHeightUpdate = false){
       // Reset max Y tracking
       
-      // Only draw grid points in edit mode
-      if (editorVisible) {
-      drawGridPoints(s);
+      // Only draw grid points in edit mode and not flipping
+      if (editorVisible && !isFlipping) {
+        drawGridPoints(s);
       }
+      
       // Don't set lineWidth here - let each drawOp set its own thickness
       
       // First pass: draw all outlines
@@ -1844,6 +1957,14 @@ inComment = true;
     updateCanvasBackground(initialColor);
     updateRovingLights(initialColor);
     
+    // Add fade-in animation when page loads
+    window.addEventListener('load', () => {
+      const cardElement = document.querySelector('.grid > div:first-child');
+      if (cardElement) {
+        cardElement.style.animation = 'cardFadeIn 1.2s ease-out forwards';
+      }
+    });
+    
     // Animate checkbox event listener
     animateCheckbox.addEventListener('change', () => {
       if (!editorVisible) {
@@ -1911,11 +2032,10 @@ inComment = true;
       }
       
       if (cardElement) {
-        cardElement.style.animation = `${flipOutAnimation} 1.5s linear forwards`;
+        cardElement.style.animation = `${flipOutAnimation} 0.8s linear forwards`;
         
         setTimeout(() => {
-          cardElement.style.animation = `${flipInAnimation} 1.5s linear forwards`;
-          isFlippingOut = false;
+          cardElement.style.animation = `${flipInAnimation} 0.8s linear forwards`;
           
           const coloredItems = parseBytesWithColors(getEditorValue());
           const { ops, visited } = buildOps(coloredItems);
@@ -1925,17 +2045,51 @@ inComment = true;
           } else {
             renderInstant(ops, visited);
           }
-        }, 1500);
+          
+          // Re-enable interactions after flip in completes
+          setTimeout(() => {
+            isFlippingOut = false;
+          }, 800); // Wait for flip in animation to complete
+        }, 800);
       }
     }
     
     // Consolidated input handlers
-    document.addEventListener('click', () => !editorVisible && !isFlippingOut && handleCardFlip('left'));
+    document.addEventListener('click', (e) => {
+      if (editorVisible || isFlippingOut) return;
+      
+      // Find the card element to get its position
+      const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      if (!cardElement) return;
+      
+      // Get card's bounding rectangle
+      const cardRect = cardElement.getBoundingClientRect();
+      const cardCenterX = cardRect.left + cardRect.width / 2;
+      
+      // Determine click position relative to card center
+      const clickX = e.clientX;
+      const direction = clickX < cardCenterX ? 'left' : 'right';
+      
+      handleCardFlip(direction);
+    });
     document.addEventListener('touchstart', (e) => {
-      if (!editorVisible && !isFlippingOut) {
-        e.preventDefault();
-        handleCardFlip('left');
-      }
+      if (editorVisible || isFlippingOut) return;
+      
+      e.preventDefault();
+      
+      // Find the card element to get its position
+      const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      if (!cardElement) return;
+      
+      // Get card's bounding rectangle
+      const cardRect = cardElement.getBoundingClientRect();
+      const cardCenterX = cardRect.left + cardRect.width / 2;
+      
+      // Determine touch position relative to card center
+      const touchX = e.touches[0].clientX;
+      const direction = touchX < cardCenterX ? 'left' : 'right';
+      
+      handleCardFlip(direction);
     });
 
     document.addEventListener('keydown', async (e) => {
@@ -1949,67 +2103,146 @@ inComment = true;
       
       // Handle Ctrl+E or Cmd+E for editor toggle
       if (e.key.toLowerCase() === 'e' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
-        // Only toggle if not typing in the editor
-        if (document.activeElement !== inputEl && document.activeElement !== ruleEl && document.activeElement !== outputEl) {
+        // Only toggle if not typing in the editor, not currently flipping, no animation running, and cooldown period has ended
+        const now = performance.now();
+        const isInCooldown = now < animationCooldownEnd;
+        if (document.activeElement !== inputEl && document.activeElement !== ruleEl && document.activeElement !== outputEl && !isFlipping && !currentAnim && !isInCooldown) {
           e.preventDefault();
           editorVisible = !editorVisible;
           
           // Toggle Pico CSS based on mode
           togglePicoCSS(editorVisible);
           
-          // Toggle body class for styling
-          document.body.classList.toggle('canvas-only', !editorVisible);
+          // Handle card flip animation based on mode
+          if (!cardElement) {
+            cardElement = document.querySelector('.grid > div:first-child');
+          }
           
-          // Add initial flip-in animation when switching to presentation mode
+          console.log('Editor toggle:', editorVisible, 'Card element:', cardElement);
+          
           if (!editorVisible) {
-            if (!cardElement) {
-              cardElement = document.querySelector('.canvas-only .grid > div:first-child');
-            }
+            // Switching to presentation mode
+            console.log('Switching to presentation mode');
+            
+            // Step 1: Start first 90° rotation with fade out
+            isFlipping = true; // Disable key listeners during flip
             if (cardElement) {
-              cardElement.style.animation = 'cardFlipIn 1.5s linear forwards';
+              cardElement.style.animation = 'cardFlipFromEditorFirstHalf 0.75s linear forwards';
             }
-          }
-          
-          // If switching to presentation mode, wait for SVG to load before starting animation
-          if (!editorVisible) {
-            // Update canvas background first
-            const selectedColor = bgColorSelectEl.value;
-            updateCanvasBackground(selectedColor);
             
-            // Wait for SVG to load before starting presentation animation
-            await drawSvgBackground();
-            
-            // Now start the presentation animation with fade-in
-            document.body.classList.toggle('canvas-only', !editorVisible);
-            document.body.classList.add('page-ready');
+            // Step 2: Wait for first half to complete, then switch to presentation mode
+            setTimeout(async () => {
+              console.log('First 90° complete, switching to presentation');
+              
+              // Clear canvas and switch to presentation mode
+              ctx.clearRect(0, 0, width, height);
+              document.body.classList.toggle('canvas-only', !editorVisible);
+              
+              // Update canvas background
+              const selectedColor = bgColorSelectEl.value;
+              updateCanvasBackground(selectedColor);
+              
+              // Wait for SVG to load
+              await drawSvgBackground();
+              
+              // Render presentation mode
+              const coloredItems = parseBytesWithColors(getEditorValue());
+              const { ops, visited } = buildOps(coloredItems);
+              
+              if (animateCheckbox.checked) {
+                startAnim(ops, visited);
+              } else {
+                renderInstant(ops, visited);
+              }
+              
+              // Step 3: Wait for rendering to complete, then start second half flip
+              setTimeout(() => {
+                console.log('Presentation loaded, starting fade-in flip');
+                
+                // Start second half: fade in while rotating final 90°
+                if (cardElement) {
+                  cardElement.style.animation = 'cardFlipFromEditorSecondHalf 0.75s linear forwards';
+                }
+                
+                // Step 4: Wait for second half to complete, then finish setup
+                setTimeout(() => {
+                  console.log('Second 90° complete, finishing presentation setup');
+                  
+                  // Reset card element to final position (0 degrees)
+                  if (cardElement) {
+                    cardElement.style.opacity = '1';
+                    cardElement.style.transform = 'rotateY(0deg)';
+                    cardElement.style.animation = 'none';
+                  }
+                  isFlipping = false; // Re-enable key listeners
+                }, 750); // Wait for second half animation
+              }, 100); // Small delay to ensure rendering completes
+            }, 750); // Wait for first half animation
           } else {
-            // Switching to editor mode - immediate toggle
-            document.body.classList.toggle('canvas-only', !editorVisible);
+            // Switching to editor mode
+            console.log('Switching to editor mode');
             
-            // Update canvas background
-            const selectedColor = bgColorSelectEl.value;
-            updateCanvasBackground(selectedColor);
-            updateRovingLights(selectedColor);
-            await drawSvgBackground();
-          }
-          
-          // Clear canvas when switching modes to remove any lingering grid points
-          ctx.clearRect(0, 0, width, height);
-          
-          
-          // Always animate in non-edit mode, static in edit mode
-          if (!editorVisible) {
-            const coloredItems = parseBytesWithColors(getEditorValue());
-            const { ops, visited } = buildOps(coloredItems);
-            
-            // Check if animation is enabled
-            if (animateCheckbox.checked) {
-            startAnim(ops, visited);
-            } else {
-              renderInstant(ops, visited);
+            // Start first half of flip animation (0 to 90 degrees)
+            isFlipping = true; // Disable key listeners during flip
+            if (cardElement) {
+              cardElement.style.animation = 'cardFlipToEditor 0.75s linear forwards';
             }
-          } else {
-            renderNow(); // redraw canvas (grid visibility will be handled in drawGridPoints)
+            
+            // Wait for first half to complete, then switch content
+            setTimeout(() => {
+              console.log('First half complete, switching content');
+              
+              // Clear canvas and switch to editor mode
+              ctx.clearRect(0, 0, width, height);
+              document.body.classList.toggle('canvas-only', !editorVisible);
+              
+              // Update canvas background and SVG
+              const selectedColor = bgColorSelectEl.value;
+              updateCanvasBackground(selectedColor);
+              updateRovingLights(selectedColor);
+              drawSvgBackground();
+              
+              // Render editor mode with grid first
+              renderNow();
+              
+              // Wait a moment for rendering to complete, then start second half of flip
+              setTimeout(() => {
+                console.log('Editor canvas loaded, starting second half flip');
+                
+                // Start second half of flip animation (90 to 180 degrees)
+                if (cardElement) {
+                  cardElement.style.animation = 'cardFlipToEditorSecondHalf 0.75s linear forwards';
+                }
+                
+                // Wait for second half to complete, then finish editor setup
+                setTimeout(() => {
+                  console.log('Second half complete, finishing editor setup');
+              
+                  // Reset card element to final position (0 degrees - not flipped, so text appears correctly)
+                  if (cardElement) {
+                    cardElement.style.opacity = '1';
+                    cardElement.style.transform = 'rotateY(0deg)';
+                    cardElement.style.animation = 'none';
+                  }
+                  
+                  // Also ensure canvas is visible
+                  const canvasElement = document.getElementById('board');
+                  if (canvasElement) {
+                    canvasElement.style.opacity = '1';
+                    canvasElement.style.visibility = 'visible';
+                    canvasElement.style.display = 'block';
+                  }
+                  isFlipping = false; // Re-enable key listeners
+                  
+                  // Reset grid fade state for new fade-in
+                  gridFadeStartTime = null;
+                  gridFadeComplete = false;
+                  
+                  // Now render editor mode with grid points
+                  renderNow();
+              }, 750); // Wait for second half animation
+            }, 100); // Small delay to ensure rendering completes
+          }, 750); // Wait for first half animation
           }
         }
       }
@@ -2058,3 +2291,4 @@ inComment = true;
   </script>
 </body>
 </html>
+
