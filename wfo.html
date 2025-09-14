@@ -541,18 +541,18 @@ const defaultSvgBackground =
 </head>
 <body>
   <!-- Editor toggle button -->
-  <button id="editorToggle" class="editor-toggle" title="Toggle Editor Mode (⌘E)">
+  <button id="editorToggle" class="editor-toggle" title="Toggle Editor Mode (⌘E)" style="left: 20px; width: 80px;">
     ✏️
   </button>
 
   <!-- Export button -->
-  <button id="exportButton" class="editor-toggle" title="Export Settings" style="left: 80px;">
+  <button id="exportButton" class="editor-toggle" title="Export Settings" style="left: 120px; width: 80px;">
     📁
   </button>
 
   <!-- Card indicator -->
-  <div id="cardIndicator" class="editor-toggle" style="left: 160px; font-size: 12px; padding: 4px 8px;">
-    Card 0/0
+  <div id="cardIndicator" class="editor-toggle" style="left: auto; right: 20px; background: transparent; width: 180px; text-align: center;">
+    0 / 0
   </div>
 
   <main class="container-fluid">
@@ -1949,6 +1949,17 @@ inComment = true;
       // Update button icon to reflect new state
       updateEditorToggleIcon();
       
+      // Show/hide card indicator based on editor mode
+      if (cardIndicator) {
+        if (editorVisible) {
+          // Hide immediately when entering editor mode
+          cardIndicator.style.display = 'none';
+        } else {
+          // Don't show yet - will be shown when presentation mode is fully loaded
+          cardIndicator.style.display = 'none';
+        }
+      }
+      
       // Toggle Pico CSS based on mode
       
       // Handle card flip animation based on mode
@@ -1998,6 +2009,11 @@ inComment = true;
           // Step 3: Wait for rendering to complete, then start second half flip
           setTimeout(() => {
             console.log('Presentation loaded, starting fade-in flip');
+            
+            // Show card indicator now that presentation mode is loaded
+            if (cardIndicator) {
+              cardIndicator.style.display = 'block';
+            }
             
             // Start second half: fade in while rotating final 90°
             if (cardElement) {
@@ -2236,7 +2252,7 @@ inComment = true;
     
     function updateCardIndicator() {
       if (cardIndicator) {
-        cardIndicator.textContent = `${currentCardIndex}/${maxCardIndex}`;
+        cardIndicator.textContent = `${currentCardIndex} / ${maxCardIndex}`;
       }
     }
 
@@ -2435,8 +2451,19 @@ inComment = true;
     });
     
     // Export button event listener
-    exportButton.addEventListener('click', () => {
+    exportButton.addEventListener('click', (e) => {
+      // Always prevent default to stop card flip
+      e.preventDefault();
+      e.stopPropagation();
       exportSettings();
+    });
+    
+    // Card indicator event listener (prevents card flip when clicked)
+    cardIndicator.addEventListener('click', (e) => {
+      // Always prevent default to stop card flip
+      e.preventDefault();
+      e.stopPropagation();
+      // No action needed - just prevent card flip
     });
     
     sInputEl.addEventListener('input', () => {
@@ -2583,6 +2610,11 @@ inComment = true;
     window.addEventListener('load', async () => {
       // Start in non-edit mode (canvas-only)
       document.body.classList.add('canvas-only');
+      
+      // Initialize card indicator visibility (visible in presentation mode)
+      if (cardIndicator) {
+        cardIndicator.style.display = 'block';
+      }
       
       // Initialize card system
       maxCardIndex = await findMaxCardIndex();
