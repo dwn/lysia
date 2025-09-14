@@ -80,7 +80,6 @@ aa 05 d5 59 91 10 02|88 8a 40 10 f8 e8 89 40 10|88 8a 05 d5 59 91 10 02|88 aa 02
 `;
 const defaultSvgBackground = 
 `https://vault.biltmoretoday.com/storage/v1/object/public/image/tree.svg`;
-//`https://cdn.svgator.com/images/2023/03/animated-origami-bird-flying-.svg`;
 </script>
   <meta charset="utf-8" />
   <title>Wfo Writer</title>
@@ -382,9 +381,6 @@ const defaultSvgBackground =
       border-radius: 3px;
     }
     
-    .byte { font-weight: 600; }
-    sub { vertical-align: sub; font-size: 0.8em; }
-    
     /* ===== RESPONSIVE LAYOUT ===== */
     .grid {
       height: auto !important;
@@ -654,11 +650,6 @@ a     xxx    b    yyy</div>
   </div>
   </main>
   <script>
-    // Keep Pico CSS loaded at all times for consistent dark mode
-    function togglePicoCSS(editorMode) {
-      // Pico CSS is now always loaded via the <link> tag in the head
-      // No need to toggle it anymore
-    }
     
     // Page fade effect functions
     function fadeOutPage() {
@@ -687,7 +678,6 @@ a     xxx    b    yyy</div>
     let currentCardIndex = 0;
     let maxCardIndex = 0; // Will be determined by checking available cards
     
-    togglePicoCSS(editorVisible);
     
     // ===== DOM REFERENCES =====
     const canvas = document.getElementById('board');
@@ -769,14 +759,6 @@ a     xxx    b    yyy</div>
     
     function rgbToHex(r, g, b) {
       return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-    }
-    
-    function adjustBrightness(hexColor, brightnessFactor) {
-      const rgb = hexToRgb(hexColor);
-      const r = Math.min(255, Math.round(rgb.r * brightnessFactor));
-      const g = Math.min(255, Math.round(rgb.g * brightnessFactor));
-      const b = Math.min(255, Math.round(rgb.b * brightnessFactor));
-      return rgbToHex(r, g, b);
     }
     
     function blendColors(color1, color2, ratio) {
@@ -882,10 +864,8 @@ a     xxx    b    yyy</div>
       
       // Check if SVG contains z-axis rotations (spins)
       const hasZRotation = checkForZAxisRotation(svgContent);
-      console.log('SVG has animated rotation (spinning):', hasZRotation);
       
       // Keep original viewBox - CSS object-fit will handle the scaling
-      //processedSvg = processedSvg.replace(/viewBox="[^"]*"/g, `viewBox="0 0 1200 1200"`);
       
       if (editorVisible) {
         // Show SVG in preview box when in editor mode
@@ -1965,13 +1945,11 @@ inComment = true;
       
       // Trigger the same logic as CMD+E
       editorVisible = !editorVisible;
-      console.log('Editor toggle:', editorVisible, 'Card element:', cardElement);
       
       // Update button icon to reflect new state
       updateEditorToggleIcon();
       
       // Toggle Pico CSS based on mode
-      togglePicoCSS(editorVisible);
       
       // Handle card flip animation based on mode
       if (!cardElement) {
@@ -2061,6 +2039,13 @@ inComment = true;
         isFlipping = true; // Disable key listeners during flip
         if (cardElement) {
           cardElement.style.animation = 'cardFlipToEditor 0.75s linear forwards';
+          
+          // Hide SVG background at the halfway point of the flip (when card is at 45 degrees)
+          setTimeout(() => {
+            if (svgBackground) {
+              svgBackground.style.display = 'none';
+            }
+          }, 375); // Half of 750ms animation
         }
         
         // Wait for flip-out to complete, then switch content
@@ -2146,7 +2131,6 @@ inComment = true;
     inputEl.addEventListener('paste', (e) => {
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text');
-      console.log('Pasting text:', text);
       insertTextAtCaret(inputEl, text);
       // Delay highlighting to allow selection to be preserved
       setTimeout(() => {
@@ -2594,11 +2578,6 @@ inComment = true;
       }
     });
 
-    // Window resize listener to reposition SVG background
-    window.addEventListener('resize', () => {
-      if (!editorVisible) {
-      }
-    });
 
     // Initial
     window.addEventListener('load', async () => {
