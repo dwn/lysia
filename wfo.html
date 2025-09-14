@@ -1334,6 +1334,10 @@ a     xxx    b    yyy</div>
     
     function startAnim(ops, visited){
       stopAnim();
+      
+      // Clear canvas before starting animation
+      ctx.clearRect(0, 0, width, height);
+      
       const animStart = performance.now();
 
       // When each op *starts* becoming visible
@@ -1586,11 +1590,11 @@ a     xxx    b    yyy</div>
 
         // For current letter, use different colors for each hex pair (skip invisible moves)
         let stroke;
-        if (isCurrentLetter && !isInvisibleMove && !editorVisible) {
-          // Use the tracked hex pair index within current letter (only in presentation mode)
+        if (isCurrentLetter && !isInvisibleMove) {
+          // Use the tracked hex pair index within current letter (both editor and presentation modes)
           const colorIndex = currentLetterHexPairIndex % HEX_PAIR_COLORS.length;
           stroke = HEX_PAIR_COLORS[colorIndex];
-          currentLetterHexPairIndex++; // Increment for next hex pair
+          currentLetterHexPairIndex++; // Increment for next visible hex pair
         } else {
           stroke = textColor;
         }
@@ -1654,6 +1658,9 @@ a     xxx    b    yyy</div>
     }
 
     function renderInstant(ops, visited, skipHeightUpdate = false){
+      // Clear canvas before redrawing to avoid visual artifacts
+      ctx.clearRect(0, 0, width, height);
+      
       // Reset max Y tracking
       
       // Only draw grid points in edit mode and not flipping
@@ -1943,6 +1950,9 @@ inComment = true;
       editorVisible = !editorVisible;
       console.log('Editor toggle:', editorVisible, 'Card element:', cardElement);
       
+      // Update button icon to reflect new state
+      updateEditorToggleIcon();
+      
       // Toggle Pico CSS based on mode
       togglePicoCSS(editorVisible);
       
@@ -2130,6 +2140,16 @@ inComment = true;
     });
 
     // ===== UI FUNCTIONS =====
+    function updateEditorToggleIcon() {
+      if (editorVisible) {
+        editorToggleBtn.innerHTML = '✕';
+        editorToggleBtn.style.color = 'red';
+      } else {
+        editorToggleBtn.innerHTML = '✏️';
+        editorToggleBtn.style.color = '';
+      }
+    }
+
     function updateEditorToggleState() {
       const now = performance.now();
       const isInCooldown = now < animationCooldownEnd;
@@ -2141,6 +2161,7 @@ inComment = true;
                        !isInCooldown;
       
       editorToggleBtn.disabled = !canToggle;
+      updateEditorToggleIcon();
     }
 
     function renderNow(){
@@ -2432,10 +2453,15 @@ inComment = true;
       // Now show the page with fade-in
       document.body.classList.add('page-ready');
       
-      // Start with animated rendering instead of static
+      // Start rendering based on checkbox state
       const coloredItems = parseBytesWithColors(getEditorValue());
       const { ops, visited } = buildOps(coloredItems);
-      startAnim(ops, visited);
+      
+      if (animateCheckbox.checked) {
+        startAnim(ops, visited);
+      } else {
+        renderInstant(ops, visited);
+      }
       pushHistory(); // seed history
       
       // Add event listeners after DOM is ready
