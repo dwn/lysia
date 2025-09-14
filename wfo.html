@@ -2281,10 +2281,14 @@ inComment = true;
       const a = document.createElement('a');
       a.href = url;
       a.download = 'card.json';
+      a.style.display = 'none';
+      
+      // Mark this as a programmatic click to avoid card flip
+      a.setAttribute('data-programmatic', 'true');
+      
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
       // Clean up
       URL.revokeObjectURL(url);
     }
@@ -2548,6 +2552,9 @@ inComment = true;
     // Consolidated input handlers
     document.addEventListener('click', (e) => {
       if (editorVisible || isFlippingOut) return;
+      
+      // Don't trigger card flip for programmatic clicks (like download links)
+      if (e.target.getAttribute('data-programmatic') === 'true') return;
       
       // Find the card element to get its position
       const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
