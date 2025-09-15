@@ -511,7 +511,7 @@ const defaultSvgBackground =
       z-index: 1000;
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
+      border-radius: 10%;
       padding: 8px 12px;
       font-size: 16px;
       height: 38px;
@@ -552,8 +552,13 @@ const defaultSvgBackground =
     📁
   </button>
 
+  <!-- Zoom out button -->
+  <button id="zoomOutButton" class="editor-toggle" title="Zoom Out to 20%" style="left: auto; right: 20px; width: 80px;">
+    🔍
+  </button>
+
   <!-- Card indicator -->
-  <div id="cardIndicator" class="editor-toggle" style="left: auto; right: 20px; background: transparent; width: 180px; text-align: center;">
+  <div id="cardIndicator" class="editor-toggle" style="left: auto; right: 120px; background: transparent; width: 80px; text-align: center;">
     0 / 0
   </div>
 
@@ -697,6 +702,7 @@ a     xxx    b    yyy</div>
     const animateCheckbox = document.getElementById('animateCheckbox');
     const editorToggleBtn = document.getElementById('editorToggle');
     const exportButton = document.getElementById('exportButton');
+    const zoomOutButton = document.getElementById('zoomOutButton');
     const cardIndicator = document.getElementById('cardIndicator');
     let cardElement = null;
     
@@ -2462,6 +2468,46 @@ inComment = true;
       e.preventDefault();
       e.stopPropagation();
       exportSettings();
+    });
+    
+    // Zoom out button event listener
+    zoomOutButton.addEventListener('click', (e) => {
+      // Always prevent default to stop card flip
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Toggle between current zoom (75%) and 15%
+      const currentZoom = document.body.style.zoom || '0.75';
+      if (currentZoom === '0.75') {
+        document.body.style.zoom = '0.15';
+        // Hide all buttons except the zoom button when zoomed out
+        document.getElementById('editorToggle').style.display = 'none';
+        document.getElementById('exportButton').style.display = 'none';
+        document.getElementById('cardIndicator').style.display = 'none';
+        // Only show and scale the zoom button
+        document.getElementById('zoomOutButton').style.display = 'block';
+        document.getElementById('zoomOutButton').style.transform = 'scale(5)';
+        document.getElementById('zoomOutButton').style.right = '275px';
+        document.getElementById('zoomOutButton').style.top = '200px';
+      } else {
+        document.body.style.zoom = '0.75';
+        // Show all buttons again when zoomed back in
+        document.getElementById('editorToggle').style.display = 'block';
+        document.getElementById('exportButton').style.display = 'block';
+        document.getElementById('cardIndicator').style.display = 'block';
+        // Reset button scale and positions to normal
+        document.querySelectorAll('.editor-toggle').forEach(button => {
+          button.style.transform = '';
+        });
+        document.getElementById('editorToggle').style.left = '20px';
+        document.getElementById('editorToggle').style.top = '';
+        document.getElementById('exportButton').style.left = '120px';
+        document.getElementById('exportButton').style.top = '';
+        document.getElementById('zoomOutButton').style.right = '20px';
+        document.getElementById('zoomOutButton').style.top = '';
+        document.getElementById('cardIndicator').style.right = '120px';
+        document.getElementById('cardIndicator').style.top = '';
+      }
     });
     
     // Card indicator event listener (prevents card flip when clicked)
