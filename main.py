@@ -150,11 +150,14 @@ async def get_wfo_content():
   with open("wfo.html", "r") as f:
     html_content = f.read()
   
-  # Get LOCAL_SUPABASE_URL from environment variable
+  # Get environment variables
   local_supabase_url = os.getenv("LOCAL_SUPABASE_URL", "http://localhost:54321")
+  local_supabase_service_role_key = os.getenv("LOCAL_SUPABASE_SERVICE_ROLE_KEY", "")
   
-  # Replace SUPABASE_URL placeholder with actual value (only in CARD_BASE_URL)
+  # Replace placeholders with actual values (specific replacements only)
   html_content = html_content.replace("`{{SUPABASE_URL}}/storage/v1/object/public/card/`", f"`{local_supabase_url}/storage/v1/object/public/card/`")
+  html_content = html_content.replace("const SUPABASE_URL = '{{SUPABASE_URL}}';", f"const SUPABASE_URL = '{local_supabase_url}';")
+  html_content = html_content.replace("const SUPABASE_SERVICE_ROLE_KEY = '{{SUPABASE_SERVICE_ROLE_KEY}}';", f"const SUPABASE_SERVICE_ROLE_KEY = '{local_supabase_service_role_key}';")
   
   return HTMLResponse(content=html_content)
 ############################################

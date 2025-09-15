@@ -552,8 +552,8 @@ const defaultSvgBackground =
     ✏️
   </button>
 
-  <!-- Export button -->
-  <button id="exportButton" class="editor-toggle" title="Export Settings" style="left: 120px; width: 80px;">
+  <!-- Upload button -->
+  <button id="exportButton" class="editor-toggle" title="Upload Card to Storage" style="left: 120px; width: 80px;">
     📁
   </button>
 
@@ -661,6 +661,7 @@ a     xxx    b    yyy</div>
     </aside>
   </div>
   </main>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     
     // Page fade effect functions
@@ -692,6 +693,11 @@ a     xxx    b    yyy</div>
     if (CARD_BASE_URL.includes('{{SUPABASE_URL}}')) {
       console.warn('SUPABASE_URL not replaced - make sure to access via FastAPI server with LOCAL_SUPABASE_URL set');
     }
+    
+    // ===== SUPABASE CLIENT =====
+    const SUPABASE_URL = '{{SUPABASE_URL}}';
+    const SUPABASE_SERVICE_ROLE_KEY = '{{SUPABASE_SERVICE_ROLE_KEY}}';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     let currentCardIndex = 0;
     let maxCardIndex = 0; // Will be determined by checking available cards
     
@@ -710,10 +716,12 @@ a     xxx    b    yyy</div>
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
+    const italicsCheckbox = document.getElementById('italicsCheckbox');
     const editorToggleBtn = document.getElementById('editorToggle');
     const exportButton = document.getElementById('exportButton');
     const zoomOutButton = document.getElementById('zoomOutButton');
     const cardIndicator = document.getElementById('cardIndicator');
+    const svgInputEl = document.getElementById('svgInput');
     let cardElement = null;
     
     // ===== CANVAS SETUP =====
@@ -2279,41 +2287,69 @@ inComment = true;
       }
     }
 
-    function exportSettings() {
-      // Collect all settings
-      const settings = {
-        options: {
-          size: parseInt(sInputEl.value, 10),
-          backgroundColor: bgColorSelectEl.value,
-          italics: italicsCheckbox.checked,
-          animate: animateCheckbox.checked,
-          svgBackground: svgInputEl.value.trim()
-        },
-        rule: getPlainText(ruleEl),
-        input: getPlainText(inputEl)
-      };
+    async function uploadCard() {
+      try {
+        // Collect all settings
+        console.log('=== UPLOAD DEBUG ===');
+        console.log('Current mode - editorVisible:', editorVisible);
+        console.log('Size:', sInputEl.value);
+        console.log('Background color:', bgColorSelectEl.value);
+        console.log('Italics:', italicsCheckbox.checked);
+        console.log('Animate:', animateCheckbox.checked);
+        console.log('SVG background:', svgInputEl.value.trim());
+        console.log('Rule text:', getPlainText(ruleEl));
+        console.log('Input text:', getPlainText(inputEl));
+        
+        const settings = {
+          options: {
+            size: parseInt(sInputEl.value, 10),
+            backgroundColor: bgColorSelectEl.value,
+            italics: italicsCheckbox.checked,
+            animate: animateCheckbox.checked,
+            svgBackground: svgInputEl.value.trim()
+          },
+          rule: getPlainText(ruleEl),
+          input: getPlainText(inputEl)
+        };
 
-      // Create JSON string
-      const jsonString = JSON.stringify(settings, null, 2);
-      
-      // Create blob and download
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create temporary download link
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'card.json';
-      a.style.display = 'none';
-      
-      // Mark this as a programmatic click to avoid card flip
-      a.setAttribute('data-programmatic', 'true');
-      
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      // Clean up
-      URL.revokeObjectURL(url);
+        // Create JSON string
+        const jsonString = JSON.stringify(settings, null, 2);
+        
+        // Create blob for upload
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        
+        // Upload to Supabase storage
+        const fileName = `${currentCardIndex}.json`;
+        console.log(`Attempting to upload ${fileName} to bucket 'card'`);
+        console.log('Supabase client:', supabaseClient);
+        
+        const { data, error } = await supabaseClient.storage
+          .from('card')
+          .upload(fileName, blob, {
+            contentType: 'application/json',
+            upsert: true // Overwrite if file exists
+          });
+
+        if (error) {
+          console.error('Upload error:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          alert(`Upload failed: ${error.message}\n\nDetails: ${JSON.stringify(error, null, 2)}`);
+          return;
+        }
+
+        console.log('Upload successful:', data);
+        alert(`Card ${currentCardIndex} uploaded successfully!`);
+        
+        // Update max card index if we uploaded a new card
+        if (currentCardIndex > maxCardIndex) {
+          maxCardIndex = currentCardIndex;
+          updateCardIndicator();
+        }
+        
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert(`Upload failed: ${error.message}`);
+      }
     }
 
     function updateEditorToggleState() {
@@ -2482,7 +2518,7 @@ inComment = true;
       // Always prevent default to stop card flip
       e.preventDefault();
       e.stopPropagation();
-      exportSettings();
+      uploadCard();
     });
     
     // Zoom out button event listener
@@ -2545,7 +2581,6 @@ inComment = true;
     });
 
     // SVG input functionality
-    const svgInputEl = document.getElementById('svgInput');
     svgInputEl.addEventListener('input', async () => {
       // Always update SVG display (preview in editor mode, background in non-editor mode)
         await drawSvgBackground();
