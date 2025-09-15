@@ -2201,7 +2201,9 @@ inComment = true;
           throw new Error('SUPABASE_URL not configured - access via FastAPI server with LOCAL_SUPABASE_URL set');
         }
         
-        const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json`);
+        // Add cache-busting parameter to ensure we get the latest version
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json${cacheBuster}`);
         if (!response.ok) {
           throw new Error(`Card ${cardIndex} not found`);
         }
@@ -2260,7 +2262,9 @@ inComment = true;
       let maxIndex = 0;
       for (let i = 0; i < 100; i++) { // Check up to 100 cards
         try {
-          const response = await fetch(`${CARD_BASE_URL}${i}.json`, { method: 'HEAD' });
+          // Add cache-busting parameter to ensure we get the latest version
+          const cacheBuster = `?t=${Date.now()}`;
+          const response = await fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`, { method: 'HEAD' });
           if (response.ok) {
             maxIndex = i;
           } else {
