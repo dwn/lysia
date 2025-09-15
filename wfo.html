@@ -451,6 +451,11 @@ const defaultSvgBackground =
       display: none !important;
     }
     
+    /* Hide zoom button in editor mode */
+    body:not(.canvas-only) #zoomOutButton {
+      display: none !important;
+    }
+    
     /* Monitor/glossy effect for presentation mode */
     .canvas-only canvas {
       background: linear-gradient(135deg, 
@@ -681,7 +686,12 @@ a     xxx    b    yyy</div>
     const start = { xi: pad.left, yi: pad.top };
     
     // ===== CARD SYSTEM =====
-    const CARD_BASE_URL = 'https://vault.biltmoretoday.com/storage/v1/object/public/card/';
+    const CARD_BASE_URL = `{{SUPABASE_URL}}/storage/v1/object/public/card/`;
+    
+    // Check if SUPABASE_URL was properly replaced
+    if (CARD_BASE_URL.includes('{{SUPABASE_URL}}')) {
+      console.warn('SUPABASE_URL not replaced - make sure to access via FastAPI server with LOCAL_SUPABASE_URL set');
+    }
     let currentCardIndex = 0;
     let maxCardIndex = 0; // Will be determined by checking available cards
     
@@ -2178,6 +2188,11 @@ inComment = true;
     // ===== CARD SYSTEM FUNCTIONS =====
     async function loadCard(cardIndex) {
       try {
+        // Check if URL is valid
+        if (CARD_BASE_URL.includes('{{SUPABASE_URL}}')) {
+          throw new Error('SUPABASE_URL not configured - access via FastAPI server with LOCAL_SUPABASE_URL set');
+        }
+        
         const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json`);
         if (!response.ok) {
           throw new Error(`Card ${cardIndex} not found`);

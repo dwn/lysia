@@ -6,6 +6,11 @@ from starlette.requests import Request
 from starlette.responses import Response
 import markdown2 as md
 import util as ut
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -136,6 +141,22 @@ async def get_script_content(request: Request):
     "bottom_contents": md.markdown("## Hello, World!")
   }
   return templates.TemplateResponse("layout.html", context)
+############################################
+# WFO page with environment variables
+############################################
+@app.get("/wfo.html", response_class=HTMLResponse)
+async def get_wfo_content():
+  # Read the wfo.html file
+  with open("wfo.html", "r") as f:
+    html_content = f.read()
+  
+  # Get LOCAL_SUPABASE_URL from environment variable
+  local_supabase_url = os.getenv("LOCAL_SUPABASE_URL", "http://localhost:54321")
+  
+  # Replace SUPABASE_URL placeholder with actual value (only in CARD_BASE_URL)
+  html_content = html_content.replace("`{{SUPABASE_URL}}/storage/v1/object/public/card/`", f"`{local_supabase_url}/storage/v1/object/public/card/`")
+  
+  return HTMLResponse(content=html_content)
 ############################################
 # To run the app
 ############################################
