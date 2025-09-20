@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Simple WFO HTML Server
+# This script loads environment variables from .env file and serves wfo.html
+# with proper Supabase configuration substitution.
+
+set -e
+
+# Default values
+DEFAULT_SUPABASE_URL="http://localhost:54321"
+DEFAULT_SERVICE_KEY=""
+
+# Load environment variables from .env file if it exists
+if [ -f ".env" ]; then
+    echo "📄 Loading environment variables from .env file..."
+    set -a  # automatically export all variables
+    source .env
+    set +a  # turn off automatic export
+else
+    echo "⚠️  Warning: No .env file found. Using default values."
+    echo "   Create a .env file with:"
+    echo "   LOCAL_SUPABASE_URL=http://localhost:54321"
+    echo "   LOCAL_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key"
+    echo
+fi
+
+# Set variables with defaults
+SUPABASE_URL="${LOCAL_SUPABASE_URL:-$DEFAULT_SUPABASE_URL}"
+SERVICE_KEY="${LOCAL_SUPABASE_SERVICE_ROLE_KEY:-$DEFAULT_SERVICE_KEY}"
+
+echo "🚀 Starting WFO HTML Server..."
+echo "📡 Supabase URL: $SUPABASE_URL"
+if [ -n "$SERVICE_KEY" ]; then
+    echo "🔑 Service Key: $(printf '*%.0s' $(seq 1 ${#SERVICE_KEY}))"
+else
+    echo "🔑 Service Key: Not set"
+fi
+echo "🌐 Server will be available at: http://localhost:8080"
+echo "📄 WFO page: http://localhost:8080/wfo.html"
+echo "   Press Ctrl+C to stop the server"
+echo
+
+# Check if wfo.html exists
+if [ ! -f "wfo.html" ]; then
+    echo "❌ Error: wfo.html file not found in current directory"
+    exit 1
+fi
+
+# Create a temporary directory for the processed HTML
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
+
+# Process the HTML file with environment variable substitution
+# Use '|' as delimiter instead of '/' to avoid conflicts with URLs
+# Only replace in variable assignments, not in validation checks
+sed "s|const SUPABASE_URL = '{{SUPABASE_URL}}'|const SUPABASE_URL = '$SUPABASE_URL'|g; \
+     s|const SUPABASE_SERVICE_ROLE_KEY = '{{SUPABASE_SERVICE_ROLE_KEY}}'|const SUPABASE_SERVICE_ROLE_KEY = '$SERVICE_KEY'|g; \
+     s|\`{{SUPABASE_URL}}/storage/v1/object/public/card/\`|\`$SUPABASE_URL/storage/v1/object/public/card/\`|g" wfo.html > "$TEMP_DIR/wfo.html"
+
+# Change to temp directory and start server
+cd "$TEMP_DIR"
+
+# Start the HTTP server
+echo "🌐 Server started on http://localhost:8080"
+python3 -m http.server 8080
