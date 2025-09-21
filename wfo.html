@@ -605,7 +605,7 @@ a     xxx    b    yyy</div>
             <br>
             <strong>Shortcuts:</strong>
             <br>
-            <code>Ctrl+E / Cmd+E</code> toggles editor
+            <code>Ctrl/Cmd + E</code> toggles editor
       </small>
         </details>
         
@@ -698,7 +698,7 @@ a     xxx    b    yyy</div>
     const SUPABASE_URL = '{{SUPABASE_URL}}';
     const SUPABASE_SERVICE_ROLE_KEY = '{{SUPABASE_SERVICE_ROLE_KEY}}';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    let currentCardIndex = 0;
+    let currentCardIndex = 1;
     let maxCardIndex = 0; // Will be determined by checking available cards
     
     
@@ -2258,22 +2258,45 @@ inComment = true;
     }
     
     async function findMaxCardIndex() {
-      // Try to find the highest available card index
+      // Try to find the highest available card index using parallel chunks of 15
       let maxIndex = 0;
-      for (let i = 0; i < 100; i++) { // Check up to 100 cards
-        try {
-          // Add cache-busting parameter to ensure we get the latest version
+      const chunkSize = 15;
+      const maxCards = 100;
+      
+      for (let startIndex = 1; startIndex <= maxCards; startIndex += chunkSize) {
+        const endIndex = Math.min(startIndex + chunkSize - 1, maxCards);
+        
+        // Create parallel requests for this chunk
+        const promises = [];
+        for (let i = startIndex; i <= endIndex; i++) {
           const cacheBuster = `?t=${Date.now()}`;
-          const response = await fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`, { method: 'HEAD' });
-          if (response.ok) {
-            maxIndex = i;
-          } else {
-            break; // Stop at first missing card
+          const promise = fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`, { method: 'HEAD' })
+            .then(response => ({ index: i, exists: response.ok }))
+            .catch(() => ({ index: i, exists: false }));
+          promises.push(promise);
+        }
+        
+        // Wait for all requests in this chunk to complete
+        const results = await Promise.all(promises);
+        
+        // Check results in order to find the highest existing card
+        let foundExisting = false;
+        for (const result of results) {
+          if (result.exists) {
+            maxIndex = result.index;
+            foundExisting = true;
+          } else if (foundExisting) {
+            // If we found existing cards but now hit a missing one, we can stop
+            break;
           }
-        } catch (error) {
-          break; // Stop on error
+        }
+        
+        // If no cards exist in this chunk, we've found the end
+        if (!foundExisting) {
+          break;
         }
       }
+      
       return maxIndex;
     }
     
@@ -2282,7 +2305,7 @@ inComment = true;
     }
     
     function canFlipRight() {
-      return currentCardIndex > 0;
+      return currentCardIndex > 1;
     }
     
     function updateCardIndicator() {
@@ -2727,13 +2750,13 @@ inComment = true;
       
       // Initialize card system
       maxCardIndex = await findMaxCardIndex();
-      console.log(`Found ${maxCardIndex + 1} cards (0-${maxCardIndex})`);
+      console.log(`Found ${maxCardIndex} cards (1-${maxCardIndex})`);
       
       // Update card indicator with max count
       updateCardIndicator();
       
-      // Load the first card (index 0)
-      const loadSuccess = await loadCard(0);
+      // Load the first card (index 1)
+      const loadSuccess = await loadCard(1);
       if (!loadSuccess) {
         // Fallback to default content if card loading fails
         inputEl.textContent = defaultContent;
@@ -2778,3 +2801,6 @@ inComment = true;
 </body>
 </html>
 
+<!-- Test comment for hot reload -->
+<!-- Python hot reload test -->
+<!-- FastAPI hot reload test -->
