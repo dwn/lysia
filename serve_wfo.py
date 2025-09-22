@@ -52,9 +52,6 @@ class WFOServer:
         self.supabase_url = os.environ.get('LOCAL_SUPABASE_URL', 'http://localhost:54321')
         self.service_key = os.environ.get('LOCAL_SUPABASE_SERVICE_ROLE_KEY', '')
         
-        print(f"🔍 Debug: Loaded SUPABASE_URL = '{self.supabase_url}'")
-        print(f"🔍 Debug: Loaded SERVICE_KEY = {'*' * len(self.service_key) if self.service_key else 'None'}")
-        
     def find_available_port(self):
         """Find an available port starting from 8080"""
         import socket
@@ -83,8 +80,6 @@ class WFOServer:
             
         print("🔄 Processing wfo.html...")
         print(f"📁 Source: {source_file}")
-        print(f"🔍 Debug: self.supabase_url = '{self.supabase_url}'")
-        print(f"🔍 Debug: self.service_key = {'*' * len(self.service_key) if self.service_key else 'None'}")
         
         # Read the source file
         with open(source_file, 'r', encoding='utf-8') as f:
