@@ -160,7 +160,7 @@ class WFOServer:
         print("🔥 Hot reloading enabled - changes to wfo.html will be reflected immediately!")
         
         uvicorn.run(
-            "serve_wfo_fastapi:app",  # Import string for reload mode
+            "serve_wfo:app",  # Import string for reload mode
             host="localhost",
             port=self.port,
             reload=True,  # This enables hot reloading!
