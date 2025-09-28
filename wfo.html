@@ -145,7 +145,8 @@ const defaultSvgBackground =
     }
     
     /* ===== ANIMATIONS ===== */
-    .canvas-only .grid > div:first-child::before {
+    /* Global glow for single-card mode only (not grid mode) */
+    .canvas-only .grid > div:first-child:not(.grid-container)::before {
       content: '';
       position: absolute;
       top: -120px;
@@ -158,6 +159,12 @@ const defaultSvgBackground =
       opacity: 0.7;
       animation: glowPulse 3s ease-in-out infinite;
       filter: blur(5px);
+    }
+    
+    /* No large glow in zoomed-out grid mode - individual card glows only */
+    .canvas-only .grid > div:first-child.grid-container::before,
+    .canvas-only .grid > div:first-child:has(.grid-container)::before {
+      display: none;
     }
     
     @keyframes cardFlipIn {
@@ -458,12 +465,7 @@ const defaultSvgBackground =
     
     /* Monitor/glossy effect for presentation mode */
     .canvas-only canvas {
-      background: linear-gradient(135deg, 
-        rgba(109,191,232,0.8) 0%, 
-        rgba(40,161,222,0.6) 25%, 
-        rgba(31,140,194,0.4) 50%, 
-        rgba(51,160,214,0.2) 75%, 
-        rgba(20,120,180,0.1) 100%);
+      background: transparent;
       box-shadow: 
         inset 0 2px 4px rgba(255,255,255,0.3),
         inset 0 -2px 4px rgba(0,0,0,0.1),
@@ -702,7 +704,7 @@ a     xxx    b    yyy</div>
     let maxCardIndex = 0; // Will be determined by checking available cards
     
     // ===== CARD PRELOADING SYSTEM =====
-    const CARD_BLOCK_SIZE = 13; // Number of cards to preload in each block
+    const CARD_BLOCK_SIZE = 11; // Number of cards to preload in each block
     const cardCache = new Map(); // Cache for card JSON data
     const svgCache = new Map(); // Cache for SVG content
     let currentBlockStart = 1; // Starting index of current preloaded block
@@ -711,12 +713,12 @@ a     xxx    b    yyy</div>
     
     // ===== DOM REFERENCES =====
     const canvas = document.getElementById('board');
-    const ctx = canvas.getContext('2d', { alpha: true });
+    let ctx = canvas.getContext('2d', { alpha: true });
     const bgColorSelectEl = document.getElementById('bgColorSelect');
     const svgPreview = document.getElementById('svgPreview');
     const svgPreviewContent = document.getElementById('svgPreviewContent');
     let svgBackground = document.getElementById('svgBackground');
-    const canvasWrapper = document.getElementById('canvasWrapper');
+    let canvasWrapper = document.getElementById('canvasWrapper');
     const inputEl = document.getElementById('strInput');
     const ruleEl = document.getElementById('strRule');
     const outputEl = document.getElementById('strOutput');
@@ -952,7 +954,8 @@ a     xxx    b    yyy</div>
       // Create or update background SVG element
       const canvas = document.getElementById('board');
       
-      if (!svgBackground) {
+      // Check if SVG background element exists in DOM, if not create it
+      if (!svgBackground || !document.getElementById('svgBackground')) {
         svgBackground = document.createElement('div');
         svgBackground.id = 'svgBackground';
           svgBackground.style.position = 'absolute';
@@ -2321,6 +2324,336 @@ inComment = true;
       }
     }
 
+    // ===== CARD BLOCK OVERVIEW FUNCTIONS =====
+    
+    // Show the current block of cards in zoomed out mode
+    async function showCardBlockOverview() {
+      // Get the current block range
+      const blockStart = getBlockForCard(currentCardIndex);
+      const range = getBlockRange(blockStart);
+      
+      // Find the main card container
+      const mainCardContainer = document.querySelector('.canvas-only .grid > div:first-child');
+      if (!mainCardContainer) return;
+      
+      // Create the grid container for all cards
+      const gridContainer = document.createElement('div');
+      gridContainer.className = 'grid-container';
+      gridContainer.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto auto auto auto;
+        gap: 40px;
+        width: 100%;
+        height: 100%;
+        align-items: center;
+        justify-items: center;
+        overflow: auto;
+        padding: 40px;
+      `;
+      
+      // Create card elements for each card in the block
+      for (let i = range.start; i <= range.end; i++) {
+        const cardWrapper = document.createElement('div');
+        cardWrapper.style.cssText = `
+          width: 600px;
+          height: 1000px;
+          border: 2px solid #666;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+          overflow: hidden;
+        `;
+        
+        // Highlight the current card (will be overridden by individual glow if card has background color)
+        if (i === currentCardIndex) {
+          // Will be set to bright card color when card data is loaded
+          cardWrapper.style.border = '3px solid #ffffff'; // Temporary white
+          // Don't set boxShadow here - let individual card glow handle it
+        }
+        
+        // Create canvas for the card
+        const cardCanvas = document.createElement('canvas');
+        cardCanvas.width = 600;
+        cardCanvas.height = 1000;
+        cardCanvas.style.cssText = `
+          width: 100%;
+          height: 100%;
+          display: block;
+        `;
+        
+        // Create SVG background container
+        const svgContainer = document.createElement('div');
+        svgContainer.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: -1;
+          pointer-events: none;
+        `;
+        
+        cardWrapper.appendChild(svgContainer);
+        cardWrapper.appendChild(cardCanvas);
+        
+        // Load and render the card content
+        try {
+          // Get card data from cache or load it
+          let cardData = cardCache.get(i);
+          if (!cardData) {
+            const cacheBuster = `?t=${Date.now()}`;
+            const response = await fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`);
+            if (response.ok) {
+              cardData = await response.json();
+              cardCache.set(i, cardData);
+            }
+          }
+          
+          if (cardData) {
+            // Set background color
+            if (cardData.options && cardData.options.backgroundColor) {
+              cardCanvas.style.background = generateGradientFromColor(cardData.options.backgroundColor);
+              
+              // Add individual glow to each card
+              const rgb = hexToRgb(cardData.options.backgroundColor);
+              const glow1 = `rgba(${Math.min(255, rgb.r + 100)}, ${Math.min(255, rgb.g + 100)}, ${Math.min(255, rgb.b + 100)}, 0.4)`;
+              const glow2 = `rgba(${Math.min(255, rgb.r + 80)}, ${Math.min(255, rgb.g + 80)}, ${Math.min(255, rgb.b + 80)}, 0.3)`;
+              const glow3 = `rgba(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)}, 0.2)`;
+              
+              // Override current card highlight with individual glow
+              if (i === currentCardIndex) {
+                // Create bright version of card color for border
+                const brightColor = `rgba(${Math.min(255, Math.round(rgb.r * 1.8))}, ${Math.min(255, Math.round(rgb.g * 1.8))}, ${Math.min(255, Math.round(rgb.b * 1.8))}, 1)`;
+                cardWrapper.style.border = `3px solid ${brightColor}`;
+                
+                cardWrapper.style.boxShadow = `
+                  0 0 20px ${glow1},
+                  0 0 40px ${glow2},
+                  0 0 60px ${glow3},
+                  0 0 10px rgba(255, 255, 255, 0.8)
+                `;
+              } else {
+                cardWrapper.style.boxShadow = `
+                  0 0 20px ${glow1},
+                  0 0 40px ${glow2},
+                  0 0 60px ${glow3}
+                `;
+              }
+            }
+            
+            // Load SVG background
+            if (cardData.options && cardData.options.svgBackground) {
+              const svgValue = cardData.options.svgBackground;
+              if (svgValue.startsWith('http://') || svgValue.startsWith('https://')) {
+                // Check cache first
+                let svgContent = svgCache.get(svgValue);
+                if (!svgContent) {
+                  try {
+                    const response = await fetch(svgValue);
+                    svgContent = await response.text();
+                    svgCache.set(svgValue, svgContent);
+                  } catch (error) {
+                    console.error('Failed to fetch SVG:', error);
+                  }
+                }
+                
+                if (svgContent) {
+                  svgContainer.innerHTML = `
+                    <style>
+                      svg {
+                        width: 100%;
+                        height: 100%;
+                        display: block;
+                        object-fit: contain;
+                        object-position: center;
+                      }
+                    </style>
+                    ${svgContent}
+                  `;
+                }
+              } else {
+                // Direct SVG content
+                svgContainer.innerHTML = `
+                  <style>
+                    svg {
+                      width: 100%;
+                      height: 100%;
+                      display: block;
+                      object-fit: contain;
+                      object-position: center;
+                    }
+                  </style>
+                  ${svgValue}
+                `;
+              }
+            }
+            
+            // Render card content on canvas
+            if (cardData.input) {
+              const ctx = cardCanvas.getContext('2d');
+              // No scaling needed - canvas is already 600x1000
+              
+              // Set up canvas context
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              
+              // Parse and render the card content
+              const coloredItems = parseBytesWithColors(cardData.input);
+              const { ops, visited } = buildOps(coloredItems);
+              
+              // Clear canvas
+              ctx.clearRect(0, 0, 600, 1000);
+              
+              // Render the operations
+              for (const op of ops) {
+                drawOpUnified(op, 1, 'both');
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load card ${i}:`, error);
+          // Show card number as fallback
+          cardCanvas.style.background = '#333';
+          const ctx = cardCanvas.getContext('2d');
+          ctx.fillStyle = 'white';
+          ctx.font = '120px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(i.toString(), 300, 500);
+        }
+        
+        // Add click handler to jump to card
+        cardWrapper.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (i !== currentCardIndex) {
+            // Zoom back in and load the selected card
+            document.body.style.zoom = '0.75';
+            document.getElementById('editorToggle').style.display = 'block';
+            document.getElementById('exportButton').style.display = 'block';
+            document.getElementById('cardIndicator').style.display = 'block';
+            document.querySelectorAll('.editor-toggle').forEach(button => {
+              button.style.transform = '';
+            });
+            document.getElementById('editorToggle').style.left = '20px';
+            document.getElementById('editorToggle').style.top = '';
+            document.getElementById('exportButton').style.left = '120px';
+            document.getElementById('exportButton').style.top = '';
+            document.getElementById('zoomOutButton').style.right = '20px';
+            document.getElementById('zoomOutButton').style.top = '';
+            document.getElementById('cardIndicator').style.right = '120px';
+            document.getElementById('cardIndicator').style.top = '';
+            
+            hideCardBlockOverview();
+            
+            // Wait for canvas to be ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Load the selected card
+            currentCardIndex = i;
+            await loadCard(currentCardIndex);
+          }
+        });
+        
+        // Add hover effect
+        cardWrapper.addEventListener('mouseenter', () => {
+          if (i !== currentCardIndex) {
+            cardWrapper.style.transform = 'scale(1.05)';
+            cardWrapper.style.borderColor = '#999';
+          }
+        });
+        
+        cardWrapper.addEventListener('mouseleave', () => {
+          if (i !== currentCardIndex) {
+            cardWrapper.style.transform = 'scale(1)';
+            cardWrapper.style.borderColor = '#666';
+          }
+        });
+        
+        gridContainer.appendChild(cardWrapper);
+      }
+      
+      // Apply the grid layout: 1 card (centered), 3 cards, 3 cards, 3 cards, 1 card (centered)
+      const cards = gridContainer.children;
+      if (cards.length >= 11) {
+        // First row: 1 card (centered)
+        cards[0].style.gridColumn = '2';
+        cards[0].style.gridRow = '1';
+        
+        // Second row: 3 cards
+        for (let i = 1; i <= 3; i++) {
+          cards[i].style.gridColumn = i;
+          cards[i].style.gridRow = '2';
+        }
+        
+        // Third row: 3 cards
+        for (let i = 4; i <= 6; i++) {
+          cards[i].style.gridColumn = i - 3;
+          cards[i].style.gridRow = '3';
+        }
+        
+        // Fourth row: 3 cards
+        for (let i = 7; i <= 9; i++) {
+          cards[i].style.gridColumn = i - 6;
+          cards[i].style.gridRow = '4';
+        }
+        
+        // Fifth row: 1 card (centered)
+        if (cards.length > 10) {
+          cards[10].style.gridColumn = '2';
+          cards[10].style.gridRow = '5';
+        }
+      }
+      
+      // Replace the main card with the grid
+      mainCardContainer.innerHTML = '';
+      mainCardContainer.appendChild(gridContainer);
+    }
+    
+    // Hide the card block overview
+    function hideCardBlockOverview() {
+      // Restore the main card
+      const mainCardContainer = document.querySelector('.canvas-only .grid > div:first-child');
+      if (mainCardContainer) {
+        // Clear the grid and restore the original canvas
+        mainCardContainer.innerHTML = `
+          <div id="canvasWrapper" style="position: relative; overflow: hidden; padding-bottom: 1.5rem; border-radius: 16px;">
+            <canvas id="board" width="600" height="1000" aria-label="drawing canvas"></canvas>
+          </div>
+        `;
+        
+        // Re-initialize the canvas
+        const canvas = document.getElementById('board');
+        // Update the global ctx variable
+        ctx = canvas.getContext('2d', { alpha: true });
+        const dpr = window.devicePixelRatio || 1;
+        if (dpr !== 1) {
+          canvas.width = 600 * dpr;
+          canvas.height = 1000 * dpr;
+          canvas.style.width = '600px';
+          canvas.style.height = '1000px';
+          ctx.scale(dpr, dpr);
+        }
+        
+        // Set up canvas context
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.textRenderingOptimization = 'optimizeQuality';
+        
+        // Re-initialize SVG background reference
+        svgBackground = document.getElementById('svgBackground');
+        
+        // Re-initialize canvasWrapper reference
+        canvasWrapper = document.getElementById('canvasWrapper');
+      }
+    }
+
     // ===== CARD SYSTEM FUNCTIONS =====
     async function loadCard(cardIndex) {
       try {
@@ -2573,14 +2906,18 @@ inComment = true;
       // Clear existing options
       bgColorSelectEl.innerHTML = '';
       
+      // Add transparent option first to prevent flash
+      const transparentOption = document.createElement('option');
+      transparentOption.value = 'transparent';
+      transparentOption.textContent = 'transparent';
+      transparentOption.selected = true;
+      bgColorSelectEl.appendChild(transparentOption);
+      
       // Add color options with names and hex values
       colors.forEach((colorObj, index) => {
         const option = document.createElement('option');
         option.value = colorObj.hex;
         option.textContent = `${colorObj.name} (${colorObj.hex})`;
-        if (colorObj.hex === initialColor) {
-          option.selected = true;
-        }
         bgColorSelectEl.appendChild(option);
       });
     }
@@ -2631,7 +2968,9 @@ inComment = true;
     
     // Set initial values
     colorIndicator.style.backgroundColor = initialColor;
-    updateCanvasBackground(initialColor);
+    // Start with transparent background to prevent flash
+    const canvasElement = document.getElementById('board');
+    canvasElement.style.background = 'transparent';
     updateCardGlow(initialColor);
     
     // Add fade-in animation when page loads
@@ -2704,6 +3043,9 @@ inComment = true;
         document.getElementById('zoomOutButton').style.transform = 'scale(5)';
         document.getElementById('zoomOutButton').style.right = '275px';
         document.getElementById('zoomOutButton').style.top = '200px';
+        
+        // Show the card block overview
+        showCardBlockOverview();
       } else {
         document.body.style.zoom = '0.75';
         // Show all buttons again when zoomed back in
@@ -2722,6 +3064,9 @@ inComment = true;
         document.getElementById('zoomOutButton').style.top = '';
         document.getElementById('cardIndicator').style.right = '120px';
         document.getElementById('cardIndicator').style.top = '';
+        
+        // Hide the card block overview
+        hideCardBlockOverview();
       }
     });
     
