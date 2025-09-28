@@ -701,6 +701,13 @@ a     xxx    b    yyy</div>
     let currentCardIndex = 1;
     let maxCardIndex = 0; // Will be determined by checking available cards
     
+    // ===== CARD PRELOADING SYSTEM =====
+    const CARD_BLOCK_SIZE = 13; // Number of cards to preload in each block
+    const cardCache = new Map(); // Cache for card JSON data
+    const svgCache = new Map(); // Cache for SVG content
+    let currentBlockStart = 1; // Starting index of current preloaded block
+    let preloadingInProgress = false;
+    
     
     // ===== DOM REFERENCES =====
     const canvas = document.getElementById('board');
@@ -738,7 +745,22 @@ a     xxx    b    yyy</div>
     let gridX = Math.floor(width / s);
     
     // ===== DRAWING CONSTANTS =====
-    const COLORS = ['#000000','#8c0004','#f80007','#f34001','#faaf00','#d9ce00','#0ccc0e','#00dfd8','#3441fc','#5020e0','#8000f0','#350063','#808080','#ffffff'];
+    const COLORS = [
+      { name: 'bla', hex: '#000000' },
+      { name: 'car', hex: '#8c0004' },
+      { name: 'red', hex: '#f80007' },
+      { name: 'ora', hex: '#f34001' },
+      { name: 'amb', hex: '#faaf00' },
+      { name: 'yel', hex: '#d9ce00' },
+      { name: 'grn', hex: '#0ccc0e' },
+      { name: 'cya', hex: '#00dfd8' },
+      { name: 'blu', hex: '#3441fc' },
+      { name: 'ind', hex: '#5020e0' },
+      { name: 'pur', hex: '#8000f0' },
+      { name: 'vio', hex: '#350063' },
+      { name: 'gry', hex: '#808080' },
+      { name: 'wht', hex: '#ffffff' }
+    ];
     const THICKNESS_MULTIPLIERS = {
       outline: 12,
       main: 4,
@@ -845,12 +867,18 @@ a     xxx    b    yyy</div>
       
       // Check if it's a URL (starts with http/https) or SVG code
       if (svgValue.startsWith('http://') || svgValue.startsWith('https://')) {
-        try {
-          const response = await fetch(svgValue);
-          svgContent = await response.text();
-        } catch (error) {
-          console.error('Failed to fetch SVG from URL:', error);
-          return;
+        // Check cache first
+        svgContent = svgCache.get(svgValue);
+        
+        if (!svgContent) {
+          try {
+            const response = await fetch(svgValue);
+            svgContent = await response.text();
+            svgCache.set(svgValue, svgContent);
+          } catch (error) {
+            console.error('Failed to fetch SVG from URL:', error);
+            return;
+          }
         }
         } else {
         // It's SVG code directly
@@ -963,6 +991,9 @@ a     xxx    b    yyy</div>
         </style>
         ${processedSvg}
       `;
+      
+      // Force a reflow/repaint to ensure SVG is rendered
+      svgBackground.offsetHeight; // Force reflow
       }
     }
     
@@ -2016,7 +2047,7 @@ inComment = true;
           // Update canvas background and SVG
           const selectedColor = bgColorSelectEl.value;
           updateCanvasBackground(selectedColor);
-          updateRovingLights(selectedColor);
+          updateCardGlow(selectedColor);
           await drawSvgBackground();
           
           // Clear canvas and render the content (ensure editorVisible is properly set)
@@ -2101,7 +2132,7 @@ inComment = true;
           // Update canvas background and SVG
           const selectedColor = bgColorSelectEl.value;
           updateCanvasBackground(selectedColor);
-          updateRovingLights(selectedColor);
+          updateCardGlow(selectedColor);
           drawSvgBackground();
           gridFadeStartTime = null;
           gridFadeComplete = false;
@@ -2193,6 +2224,103 @@ inComment = true;
       }
     }
 
+    // ===== CARD PRELOADING FUNCTIONS =====
+    
+    // Calculate which block a card index belongs to
+    function getBlockForCard(cardIndex) {
+      return Math.floor((cardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
+    }
+    
+    // Get the range of cards in a block
+    function getBlockRange(blockStart) {
+      return {
+        start: blockStart,
+        end: Math.min(blockStart + CARD_BLOCK_SIZE - 1, maxCardIndex)
+      };
+    }
+    
+    // Preload a block of cards (JSONs and SVGs)
+    async function preloadCardBlock(blockStart) {
+      if (preloadingInProgress) return;
+      preloadingInProgress = true;
+      
+      const range = getBlockRange(blockStart);
+      console.log(`Preloading card block ${blockStart}-${range.end}`);
+      
+      const promises = [];
+      
+      // Preload JSON data for all cards in the block
+      for (let i = range.start; i <= range.end; i++) {
+        if (!cardCache.has(i)) {
+          const cacheBuster = `?t=${Date.now()}`;
+          const promise = fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`)
+            .then(response => {
+              if (response.ok) {
+                return response.json().then(data => {
+                  cardCache.set(i, data);
+                  return { index: i, success: true, data };
+                });
+              } else {
+                return { index: i, success: false };
+              }
+            })
+            .catch(() => ({ index: i, success: false }));
+          promises.push(promise);
+        }
+      }
+      
+      // Wait for all JSON requests to complete
+      const results = await Promise.all(promises);
+      
+      // Now preload SVGs for cards that have SVG backgrounds
+      const svgPromises = [];
+      for (const result of results) {
+        if (result.success && result.data && result.data.options && result.data.options.svgBackground) {
+          const svgUrl = result.data.options.svgBackground;
+          if (svgUrl.startsWith('http://') || svgUrl.startsWith('https://')) {
+            if (!svgCache.has(svgUrl)) {
+              const svgPromise = fetch(svgUrl)
+                .then(response => {
+                  if (response.ok) {
+                    return response.text().then(content => {
+                      svgCache.set(svgUrl, content);
+                      return { url: svgUrl, success: true };
+                    });
+                  } else {
+                    return { url: svgUrl, success: false };
+                  }
+                })
+                .catch(() => ({ url: svgUrl, success: false }));
+              svgPromises.push(svgPromise);
+            }
+          }
+        }
+      }
+      
+      // Wait for all SVG requests to complete
+      if (svgPromises.length > 0) {
+        await Promise.all(svgPromises);
+      }
+      
+      console.log(`Preloaded card block ${blockStart}-${range.end}`);
+      preloadingInProgress = false;
+    }
+    
+    // Check if we need to preload a new block and do so
+    async function ensureBlockPreloaded(cardIndex) {
+      const requiredBlock = getBlockForCard(cardIndex);
+      
+      if (requiredBlock !== currentBlockStart) {
+        console.log(`Card ${cardIndex} requires block ${requiredBlock}, current block is ${currentBlockStart}`);
+        currentBlockStart = requiredBlock;
+        
+        // Preload the new block in the background
+        preloadCardBlock(requiredBlock).catch(error => {
+          console.error('Failed to preload card block:', error);
+        });
+      }
+    }
+
     // ===== CARD SYSTEM FUNCTIONS =====
     async function loadCard(cardIndex) {
       try {
@@ -2201,13 +2329,22 @@ inComment = true;
           throw new Error('SUPABASE_URL not configured - access via FastAPI server with LOCAL_SUPABASE_URL set');
         }
         
-        // Add cache-busting parameter to ensure we get the latest version
-        const cacheBuster = `?t=${Date.now()}`;
-        const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json${cacheBuster}`);
-        if (!response.ok) {
-          throw new Error(`Card ${cardIndex} not found`);
+        // Ensure the block containing this card is preloaded
+        await ensureBlockPreloaded(cardIndex);
+        
+        // Check cache first
+        let cardData = cardCache.get(cardIndex);
+        
+        if (!cardData) {
+          // Fallback to direct fetch if not in cache
+          const cacheBuster = `?t=${Date.now()}`;
+          const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json${cacheBuster}`);
+          if (!response.ok) {
+            throw new Error(`Card ${cardIndex} not found`);
+          }
+          cardData = await response.json();
+          cardCache.set(cardIndex, cardData);
         }
-        const cardData = await response.json();
         
         // Apply the loaded settings
         if (cardData.options) {
@@ -2216,9 +2353,9 @@ inComment = true;
           thickness = s / 10;
           sValueEl.textContent = s;
           
-          bgColorSelectEl.value = cardData.options.backgroundColor || '#8c0004';
+          bgColorSelectEl.value = cardData.options.backgroundColor || COLORS[DEFAULT_PANEL_COLOR_INDEX].hex;
           const colorIndicator = document.getElementById('bgColorIndicator');
-          colorIndicator.style.backgroundColor = cardData.options.backgroundColor || '#8c0004';
+          colorIndicator.style.backgroundColor = cardData.options.backgroundColor || COLORS[DEFAULT_PANEL_COLOR_INDEX].hex;
           
           italicsCheckbox.checked = cardData.options.italics !== false;
           italicsMode = cardData.options.italics !== false;
@@ -2238,7 +2375,7 @@ inComment = true;
         
         // Update UI
         updateCanvasBackground(bgColorSelectEl.value);
-        updateRovingLights(bgColorSelectEl.value);
+        updateCardGlow(bgColorSelectEl.value);
         highlightEditor();
         
         // Load and display SVG background
@@ -2431,17 +2568,17 @@ inComment = true;
     // ===== COLOR & BACKGROUND FUNCTIONS =====
     function populateColorOptions() {
       const colors = COLORS;
-      const initialColor = colors[DEFAULT_PANEL_COLOR_INDEX]; // Default to yellowish color
+      const initialColor = colors[DEFAULT_PANEL_COLOR_INDEX].hex; // Default to car color
       
       // Clear existing options
       bgColorSelectEl.innerHTML = '';
       
-      // Add color options with hex values
-      colors.forEach((color, index) => {
+      // Add color options with names and hex values
+      colors.forEach((colorObj, index) => {
         const option = document.createElement('option');
-        option.value = color;
-        option.textContent = color; // Show the hex value
-        if (color === initialColor) {
+        option.value = colorObj.hex;
+        option.textContent = `${colorObj.name} (${colorObj.hex})`;
+        if (colorObj.hex === initialColor) {
           option.selected = true;
         }
         bgColorSelectEl.appendChild(option);
@@ -2472,7 +2609,7 @@ inComment = true;
     }
     
     // Update card glow to match the selected color
-    function updateRovingLights(selectedColor) {
+    function updateCardGlow(selectedColor) {
       const rgb = hexToRgb(selectedColor);
       
       // Create lighter, more whitish glow variations (brighter)
@@ -2489,13 +2626,13 @@ inComment = true;
     // Initialize color options and set defaults
     populateColorOptions();
     
-    const initialColor = COLORS[DEFAULT_PANEL_COLOR_INDEX];
+    const initialColor = COLORS[DEFAULT_PANEL_COLOR_INDEX].hex;
     const colorIndicator = document.getElementById('bgColorIndicator');
     
     // Set initial values
     colorIndicator.style.backgroundColor = initialColor;
     updateCanvasBackground(initialColor);
-    updateRovingLights(initialColor);
+    updateCardGlow(initialColor);
     
     // Add fade-in animation when page loads
     window.addEventListener('load', () => {
@@ -2537,7 +2674,7 @@ inComment = true;
       
       // Update canvas background and glow
       updateCanvasBackground(selectedColor);
-      updateRovingLights(selectedColor);
+      updateCardGlow(selectedColor);
     });
     
     // Export button event listener
@@ -2664,6 +2801,26 @@ inComment = true;
             return;
           }
           
+          
+          // Trigger background preloading for adjacent blocks
+          const currentBlock = getBlockForCard(currentCardIndex);
+          const nextBlock = currentBlock + CARD_BLOCK_SIZE;
+          const prevBlock = currentBlock - CARD_BLOCK_SIZE;
+          
+          // Preload next block if it exists
+          if (nextBlock <= maxCardIndex) {
+            preloadCardBlock(nextBlock).catch(error => {
+              console.error('Failed to preload next block:', error);
+            });
+          }
+          
+          // Preload previous block if it exists
+          if (prevBlock >= 1) {
+            preloadCardBlock(prevBlock).catch(error => {
+              console.error('Failed to preload previous block:', error);
+            });
+          }
+          
           cardElement.style.animation = `${flipInAnimation} 0.8s linear forwards`;
           
           // Re-enable interactions after flip in completes
@@ -2764,6 +2921,13 @@ inComment = true;
         highlightEditor();
         populateColorOptions();
         await drawSvgBackground();
+      }
+      
+      // Preload the first block in the background
+      if (maxCardIndex > 0) {
+        preloadCardBlock(1).catch(error => {
+          console.error('Failed to preload initial block:', error);
+        });
       }
       
       // Now show the page with fade-in
