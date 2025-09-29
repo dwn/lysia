@@ -2563,6 +2563,9 @@ inComment = true;
           
           // Load the card and ensure proper rendering
           await loadCard(currentCardIndex);
+          
+          // Add fade-in animation
+          applyCardFadeIn();
         });
         
         // Add hover effect
@@ -2661,6 +2664,24 @@ inComment = true;
     }
 
     // ===== CARD SYSTEM FUNCTIONS =====
+    
+    // Apply fade-in animation to canvas and SVG background
+    function applyCardFadeIn() {
+      const canvasElement = document.getElementById('board');
+      const svgBackgroundElement = document.getElementById('svgBackground');
+      
+      if (canvasElement) {
+        canvasElement.style.animation = '';
+        canvasElement.offsetHeight; // Force reflow
+        canvasElement.style.animation = 'cardFadeIn 1.2s ease-out forwards';
+      }
+      
+      if (svgBackgroundElement) {
+        svgBackgroundElement.style.animation = '';
+        svgBackgroundElement.offsetHeight; // Force reflow
+        svgBackgroundElement.style.animation = 'cardFadeIn 1.2s ease-out forwards';
+      }
+    }
     async function loadCard(cardIndex) {
       try {
         // Check if URL is valid
@@ -2979,13 +3000,6 @@ inComment = true;
     canvasElement.style.background = 'transparent';
     updateCardGlow(initialColor);
     
-    // Add fade-in animation when page loads
-    window.addEventListener('load', () => {
-      const cardElement = document.querySelector('.grid > div:first-child');
-      if (cardElement) {
-        cardElement.style.animation = 'cardFadeIn 1.2s ease-out forwards';
-      }
-    });
     
     // Animate checkbox event listener
     animateCheckbox.addEventListener('change', () => {
@@ -3084,6 +3098,9 @@ inComment = true;
           
           // Load the current card to ensure it's displayed
           await loadCard(currentCardIndex);
+          
+          // Add fade-in animation
+          applyCardFadeIn();
         });
       }
     });
@@ -3295,6 +3312,9 @@ inComment = true;
       
       // Now show the page with fade-in
       document.body.classList.add('page-ready');
+      
+      // Apply fade-in animation after everything is loaded
+      applyCardFadeIn();
       
       // Start rendering based on checkbox state
       const coloredItems = parseBytesWithColors(getEditorValue());
