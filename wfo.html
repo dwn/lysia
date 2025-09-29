@@ -2530,33 +2530,39 @@ inComment = true;
           e.preventDefault();
           e.stopPropagation();
           
+          // Zoom back in regardless of which card was clicked
+          document.body.style.zoom = '0.75';
+          document.getElementById('editorToggle').style.display = 'block';
+          document.getElementById('exportButton').style.display = 'block';
+          document.getElementById('cardIndicator').style.display = 'block';
+          document.querySelectorAll('.editor-toggle').forEach(button => {
+            button.style.transform = '';
+          });
+          document.getElementById('editorToggle').style.left = '20px';
+          document.getElementById('editorToggle').style.top = '';
+          document.getElementById('exportButton').style.left = '120px';
+          document.getElementById('exportButton').style.top = '';
+          document.getElementById('zoomOutButton').style.right = '20px';
+          document.getElementById('zoomOutButton').style.top = '';
+          document.getElementById('cardIndicator').style.right = '120px';
+          document.getElementById('cardIndicator').style.top = '';
+          
+          hideCardBlockOverview();
+          
+          // Wait for canvas to be ready and force a reflow
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Force a reflow to ensure DOM is ready
+          document.getElementById('board').offsetHeight;
+          
+          // Always load the card (whether it's different or the same)
+          // This ensures card data is properly loaded when returning from zoomed-out view
           if (i !== currentCardIndex) {
-            // Zoom back in and load the selected card
-            document.body.style.zoom = '0.75';
-            document.getElementById('editorToggle').style.display = 'block';
-            document.getElementById('exportButton').style.display = 'block';
-            document.getElementById('cardIndicator').style.display = 'block';
-            document.querySelectorAll('.editor-toggle').forEach(button => {
-              button.style.transform = '';
-            });
-            document.getElementById('editorToggle').style.left = '20px';
-            document.getElementById('editorToggle').style.top = '';
-            document.getElementById('exportButton').style.left = '120px';
-            document.getElementById('exportButton').style.top = '';
-            document.getElementById('zoomOutButton').style.right = '20px';
-            document.getElementById('zoomOutButton').style.top = '';
-            document.getElementById('cardIndicator').style.right = '120px';
-            document.getElementById('cardIndicator').style.top = '';
-            
-            hideCardBlockOverview();
-            
-            // Wait for canvas to be ready
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Load the selected card
             currentCardIndex = i;
-            await loadCard(currentCardIndex);
           }
+          
+          // Load the card and ensure proper rendering
+          await loadCard(currentCardIndex);
         });
         
         // Add hover effect
@@ -3067,6 +3073,18 @@ inComment = true;
         
         // Hide the card block overview
         hideCardBlockOverview();
+        
+        // Ensure card data is properly loaded when returning from zoomed-out view
+        setTimeout(async () => {
+          // Wait for canvas to be ready and force a reflow
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Force a reflow to ensure DOM is ready
+          document.getElementById('board').offsetHeight;
+          
+          // Load the current card to ensure it's displayed
+          await loadCard(currentCardIndex);
+        });
       }
     });
     
