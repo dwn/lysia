@@ -2531,26 +2531,13 @@ inComment = true;
           e.stopPropagation();
           
           // Zoom back in regardless of which card was clicked
-          document.body.style.zoom = '0.75';
-          document.getElementById('editorToggle').style.display = 'block';
-          document.getElementById('exportButton').style.display = 'block';
-          document.getElementById('cardIndicator').style.display = 'block';
-          document.querySelectorAll('.editor-toggle').forEach(button => {
-            button.style.transform = '';
-          });
-          document.getElementById('editorToggle').style.left = '20px';
-          document.getElementById('editorToggle').style.top = '';
-          document.getElementById('exportButton').style.left = '120px';
-          document.getElementById('exportButton').style.top = '';
-          document.getElementById('zoomOutButton').style.right = '20px';
-          document.getElementById('zoomOutButton').style.top = '';
-          document.getElementById('cardIndicator').style.right = '120px';
-          document.getElementById('cardIndicator').style.top = '';
+            document.body.style.zoom = '0.75';
+            setButtonState('normal');
           
           hideCardBlockOverview();
           
           // Wait for canvas to be ready and force a reflow
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await delay(100);
           
           // Force a reflow to ensure DOM is ready
           document.getElementById('board').offsetHeight;
@@ -2588,33 +2575,56 @@ inComment = true;
       
       // Apply the grid layout: 1 card (centered), 3 cards, 3 cards, 3 cards, 1 card (centered)
       const cards = gridContainer.children;
-      if (cards.length >= 11) {
-        // First row: 1 card (centered)
-        cards[0].style.gridColumn = '2';
-        cards[0].style.gridRow = '1';
+      // Place cards according to their position within the block (1-11)
+      for (let i = 0; i < cards.length; i++) {
+        const cardIndex = range.start + i;
+        const positionInBlock = cardIndex - blockStart + 1;
         
-        // Second row: 3 cards
-        for (let i = 1; i <= 3; i++) {
-          cards[i].style.gridColumn = i;
-          cards[i].style.gridRow = '2';
-        }
-        
-        // Third row: 3 cards
-        for (let i = 4; i <= 6; i++) {
-          cards[i].style.gridColumn = i - 3;
-          cards[i].style.gridRow = '3';
-        }
-        
-        // Fourth row: 3 cards
-        for (let i = 7; i <= 9; i++) {
-          cards[i].style.gridColumn = i - 6;
-          cards[i].style.gridRow = '4';
-        }
-        
-        // Fifth row: 1 card (centered)
-        if (cards.length > 10) {
-          cards[10].style.gridColumn = '2';
-          cards[10].style.gridRow = '5';
+        switch (positionInBlock) {
+          case 1:
+            cards[i].style.gridColumn = '2';
+            cards[i].style.gridRow = '1';
+            break;
+          case 2:
+            cards[i].style.gridColumn = '1';
+            cards[i].style.gridRow = '2';
+            break;
+          case 3:
+            cards[i].style.gridColumn = '2';
+            cards[i].style.gridRow = '2';
+            break;
+          case 4:
+            cards[i].style.gridColumn = '3';
+            cards[i].style.gridRow = '2';
+            break;
+          case 5:
+            cards[i].style.gridColumn = '1';
+            cards[i].style.gridRow = '3';
+            break;
+          case 6:
+            cards[i].style.gridColumn = '2';
+            cards[i].style.gridRow = '3';
+            break;
+          case 7:
+            cards[i].style.gridColumn = '3';
+            cards[i].style.gridRow = '3';
+            break;
+          case 8:
+            cards[i].style.gridColumn = '1';
+            cards[i].style.gridRow = '4';
+            break;
+          case 9:
+            cards[i].style.gridColumn = '2';
+            cards[i].style.gridRow = '4';
+            break;
+          case 10:
+            cards[i].style.gridColumn = '3';
+            cards[i].style.gridRow = '4';
+            break;
+          case 11:
+            cards[i].style.gridColumn = '2';
+            cards[i].style.gridRow = '5';
+            break;
         }
       }
       
@@ -2663,6 +2673,54 @@ inComment = true;
       }
     }
 
+    // ===== UI STATE MANAGEMENT =====
+    
+    // Utility function for delays
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Unified zoom mode detection
+    function isZoomedOut() {
+      return (document.body.style.zoom || '0.75') === '0.15';
+    }
+    
+    // Button state configurations
+    const BUTTON_STATES = {
+      normal: {
+        editorToggle: { display: 'block', left: '20px', top: '' },
+        exportButton: { display: 'block', left: '120px', top: '' },
+        zoomOutButton: { display: 'block', right: '20px', top: '', transform: '', border: '', boxShadow: '' },
+        cardIndicator: { display: 'block', right: '120px', top: '', transform: '', border: '', boxShadow: '' }
+      },
+      zoomedOut: {
+        editorToggle: { display: 'none' },
+        exportButton: { display: 'none' },
+        zoomOutButton: { display: 'block', right: '275px', top: '200px', transform: 'scale(5)', border: 'none', boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.2)' },
+        cardIndicator: { right: '750px', top: '200px', transform: 'scale(5)', border: 'none', boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.2)' }
+      }
+    };
+    
+    // Apply button states
+    function setButtonState(state) {
+      const config = BUTTON_STATES[state];
+      Object.entries(config).forEach(([buttonId, styles]) => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+          Object.entries(styles).forEach(([property, value]) => {
+            button.style[property] = value;
+          });
+        }
+      });
+      
+      // Reset transform for all editor-toggle buttons
+      if (state === 'normal') {
+        document.querySelectorAll('.editor-toggle').forEach(button => {
+          button.style.transform = '';
+        });
+      }
+    }
+    
     // ===== CARD SYSTEM FUNCTIONS =====
     
     // Apply fade-in animation to canvas and SVG background
@@ -2807,22 +2865,21 @@ inComment = true;
     
     function updateCardIndicator() {
       if (cardIndicator) {
-        cardIndicator.textContent = `${currentCardIndex} / ${maxCardIndex}`;
+        if (isZoomedOut()) {
+          // Show set number in zoomed-out mode
+          const currentSet = Math.ceil(currentCardIndex / CARD_BLOCK_SIZE);
+          const totalSets = Math.ceil(maxCardIndex / CARD_BLOCK_SIZE);
+          cardIndicator.textContent = `${currentSet} / ${totalSets}`;
+        } else {
+          // Show individual card number in normal mode
+          cardIndicator.textContent = `${currentCardIndex} / ${maxCardIndex}`;
+        }
       }
     }
 
     async function uploadCard() {
       try {
         // Collect all settings
-        console.log('=== UPLOAD DEBUG ===');
-        console.log('Current mode - editorVisible:', editorVisible);
-        console.log('Size:', sInputEl.value);
-        console.log('Background color:', bgColorSelectEl.value);
-        console.log('Italics:', italicsCheckbox.checked);
-        console.log('Animate:', animateCheckbox.checked);
-        console.log('SVG background:', svgInputEl.value.trim());
-        console.log('Rule text:', getPlainText(ruleEl));
-        console.log('Input text:', getPlainText(inputEl));
         
         const settings = {
           options: {
@@ -2844,8 +2901,6 @@ inComment = true;
         
         // Upload to Supabase storage
         const fileName = `${currentCardIndex}.json`;
-        console.log(`Attempting to upload ${fileName} to bucket 'card'`);
-        console.log('Supabase client:', supabaseClient);
         
         const { data, error } = await supabaseClient.storage
           .from('card')
@@ -2861,7 +2916,7 @@ inComment = true;
           return;
         }
 
-        console.log('Upload successful:', data);
+        // Upload successful
         alert(`Card ${currentCardIndex} uploaded successfully!`);
         
         // Update max card index if we uploaded a new card
@@ -3050,48 +3105,21 @@ inComment = true;
       e.preventDefault();
       e.stopPropagation();
       
-      // Toggle between current zoom (75%) and 15%
-      const currentZoom = document.body.style.zoom || '0.75';
-      if (currentZoom === '0.75') {
+      // Toggle between zoom modes
+      if (!isZoomedOut()) {
         document.body.style.zoom = '0.15';
-        // Hide all buttons except the zoom button when zoomed out
-        document.getElementById('editorToggle').style.display = 'none';
-        document.getElementById('exportButton').style.display = 'none';
-        document.getElementById('cardIndicator').style.display = 'none';
-        // Only show and scale the zoom button
-        document.getElementById('zoomOutButton').style.display = 'block';
-        document.getElementById('zoomOutButton').style.transform = 'scale(5)';
-        document.getElementById('zoomOutButton').style.right = '275px';
-        document.getElementById('zoomOutButton').style.top = '200px';
-        
-        // Show the card block overview
+        setButtonState('zoomedOut');
+        updateCardIndicator();
         showCardBlockOverview();
       } else {
         document.body.style.zoom = '0.75';
-        // Show all buttons again when zoomed back in
-        document.getElementById('editorToggle').style.display = 'block';
-        document.getElementById('exportButton').style.display = 'block';
-        document.getElementById('cardIndicator').style.display = 'block';
-        // Reset button scale and positions to normal
-        document.querySelectorAll('.editor-toggle').forEach(button => {
-          button.style.transform = '';
-        });
-        document.getElementById('editorToggle').style.left = '20px';
-        document.getElementById('editorToggle').style.top = '';
-        document.getElementById('exportButton').style.left = '120px';
-        document.getElementById('exportButton').style.top = '';
-        document.getElementById('zoomOutButton').style.right = '20px';
-        document.getElementById('zoomOutButton').style.top = '';
-        document.getElementById('cardIndicator').style.right = '120px';
-        document.getElementById('cardIndicator').style.top = '';
-        
-        // Hide the card block overview
+        setButtonState('normal');
         hideCardBlockOverview();
         
         // Ensure card data is properly loaded when returning from zoomed-out view
         setTimeout(async () => {
           // Wait for canvas to be ready and force a reflow
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await delay(100);
           
           // Force a reflow to ensure DOM is ready
           document.getElementById('board').offsetHeight;
@@ -3137,6 +3165,12 @@ inComment = true;
     // Consolidated card flip handler
     async function handleCardFlip(direction = 'left') {
       if (editorVisible || isFlippingOut) return;
+      
+      // Check if we're in zoomed-out mode
+      if (isZoomedOut()) {
+        await handleCardSetFade(direction);
+        return;
+      }
       
       // Check boundaries
       if (direction === 'left' && !canFlipLeft()) {
@@ -3211,6 +3245,65 @@ inComment = true;
       }
     }
     
+    async function handleCardSetFade(direction = 'left') {
+      if (editorVisible || isFlippingOut) return;
+      
+      // Check if we can navigate to another set
+      const currentBlockStart = getBlockForCard(currentCardIndex);
+      const newBlockStart = direction === 'left' ? 
+        Math.min(currentBlockStart + CARD_BLOCK_SIZE, getBlockForCard(maxCardIndex)) :
+        Math.max(currentBlockStart - CARD_BLOCK_SIZE, 1);
+      
+      // If we're already at the boundary, don't navigate
+      if (newBlockStart === currentBlockStart) {
+        console.log(`Cannot navigate ${direction} - at boundary`);
+        return;
+      }
+      
+      isFlippingOut = true;
+      
+      // Fade out current set
+      const gridContainer = document.querySelector('.grid-container');
+      if (gridContainer) {
+        gridContainer.style.transition = 'opacity 0.4s ease-out';
+        gridContainer.style.opacity = '0';
+      }
+      
+      // Wait for fade out
+      await delay(400);
+      
+      // Update to new block
+      const newCardIndex = direction === 'left' ? 
+        Math.min(currentCardIndex + CARD_BLOCK_SIZE, maxCardIndex) :
+        Math.max(currentCardIndex - CARD_BLOCK_SIZE, 1);
+      
+      currentCardIndex = newCardIndex;
+      
+      // Show new set
+      await showCardBlockOverview();
+      
+      // Fade in new set
+      const newGridContainer = document.querySelector('.grid-container');
+      if (newGridContainer) {
+        newGridContainer.style.opacity = '0';
+        newGridContainer.style.transition = 'opacity 0.4s ease-in';
+        // Force reflow to ensure opacity is applied
+        newGridContainer.offsetHeight;
+        newGridContainer.style.opacity = '1';
+      }
+      
+      // Wait for fade in
+      await delay(400);
+      
+      // Reset transition
+      if (newGridContainer) {
+        newGridContainer.style.transition = '';
+      }
+      
+      isFlippingOut = false;
+      updateCardIndicator();
+    }
+    
     // Consolidated input handlers
     document.addEventListener('click', (e) => {
       if (editorVisible || isFlippingOut) return;
@@ -3219,7 +3312,9 @@ inComment = true;
       if (e.target.getAttribute('data-programmatic') === 'true') return;
       
       // Find the card element to get its position
-      const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      if (!cardElement) {
+        cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      }
       if (!cardElement) return;
       
       // Get card's bounding rectangle
@@ -3238,7 +3333,9 @@ inComment = true;
       e.preventDefault();
       
       // Find the card element to get its position
-      const cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      if (!cardElement) {
+        cardElement = document.querySelector('.canvas-only .grid > div:first-child');
+      }
       if (!cardElement) return;
       
       // Get card's bounding rectangle
