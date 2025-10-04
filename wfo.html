@@ -722,6 +722,10 @@ a     xxx    b    yyy</div>
               <input id="animateCheckbox" type="checkbox"/>
               <label for="animateCheckbox">Animate</label>
             </div>
+            <div>
+              <input id="svgColorCheckbox" type="checkbox"/>
+              <label for="svgColorCheckbox">SVG Color</label>
+            </div>
           </div>
           <div style="margin-top: 1rem;">
             <label for="svgInput">Background Svg</label>
@@ -816,6 +820,7 @@ a     xxx    b    yyy</div>
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
     const italicsCheckbox = document.getElementById('italicsCheckbox');
+    const svgColorCheckbox = document.getElementById('svgColorCheckbox');
     const editorToggleBtn = document.getElementById('editorToggle');
     const exportButton = document.getElementById('exportButton');
     const zoomOutButton = document.getElementById('zoomOutButton');
@@ -2693,11 +2698,12 @@ inComment = true;
                   // Strip SVG colors and calculate text color
                   const cardColor = getCardColor(cardData);
                   const textColor = calculateSvgTextColor(cardColor, false); // Always presentation mode in zoomed-out
-                  const cleanedSvgContent = stripSvgColors(svgContent);
+                  const useNaturalColors = cardData.options && cardData.options.svgColor === true;
+                  const cleanedSvgContent = stripSvgColors(svgContent, useNaturalColors);
                   
                   svgContainer.innerHTML = `
                     <style>
-                      ${createSvgStyle(false, '1', textColor)}
+                      ${createSvgStyle(false, '1', textColor, useNaturalColors)}
                     </style>
                     ${cleanedSvgContent}
                   `;
@@ -2711,11 +2717,12 @@ inComment = true;
                 // Strip SVG colors and calculate text color
                 const cardColor = getCardColor(cardData);
                 const textColor = calculateSvgTextColor(cardColor, false); // Always presentation mode in zoomed-out
-                const cleanedSvgValue = stripSvgColors(svgValue);
+                const useNaturalColors = cardData.options && cardData.options.svgColor === true;
+                const cleanedSvgValue = stripSvgColors(svgValue, useNaturalColors);
                 
                 svgContainer.innerHTML = `
                   <style>
-                    ${createSvgStyle(false, '1', textColor)}
+                    ${createSvgStyle(false, '1', textColor, useNaturalColors)}
                   </style>
                   ${cleanedSvgValue}
                 `;
@@ -3050,21 +3057,40 @@ inComment = true;
       return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    function createSvgStyle(hasTransform = false, transformValue = '1', textColor = 'currentColor') {
-      return `svg {
-        width: 100%;
-        height: 100%;
-        display: block;
-        object-fit: contain;
-        object-position: center;
-        ${hasTransform ? `transform: scale(${transformValue});` : ''}
-        opacity: 0.5;
-        color: ${textColor};
+    function createSvgStyle(hasTransform = false, transformValue = '1', textColor = 'currentColor', useNaturalColors = null) {
+      // Check if using natural SVG colors (checkbox checked = use natural colors, so no CSS override)
+      if (useNaturalColors === null) {
+        useNaturalColors = svgColorCheckbox && svgColorCheckbox.checked;
       }
-      svg * {
-        fill: currentColor;
-        stroke: currentColor;
-      }`;
+      
+      if (useNaturalColors) {
+        // Keep original SVG colors - no CSS override
+        return `svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: contain;
+          object-position: center;
+          ${hasTransform ? `transform: scale(${transformValue});` : ''}
+          opacity: 0.5;
+        }`;
+      } else {
+        // Apply color inheritance
+        return `svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: contain;
+          object-position: center;
+          ${hasTransform ? `transform: scale(${transformValue});` : ''}
+          opacity: 0.5;
+          color: ${textColor};
+        }
+        svg * {
+          fill: currentColor;
+          stroke: currentColor;
+        }`;
+      }
     }
     
     function getCardColor(cardData, fallback = '#333333') {
@@ -3072,8 +3098,16 @@ inComment = true;
       return cardData.options?.backgroundColor || cardData.color || fallback;
     }
     
-    function stripSvgColors(svgContent) {
+    function stripSvgColors(svgContent, useNaturalColors = null) {
       if (!svgContent) return svgContent;
+      
+      // Check if SVG color override is enabled (checkbox checked = use natural colors, so don't override)
+      if (useNaturalColors === null) {
+        useNaturalColors = svgColorCheckbox && svgColorCheckbox.checked;
+      }
+      if (useNaturalColors) {
+        return svgContent; // Keep original colors if using natural colors
+      }
       
       // Remove fill and stroke attributes to allow CSS inheritance
       let cleanedSvg = svgContent
@@ -3247,6 +3281,8 @@ inComment = true;
           
           animateCheckbox.checked = cardData.options.animate === true;
           
+          svgColorCheckbox.checked = cardData.options.svgColor === true;
+          
           svgInputEl.value = cardData.options.svgBackground || '';
         }
         
@@ -3359,6 +3395,7 @@ inComment = true;
             backgroundColor: bgColorSelectEl.value,
             italics: italicsCheckbox.checked,
             animate: animateCheckbox.checked,
+            svgColor: svgColorCheckbox.checked,
             svgBackground: svgInputEl.value.trim()
           },
           rule: getPlainText(ruleEl),
@@ -4082,6 +4119,19 @@ inComment = true;
         italicsCheckboxEl.addEventListener('change', ()=>{
           italicsMode = italicsCheckboxEl.checked;
           renderNow();       // redraw canvas with new italics mode
+        });
+      }
+      
+      const svgColorCheckboxEl = document.getElementById('svgColorCheckbox');
+      if (svgColorCheckboxEl) {
+        svgColorCheckboxEl.addEventListener('change', async ()=>{
+          // Redraw SVG background with new color setting
+          await drawSvgBackground();
+          
+          // If in zoomed-out mode, also redraw the overview
+          if (isZoomedOut()) {
+            showCardBlockOverview();
+          }
         });
       }
     });
