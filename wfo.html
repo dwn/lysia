@@ -3551,7 +3551,7 @@ inComment = true;
       
       // Determine click position relative to card center
       const clickX = e.clientX;
-      const direction = clickX < cardCenterX ? 'left' : 'right';
+      const direction = clickX < cardCenterX ? 'right' : 'left';
       
       handleCardFlip(direction);
     });
@@ -3572,7 +3572,7 @@ inComment = true;
       
       // Determine touch position relative to card center
       const touchX = e.touches[0].clientX;
-      const direction = touchX < cardCenterX ? 'left' : 'right';
+      const direction = touchX < cardCenterX ? 'right' : 'left';
       
       handleCardFlip(direction);
     });
@@ -3581,7 +3581,7 @@ inComment = true;
       // Handle flip animations
       if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && !isFlippingOut) {
         e.preventDefault();
-        const direction = e.code === 'ArrowRight' ? 'right' : 'left';
+        const direction = e.code === 'ArrowRight' ? 'left' : 'right';
         handleCardFlip(direction);
         return;
       }
