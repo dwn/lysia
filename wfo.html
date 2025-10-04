@@ -890,6 +890,21 @@ a     xxx    b    yyy</div>
     ctx.imageSmoothingQuality = 'high';
     ctx.textRenderingOptimization = 'optimizeQuality';
     
+    // Calculate luminosity of a hex color (0-1, where 1 is brightest)
+    function getLuminosity(hexColor) {
+      const rgb = hexToRgb(hexColor);
+      // Using relative luminance formula
+      const r = rgb.r / 255;
+      const g = rgb.g / 255;
+      const b = rgb.b / 255;
+      
+      const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+      const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+      const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+      
+      return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
+    }
+    
     // ===== DRAWING FUNCTIONS =====
     function drawOutline(isPoint = false) {
       if (editorVisible) return;
@@ -1098,6 +1113,7 @@ a     xxx    b    yyy</div>
               object-fit: contain;
               object-position: center;
               transform: scale(${hasZRotation ? '0.707' : '1'});
+              opacity: 0.62;
               /* filter: drop-shadow(0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)) drop-shadow(0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)) drop-shadow(0 0 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)); */
           }
         </style>
@@ -1728,32 +1744,21 @@ a     xxx    b    yyy</div>
         // Highlight current letter with red color only when Input field is focused, others with white
         const isInputFocused = document.activeElement === inputEl;
         const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
-        // In editor mode, always use pure white. In presentation mode, blend with background
-        let textColor = editorVisible ? '#ffffff' : blendColors(backgroundColor, '#ffffff', 0.62);
+        // Calculate background luminosity for adaptive text color
+        const luminosity = getLuminosity(backgroundColor);
         
-        // Adjust brightness based on size - smaller text needs to be brighter for readability
+        // In editor mode, always use pure white. In presentation mode, use adaptive colors
+        let textColor;
         if (editorVisible) {
-          // For editor mode, use much brighter colors based on size
-          // All colors should be very bright for visibility
-          if (s <= 3) {
-            textColor = '#ffffff'; // Pure white for very small sizes
-          } else if (s <= 5) {
-            textColor = '#ffffff'; // Pure white for small sizes too
-          } else if (s <= 7) {
-            textColor = '#ffffff'; // Pure white for medium sizes
-          } else {
-            textColor = '#ffffff'; // Pure white for all sizes in editor mode
-          }
+          textColor = '#ffffff'; // Always white in editor mode
         } else {
-          // For presentation mode, use much brighter blended colors
-          if (s <= 3) {
-            textColor = blendColors(backgroundColor, '#ffffff', 0.9); // Much more white
-          } else if (s <= 5) {
-            textColor = blendColors(backgroundColor, '#ffffff', 0.8); // More white
-          } else if (s <= 7) {
-            textColor = blendColors(backgroundColor, '#ffffff', 0.7); // Still more white
+          // For presentation mode, use dark text on bright backgrounds, light text on dark backgrounds
+          if (luminosity > 0.5) {
+            // Bright background - use dark text
+            textColor = blendColors(backgroundColor, '#000000', 0.8);
           } else {
-            textColor = blendColors(backgroundColor, '#ffffff', 0.6); // Original ratio
+            // Dark background - use light text
+            textColor = blendColors(backgroundColor, '#ffffff', 0.7);
           }
         }
 
@@ -2288,11 +2293,11 @@ inComment = true;
           // Switch to presentation mode
           document.body.classList.toggle('canvas-only', !editorVisible);
           
-          // Update canvas background and SVG
+          // Update SVG first, then canvas background
           const selectedColor = bgColorSelectEl.value;
+          await drawSvgBackground();
           updateCanvasBackground(selectedColor);
           updateCardGlow(selectedColor);
-          await drawSvgBackground();
           
           // Clear canvas and render the content (ensure editorVisible is properly set)
           setTimeout(() => {
@@ -2363,17 +2368,17 @@ inComment = true;
         }
         
         // Wait for flip-out to complete, then switch content
-        setTimeout(() => {
+        setTimeout(async () => {
           
           // Clear canvas and switch to editor mode
           ctx.clearRect(0, 0, width, height);
           document.body.classList.toggle('canvas-only', !editorVisible);
           
-          // Update canvas background and SVG
+          // Update SVG first, then canvas background
           const selectedColor = bgColorSelectEl.value;
+          await drawSvgBackground();
           updateCanvasBackground(selectedColor);
           updateCardGlow(selectedColor);
-          drawSvgBackground();
           gridFadeStartTime = null;
           gridFadeComplete = false;
           
@@ -2687,6 +2692,7 @@ inComment = true;
                         display: block;
                         object-fit: contain;
                         object-position: center;
+                        opacity: 0.62;
                       }
                     </style>
                     ${svgContent}
@@ -2702,6 +2708,7 @@ inComment = true;
                       display: block;
                       object-fit: contain;
                       object-position: center;
+                      opacity: 0.62;
                     }
                   </style>
                   ${svgValue}
@@ -3103,21 +3110,31 @@ inComment = true;
     
     // ===== CARD SYSTEM FUNCTIONS =====
     
-    // Apply fade-in animation to canvas and SVG background
+    // Apply fade-in animation to canvas and SVG background (no scaling)
     function applyCardFadeIn() {
       const canvasElement = document.getElementById('board');
       const svgBackgroundElement = document.getElementById('svgBackground');
       
       if (canvasElement) {
+        // Set initial opacity and clear any existing animation
+        canvasElement.style.opacity = '0';
         canvasElement.style.animation = '';
         canvasElement.offsetHeight; // Force reflow
-        canvasElement.style.animation = 'cardFadeIn 1.2s ease-out forwards';
+        
+        // Simple fade-in without scaling
+        canvasElement.style.transition = 'opacity 1.2s ease-out';
+        canvasElement.style.opacity = '1';
       }
       
       if (svgBackgroundElement) {
+        // Set initial opacity and clear any existing animation
+        svgBackgroundElement.style.opacity = '0';
         svgBackgroundElement.style.animation = '';
         svgBackgroundElement.offsetHeight; // Force reflow
-        svgBackgroundElement.style.animation = 'cardFadeIn 1.2s ease-out forwards';
+        
+        // Simple fade-in without scaling
+        svgBackgroundElement.style.transition = 'opacity 1.2s ease-out';
+        svgBackgroundElement.style.opacity = '1';
       }
     }
     async function loadCard(cardIndex) {
@@ -3171,7 +3188,10 @@ inComment = true;
           inputEl.textContent = cardData.input;
         }
         
-        // Update UI
+        // Load and display SVG background first
+        await drawSvgBackground();
+        
+        // Update UI after SVG is loaded
         if (!isZoomedOut()) {
           updateCanvasBackground(bgColorSelectEl.value);
         }
@@ -3180,9 +3200,6 @@ inComment = true;
         
         // Process text replacement to update Output field
         processTextReplacement();
-        
-        // Load and display SVG background
-        await drawSvgBackground();
         
         // Render the new content (now using Output field)
         renderNow();
