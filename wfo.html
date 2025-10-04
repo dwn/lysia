@@ -2619,7 +2619,7 @@ inComment = true;
           if (cardData) {
             // Set background color
             if (cardData.options && cardData.options.backgroundColor) {
-              cardCanvas.style.background = generateGradientFromColor(cardData.options.backgroundColor);
+              cardCanvas.style.background = generateLightGradientFromColor(cardData.options.backgroundColor);
               
               // Add individual glow to each card
               const rgb = hexToRgb(cardData.options.backgroundColor);
@@ -3381,17 +3381,30 @@ inComment = true;
       });
     }
     
-    // Generate gradient from base color
+    // Generate gradient from base color (slightly lighter at bottom for zoomed-in mode)
     function generateGradientFromColor(baseColor) {
       const rgb = hexToRgb(baseColor);
       
-      // Create gradient with varying opacity
+      // Create gradient with varying opacity (slightly lighter at bottom)
       return `linear-gradient(135deg, 
         rgba(${rgb.r},${rgb.g},${rgb.b},0.8) 0%, 
         rgba(${rgb.r},${rgb.g},${rgb.b},0.6) 25%, 
         rgba(${rgb.r},${rgb.g},${rgb.b},0.4) 50%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.2) 75%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.1) 100%)`;
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.25) 75%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.15) 100%)`;
+    }
+    
+    // Generate lighter gradient for zoomed-out cards
+    function generateLightGradientFromColor(baseColor) {
+      const rgb = hexToRgb(baseColor);
+      
+      // Create gradient with varying opacity - lighter in bottom half
+      return `linear-gradient(135deg, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.8) 0%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.6) 25%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.5) 50%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.4) 75%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.3) 100%)`;
     }
     
     // Update canvas background based on editor mode and selected color
@@ -3745,6 +3758,22 @@ inComment = true;
           // Emulate a click on the editor toggle button
           editorToggleBtn.click();
         }
+        return;
+      }
+      
+      // Handle Enter for zoom toggle (only in presentation mode)
+      if (e.key === 'Enter' && !editorVisible && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        // Emulate a click on the zoom button
+        zoomOutButton.click();
+        return;
+      }
+      
+      // Handle Ctrl+S or Cmd+S for save card
+      if (e.key.toLowerCase() === 's' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        exportButton.click(); // Trigger the existing export functionality
+        return;
       }
     });
 
