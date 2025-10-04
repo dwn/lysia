@@ -80,6 +80,43 @@ aa 05 d5 59 91 10 02|88 8a 40 10 f8 e8 89 40 10|88 8a 05 d5 59 91 10 02|88 aa 02
 `;
 const defaultSvgBackground = 
 `https://vault.biltmoretoday.com/storage/v1/object/public/image/tree.svg`;
+
+const defaultRuleContent = `====SECTION MAIN
+04,FF
+88,AA
+ca,BB
+05,CC
+d5,DD
+59,EE
+91,FF
+10,00
+02,11
+c8,22
+62,33
+b8,44
+01,55
+a5,66
+19,77
+e2,88
+59,99
+40,AA
+60,BB
+9a,CC
+1d,DD
+52,EE
+a8,FF
+a9,00
+98,11
+03,22
+30,33
+dd,44
+00,55
+8a,66
+ae,77
+51,88
+2e,99
+a2,AA
+ef,BB`;
 </script>
   <meta charset="utf-8" />
   <title>Wfo Writer</title>
@@ -130,18 +167,6 @@ const defaultSvgBackground =
     body:not(.canvas-only) {
       zoom: 0.75;
       transform-origin: top left;
-    }
-    
-    body:not(.canvas-only) .grid {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    
-    body:not(.canvas-only) #canvasWrapper {
-      max-height: calc(100vh - 200px);
-      margin: 20px 0;
     }
     
     /* ===== ANIMATIONS ===== */
@@ -475,6 +500,62 @@ const defaultSvgBackground =
       border-radius: 16px;
       padding: 1.5rem;
       position: relative;
+    }
+    
+    /* Fixed 50/50 layout for editor mode only */
+    body:not(.canvas-only) .container-fluid {
+      max-width: none !important;
+    }
+    
+    body:not(.canvas-only) .container-fluid .grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 2rem !important;
+      min-height: 100vh;
+      align-items: start;
+    }
+    
+    body:not(.canvas-only) .container-fluid .grid > div:first-child,
+    body:not(.canvas-only) .container-fluid .grid > aside {
+      width: 100% !important;
+      max-width: none !important;
+      flex: none !important;
+    }
+    
+    body:not(.canvas-only) .container-fluid .grid > aside {
+      overflow-y: auto;
+      height: calc(100vh - 2rem);
+      position: relative;
+      z-index: 1;
+      background: var(--pico-background-color);
+    }
+    
+    /* Ensure textareas don't resize the layout in editor mode */
+    body:not(.canvas-only) .container-fluid textarea {
+      resize: vertical !important;
+      min-height: 100px !important;
+      max-height: 200px !important;
+    }
+    
+    /* Canvas wrapper positioning in editor mode */
+    body:not(.canvas-only) #canvasWrapper {
+      width: 100% !important;
+      max-width: 100% !important;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      overflow: visible !important;
+      padding-bottom: 0 !important;
+      margin-top: 65px;
+      left: -15px;
+      z-index: -1;
+    }
+    
+    body:not(.canvas-only) #canvasWrapper canvas {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      flex-shrink: 0;
     }
     
     /* Add a subtle screen reflection effect */
@@ -1882,7 +1963,14 @@ inComment = true;
     }
 
     // ===== EDITOR FUNCTIONS =====
-    function getEditorValue(){ return getPlainText(inputEl); }
+    function getEditorValue(){ 
+      // Use Output field for canvas rendering if it has content, otherwise fall back to Input
+      const outputText = getPlainText(outputEl);
+      if (outputText.trim()) {
+        return outputText;
+      }
+      return getPlainText(inputEl); 
+    }
 
     // Get the current letter index (which space between | characters the cursor is in)
     function getCurrentLetterIndex(){
@@ -2673,6 +2761,138 @@ inComment = true;
       }
     }
 
+    // ===== TEXT REPLACEMENT SYSTEM =====
+    
+    class TextReplacer {
+      static init(replacementRules) {
+        if (!replacementRules || !replacementRules.trim()) {
+          return { sections: { 'MAIN': { index: 0, firstLine: -1 } }, rules: [] };
+        }
+        
+        const lines = replacementRules.split('\n').filter(line => line.trim());
+        const sections = { 'MAIN': { index: 0, firstLine: -1 } };
+        const rules = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Check for section headers
+          if (line.startsWith('====SECTION')) {
+            const sectionName = line.split(' ')[1];
+            sections[sectionName] = { index: Object.keys(sections).length, firstLine: i };
+          } else {
+            // Parse replacement pairs (format: "find,replace" or "find replace")
+            const pairs = line.split(/\s+/).map(pair => {
+              if (pair.includes(',')) {
+                const [find, replace] = pair.split(',');
+                return [find, replace];
+              } else {
+                // If no comma, treat as single word replacement (replace with empty)
+                return [pair, ''];
+              }
+            });
+            rules.push(pairs);
+          }
+        }
+        
+        return { sections, rules };
+      }
+      
+      static run(text, replacementData) {
+        if (!replacementData || !replacementData.rules) return text;
+        
+        let result = text;
+        
+        // Process rules from the MAIN section
+        const mainSection = replacementData.sections['MAIN'];
+        if (!mainSection) return text;
+        
+        // Start from the line after the section header
+        const startLine = mainSection.firstLine + 1;
+        
+        for (let i = startLine; i < replacementData.rules.length; i++) {
+          const ruleLine = replacementData.rules[i];
+          
+          // Check for special RUN commands
+          if (ruleLine.length === 1 && ruleLine[0][0].includes('====RUN')) {
+            const runParts = ruleLine[0][0].split('-');
+            const repetitions = runParts.length > 1 ? parseInt(runParts[1]) || 1 : 1;
+            const sectionName = ruleLine[0][1];
+            
+            // Find the next section
+            const currentSection = replacementData.sections[sectionName];
+            if (currentSection) {
+              const nextSectionIndex = currentSection.index + 1;
+              const nextSectionName = Object.keys(replacementData.sections)
+                .find(name => replacementData.sections[name].index === nextSectionIndex);
+              
+              if (nextSectionName) {
+                const nextSection = replacementData.sections[nextSectionName];
+                const endLine = nextSection.firstLine;
+                
+                // Apply the section rules multiple times
+                for (let rep = 0; rep < repetitions; rep++) {
+                  for (let lineIdx = currentSection.firstLine + 1; lineIdx < endLine; lineIdx++) {
+                    const pairs = replacementData.rules[lineIdx];
+                    for (const [find, replace] of pairs) {
+                      result = result.replace(new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replace);
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            // Apply regular replacement rules
+            for (const [find, replace] of ruleLine) {
+              result = result.replace(new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replace);
+            }
+          }
+        }
+        
+        return result;
+      }
+    }
+    
+    // Process text replacement and update Output field
+    function processTextReplacement() {
+      const ruleText = getPlainText(ruleEl);
+      const inputText = getPlainText(inputEl);
+      
+      if (!ruleText.trim()) {
+        // No rules, just copy input to output
+        outputEl.textContent = inputText;
+        return;
+      }
+      
+      try {
+        const replacementData = TextReplacer.init(ruleText);
+        const processedText = TextReplacer.run(inputText, replacementData);
+        outputEl.textContent = processedText;
+      } catch (error) {
+        console.error('Text replacement error:', error);
+        outputEl.textContent = inputText; // Fallback to original input
+      }
+    }
+    
+    // Debounced version of processTextReplacement
+    let replacementTimer = null;
+    function debouncedProcessTextReplacement() {
+      if (replacementTimer) {
+        clearTimeout(replacementTimer);
+      }
+      replacementTimer = setTimeout(() => {
+        processTextReplacement();
+        // Re-render canvas with updated output
+        const coloredItems = parseBytesWithColors(getEditorValue());
+        const { ops, visited } = buildOps(coloredItems);
+        if (animateCheckbox.checked) {
+          startAnim(ops, visited);
+        } else {
+          renderInstant(ops, visited);
+        }
+      }, 250);
+    }
+    
     // ===== UI STATE MANAGEMENT =====
     
     // Utility function for delays
@@ -2796,10 +3016,13 @@ inComment = true;
         updateCardGlow(bgColorSelectEl.value);
         highlightEditor();
         
+        // Process text replacement to update Output field
+        processTextReplacement();
+        
         // Load and display SVG background
         await drawSvgBackground();
         
-        // Render the new content
+        // Render the new content (now using Output field)
         renderNow();
         
         // Update card indicator
@@ -2963,8 +3186,13 @@ inComment = true;
     // Live update on every edit (typing, delete, IME commits, etc.)
     inputEl.addEventListener('input', () => {
       highlightEditor();   // rebuild colored spans
-      renderNow();         // rebuild ops + redraw canvas
+      debouncedProcessTextReplacement(); // process text replacement and update canvas
       scheduleSnapshot();  // coalesce undo snapshots
+    });
+    
+    // Process text replacement when rule field changes
+    ruleEl.addEventListener('input', () => {
+      debouncedProcessTextReplacement();
     });
 
     // Update highlighting when cursor position changes (click, arrow keys, etc.)
@@ -3394,8 +3622,10 @@ inComment = true;
       if (!loadSuccess) {
         // Fallback to default content if card loading fails
         inputEl.textContent = defaultContent;
+        ruleEl.textContent = defaultRuleContent;
         svgInputEl.value = defaultSvgBackground;
         highlightEditor();
+        processTextReplacement(); // Process text replacement for default content
         populateColorOptions();
         await drawSvgBackground();
       }
