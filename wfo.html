@@ -910,7 +910,7 @@ a     xxx    b    yyy</div>
       if (editorVisible) return;
       
       const backgroundColor = bgColorSelectEl.value;
-      const blendedColor = blendColors(backgroundColor, '#606060', 0.4);
+      const blendedColor = blendColors(backgroundColor, '#606060', 0.2);
       
       ctx.strokeStyle = blendedColor;
       ctx.lineWidth = thickness * (isPoint ? THICKNESS_MULTIPLIERS.pointOutline : THICKNESS_MULTIPLIERS.outline);
@@ -1042,6 +1042,9 @@ a     xxx    b    yyy</div>
       // Normalize viewBox attribute (fix lowercase viewbox to proper viewBox)
       processedSvg = processedSvg.replace(/viewbox="([^"]*)"/g, 'viewBox="$1"');
       
+      // Strip SVG colors to allow CSS inheritance
+      processedSvg = stripSvgColors(processedSvg);
+      
       // Check if SVG contains z-axis rotations (spins)
       const hasZRotation = checkForZAxisRotation(svgContent);
       
@@ -1103,10 +1106,13 @@ a     xxx    b    yyy</div>
         
         // Convert hex to RGB for glow
         const rgb = hexToRgb(selectedColor);
+        
+        // Calculate text color for SVG
+        const textColor = calculateSvgTextColor(selectedColor, editorVisible);
       
       svgBackground.innerHTML = `
         <style>
-          #svgBackground ${createSvgStyle(true, hasZRotation ? '0.707' : '1')}
+          #svgBackground ${createSvgStyle(true, hasZRotation ? '0.707' : '1', textColor)}
           /* filter: drop-shadow(0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)) drop-shadow(0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)) drop-shadow(0 0 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)); */
         </style>
         ${processedSvg}
@@ -2684,11 +2690,16 @@ inComment = true;
                 }
                 
                 if (svgContent) {
+                  // Strip SVG colors and calculate text color
+                  const cardColor = getCardColor(cardData);
+                  const textColor = calculateSvgTextColor(cardColor, false); // Always presentation mode in zoomed-out
+                  const cleanedSvgContent = stripSvgColors(svgContent);
+                  
                   svgContainer.innerHTML = `
                     <style>
-                      ${createSvgStyle()}
+                      ${createSvgStyle(false, '1', textColor)}
                     </style>
-                    ${svgContent}
+                    ${cleanedSvgContent}
                   `;
                   
                   // Make canvas transparent and apply gradient to wrapper when SVG is present
@@ -2697,11 +2708,16 @@ inComment = true;
                 }
               } else {
                 // Direct SVG content
+                // Strip SVG colors and calculate text color
+                const cardColor = getCardColor(cardData);
+                const textColor = calculateSvgTextColor(cardColor, false); // Always presentation mode in zoomed-out
+                const cleanedSvgValue = stripSvgColors(svgValue);
+                
                 svgContainer.innerHTML = `
                   <style>
-                    ${createSvgStyle()}
+                    ${createSvgStyle(false, '1', textColor)}
                   </style>
-                  ${svgValue}
+                  ${cleanedSvgValue}
                 `;
                 
                 // Make canvas transparent and apply gradient to wrapper when SVG is present
@@ -3034,7 +3050,7 @@ inComment = true;
       return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    function createSvgStyle(hasTransform = false, transformValue = '1') {
+    function createSvgStyle(hasTransform = false, transformValue = '1', textColor = 'currentColor') {
       return `svg {
         width: 100%;
         height: 100%;
@@ -3042,13 +3058,57 @@ inComment = true;
         object-fit: contain;
         object-position: center;
         ${hasTransform ? `transform: scale(${transformValue});` : ''}
-        opacity: 0.62;
+        opacity: 0.5;
+        color: ${textColor};
+      }
+      svg * {
+        fill: currentColor;
+        stroke: currentColor;
       }`;
     }
     
     function getCardColor(cardData, fallback = '#333333') {
       if (!cardData) return fallback;
       return cardData.options?.backgroundColor || cardData.color || fallback;
+    }
+    
+    function stripSvgColors(svgContent) {
+      if (!svgContent) return svgContent;
+      
+      // Remove fill and stroke attributes to allow CSS inheritance
+      let cleanedSvg = svgContent
+        .replace(/\s+fill="[^"]*"/g, '')  // Remove fill attributes
+        .replace(/\s+stroke="[^"]*"/g, '') // Remove stroke attributes
+        .replace(/style="([^"]*?)"/g, (match, styleContent) => {
+          // Remove fill and stroke from CSS styles
+          const cleanedStyle = styleContent
+            .replace(/fill:\s*[^;]+;?/g, '')
+            .replace(/stroke:\s*[^;]+;?/g, '')
+            .replace(/;\s*;/g, ';') // Clean up double semicolons
+            .replace(/^;|;$/g, ''); // Remove leading/trailing semicolons
+          
+          return cleanedStyle ? `style="${cleanedStyle}"` : '';
+        });
+      
+      return cleanedSvg;
+    }
+    
+    function calculateSvgTextColor(backgroundColor, editorVisible = false) {
+      // In editor mode, always use pure white
+      if (editorVisible) {
+        return '#ffffff';
+      }
+      
+      // For presentation mode, use adaptive colors based on background luminosity
+      const luminosity = getLuminosity(backgroundColor);
+      
+      if (luminosity > 0.5) {
+        // Bright background - use dark text
+        return blendColors(backgroundColor, '#000000', 0.8);
+      } else {
+        // Dark background - use light text
+        return blendColors(backgroundColor, '#ffffff', 0.7);
+      }
     }
     
     // Calculate optimal zoom level to fit content in viewport
