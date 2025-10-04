@@ -652,12 +652,12 @@ ef,BB`;
   </button>
 
   <!-- Upload button -->
-  <button id="exportButton" class="editor-toggle" title="Upload Card to Storage" style="left: 120px; width: 80px;">
+  <button id="exportButton" class="editor-toggle" title="Upload Card to Storage (⌘S)" style="left: 120px; width: 80px;">
     📁
   </button>
 
   <!-- Zoom out button -->
-  <button id="zoomOutButton" class="editor-toggle" title="Zoom Out to 20%" style="left: auto; right: 20px; width: 80px;">
+  <button id="zoomOutButton" class="editor-toggle" title="Toggle Zoom (Enter)" style="left: auto; right: 20px; width: 80px;">
     🔍
   </button>
 
@@ -700,11 +700,6 @@ a     xxx    b    yyy</div>
             <code>|</code> next glyph
             <br>
             <code>||</code> next text row
-            <br>
-            <br>
-            <strong>Shortcuts:</strong>
-            <br>
-            <code>Ctrl/Cmd + E</code> toggles editor
       </small>
         </details>
         
@@ -3798,15 +3793,6 @@ inComment = true;
         return;
       }
       
-      // Handle Ctrl+X or Cmd+X to close editor (like X button)
-      if (e.key.toLowerCase() === 'x' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
-        e.preventDefault();
-        if (editorVisible) {
-          // Close editor by clicking the X button
-          editorToggleBtn.click();
-        }
-        return;
-      }
       
       // Handle number keys 1-9 to jump to specific card in current set (only in presentation mode)
       if (e.key >= '1' && e.key <= '9' && !editorVisible && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
