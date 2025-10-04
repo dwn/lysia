@@ -199,10 +199,7 @@ ef,BB`;
     }
     
     /* Ensure consistent border styling for all cards in zoomed-out mode */
-    .canvas-only .grid-container .card-wrapper {
-      border: 2px solid #666 !important;
-    }
-    
+    .canvas-only .grid-container .card-wrapper,
     .canvas-only .grid-container .card-wrapper:hover {
       border: 2px solid #666 !important;
     }
@@ -824,6 +821,24 @@ a     xxx    b    yyy</div>
     const cardIndicator = document.getElementById('cardIndicator');
     const svgInputEl = document.getElementById('svgInput');
     let cardElement = null;
+    
+    // Utility function to prevent card flip on button clicks
+    function preventCardFlip(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Check if editor toggle is allowed
+    function canToggleEditor() {
+      const now = performance.now();
+      const isInCooldown = now < animationCooldownEnd;
+      return document.activeElement !== inputEl && 
+             document.activeElement !== ruleEl && 
+             document.activeElement !== outputEl && 
+             !isFlipping && 
+             !currentAnim && 
+             !isInCooldown;
+    }
     
     // ===== CANVAS SETUP =====
     const cssW = 600, cssH = 1000;
@@ -2216,9 +2231,7 @@ inComment = true;
     // ===== EVENT HANDLERS =====
     // Editor toggle button
     editorToggleBtn.addEventListener('click', (e) => {
-      // Always prevent default to stop card flip
-      e.preventDefault();
-      e.stopPropagation();
+      preventCardFlip(e);
       
       // Check if we can toggle (same conditions as CMD+E)
       const now = performance.now();
@@ -2258,7 +2271,6 @@ inComment = true;
       
       if (!editorVisible) {
         // Switching to presentation mode
-        console.log('Switching to presentation mode');
         
         // Start page fade out
         fadeOutPage();
@@ -2271,7 +2283,6 @@ inComment = true;
         
         // Step 2: Wait for first half to complete, then switch to presentation mode
         setTimeout(async () => {
-          console.log('First 90° complete, switching to presentation');
           
           // Switch to presentation mode
           document.body.classList.toggle('canvas-only', !editorVisible);
@@ -2297,7 +2308,6 @@ inComment = true;
           
           // Step 3: Wait for rendering to complete, then start second half flip
           setTimeout(() => {
-            console.log('Presentation loaded, starting fade-in flip');
             
             // Show card indicator now that presentation mode is loaded
             if (cardIndicator) {
@@ -2311,7 +2321,6 @@ inComment = true;
             
             // Step 4: Wait for second half to complete, then finish setup
             setTimeout(() => {
-              console.log('Second 90° complete, finishing presentation setup');
               
               // Final setup
               if (cardElement) {
@@ -2335,7 +2344,6 @@ inComment = true;
         }, 400); // Wait for first half animation
       } else {
         // Switching to editor mode
-        console.log('Switching to editor mode');
         
         // Start page fade out
         fadeOutPage();
@@ -2355,7 +2363,6 @@ inComment = true;
         
         // Wait for flip-out to complete, then switch content
         setTimeout(() => {
-          console.log('Flip-out complete, switching to editor mode');
           
           // Clear canvas and switch to editor mode
           ctx.clearRect(0, 0, width, height);
@@ -2371,7 +2378,6 @@ inComment = true;
           
           // Wait a moment for setup to complete, then fade in
           setTimeout(() => {
-            console.log('Editor mode ready, fading in');
             
             // Reset card element to final position (no flip-in needed)
             if (cardElement) {
@@ -2463,7 +2469,6 @@ inComment = true;
       preloadingInProgress = true;
       
       const range = getBlockRange(blockStart);
-      console.log(`Preloading card block ${blockStart}-${range.end}`);
       
       const promises = [];
       
@@ -2520,7 +2525,6 @@ inComment = true;
         await Promise.all(svgPromises);
       }
       
-      console.log(`Preloaded card block ${blockStart}-${range.end}`);
       preloadingInProgress = false;
     }
     
@@ -2529,7 +2533,6 @@ inComment = true;
       const requiredBlock = getBlockForCard(cardIndex);
       
       if (requiredBlock !== currentBlockStart) {
-        console.log(`Card ${cardIndex} requires block ${requiredBlock}, current block is ${currentBlockStart}`);
         currentBlockStart = requiredBlock;
         
         // Preload the new block in the background
@@ -2742,8 +2745,7 @@ inComment = true;
         
         // Add click handler to jump to card
         cardWrapper.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+          preventCardFlip(e);
           
           // Zoom back in regardless of which card was clicked
             document.body.style.zoom = '0.75';
@@ -3495,17 +3497,13 @@ inComment = true;
     
     // Export button event listener
     exportButton.addEventListener('click', (e) => {
-      // Always prevent default to stop card flip
-      e.preventDefault();
-      e.stopPropagation();
+      preventCardFlip(e);
       uploadCard();
     });
     
     // Zoom out button event listener
     zoomOutButton.addEventListener('click', (e) => {
-      // Always prevent default to stop card flip
-      e.preventDefault();
-      e.stopPropagation();
+      preventCardFlip(e);
       
       // Toggle between zoom modes
       if (!isZoomedOut()) {
@@ -3537,9 +3535,7 @@ inComment = true;
     
     // Card indicator event listener (prevents card flip when clicked)
     cardIndicator.addEventListener('click', (e) => {
-      // Always prevent default to stop card flip
-      e.preventDefault();
-      e.stopPropagation();
+      preventCardFlip(e);
       // No action needed - just prevent card flip
     });
     
@@ -3575,12 +3571,8 @@ inComment = true;
       }
       
       // Check boundaries
-      if (direction === 'left' && !canFlipLeft()) {
-        console.log('Cannot flip left - at last card');
-        return;
-      }
-      if (direction === 'right' && !canFlipRight()) {
-        console.log('Cannot flip right - at first card');
+      if ((direction === 'left' && !canFlipLeft()) || 
+          (direction === 'right' && !canFlipRight())) {
         return;
       }
       
@@ -3658,7 +3650,6 @@ inComment = true;
       
       // If we're already at the boundary, don't navigate
       if (newBlockStart === currentBlockStart) {
-        console.log(`Cannot navigate ${direction} - at boundary`);
         return;
       }
       
@@ -3767,12 +3758,8 @@ inComment = true;
       
       // Handle Ctrl+E or Cmd+E for editor toggle
       if (e.key.toLowerCase() === 'e' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
-        // Only toggle if not typing in the editor, not currently flipping, no animation running, and cooldown period has ended
-        const now = performance.now();
-        const isInCooldown = now < animationCooldownEnd;
-        if (document.activeElement !== inputEl && document.activeElement !== ruleEl && document.activeElement !== outputEl && !isFlipping && !currentAnim && !isInCooldown) {
+        if (canToggleEditor()) {
           e.preventDefault();
-          // Emulate a click on the editor toggle button
           editorToggleBtn.click();
         }
         return;
@@ -3854,21 +3841,14 @@ inComment = true;
             const previousSelected = gridContainer.querySelector('.card-wrapper.selected');
             if (previousSelected) {
               previousSelected.classList.remove('selected');
-              console.log('Removed selection from previous card');
             }
             
             // Add selection to new card
             const cardWrappers = gridContainer.querySelectorAll('.card-wrapper');
             const targetPosition = newPosition - 1; // Convert to 0-based index
-            console.log('Target position:', targetPosition, 'Total cards:', cardWrappers.length);
             if (cardWrappers[targetPosition]) {
               cardWrappers[targetPosition].classList.add('selected');
-              console.log('Added selection to card at position:', targetPosition);
-            } else {
-              console.log('No card found at position:', targetPosition);
             }
-          } else {
-            console.log('No grid container found');
           }
         }
         return;
@@ -3888,7 +3868,6 @@ inComment = true;
       
       // Initialize card system
       maxCardIndex = await findMaxCardIndex();
-      console.log(`Found ${maxCardIndex} cards (1-${maxCardIndex})`);
       
       // Update card indicator with max count
       updateCardIndicator();
@@ -3950,7 +3929,3 @@ inComment = true;
   </script>
 </body>
 </html>
-
-<!-- Test comment for hot reload -->
-<!-- Python hot reload test -->
-<!-- FastAPI hot reload test -->
