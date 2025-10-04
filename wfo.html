@@ -3454,18 +3454,20 @@ inComment = true;
     
     // Animate checkbox event listener
     animateCheckbox.addEventListener('change', () => {
-      // Update the current presentation based on checkbox state (works in both modes)
-      const coloredItems = parseBytesWithColors(getEditorValue());
-      const { ops, visited } = buildOps(coloredItems);
-      
-      // Stop any current animation
-      stopAnim();
-      
-      // Render based on checkbox state
-      if (animateCheckbox.checked) {
-        startAnim(ops, visited);
-      } else {
-        renderInstant(ops, visited);
+      if (!editorVisible) {
+        // Update the current presentation based on checkbox state
+        const coloredItems = parseBytesWithColors(getEditorValue());
+        const { ops, visited } = buildOps(coloredItems);
+        
+        // Stop any current animation
+        stopAnim();
+        
+        // Render based on checkbox state
+        if (animateCheckbox.checked) {
+          startAnim(ops, visited);
+        } else {
+          renderInstant(ops, visited);
+        }
       }
     });
     
