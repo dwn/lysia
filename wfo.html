@@ -2387,14 +2387,7 @@ inComment = true;
       }
     });
     
-    // Intercept default paragraph for plain newline
-    inputEl.addEventListener('beforeinput', (e) => {
-      if (e.inputType === 'insertParagraph') {
-        e.preventDefault();
-        insertTextAtCaret(inputEl, '\n');
-        scheduleSnapshot();
-      }
-    });
+    // Let browser handle Enter naturally - no interception needed
 
     // Keydown fallback for Enter
     inputEl.addEventListener('keydown', (e) => {
@@ -2414,12 +2407,7 @@ inComment = true;
         return;
       }
 
-      // Plain Enter inserts '\n'
-      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        e.preventDefault();
-        insertTextAtCaret(inputEl, '\n');
-        scheduleSnapshot();
-      }
+      // Enter handling is done by beforeinput event handler
     });
 
     // Sanitize paste to plain text
