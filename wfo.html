@@ -192,6 +192,21 @@ ef,BB`;
       display: none;
     }
     
+    /* Selected card outline in zoomed-out mode */
+    .canvas-only .grid-container .card-wrapper.selected {
+      border: 3px solid #4a9eff !important;
+      box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.6) !important;
+    }
+    
+    /* Ensure consistent border styling for all cards in zoomed-out mode */
+    .canvas-only .grid-container .card-wrapper {
+      border: 2px solid #666 !important;
+    }
+    
+    .canvas-only .grid-container .card-wrapper:hover {
+      border: 2px solid #666 !important;
+    }
+    
     @keyframes cardFlipIn {
       0% {
         transform: translateX(100vw) rotateY(90deg);
@@ -2560,6 +2575,7 @@ inComment = true;
       // Create card elements for each card in the block
       for (let i = range.start; i <= range.end; i++) {
         const cardWrapper = document.createElement('div');
+        cardWrapper.className = 'card-wrapper';
         cardWrapper.style.cssText = `
           width: 600px;
           height: 1000px;
@@ -2573,9 +2589,8 @@ inComment = true;
         
         // Highlight the current card (will be overridden by individual glow if card has background color)
         if (i === currentCardIndex) {
-          // Will be set to bright card color when card data is loaded
-          cardWrapper.style.border = '3px solid #ffffff'; // Temporary white
-          // Don't set boxShadow here - let individual card glow handle it
+          // Don't set a bright border here - keep the normal gray border
+          cardWrapper.classList.add('selected');
         }
         
         // Create canvas for the card
@@ -3133,7 +3148,9 @@ inComment = true;
         }
         
         // Update UI
-        updateCanvasBackground(bgColorSelectEl.value);
+        if (!isZoomedOut()) {
+          updateCanvasBackground(bgColorSelectEl.value);
+        }
         updateCardGlow(bgColorSelectEl.value);
         highlightEditor();
         
@@ -3743,7 +3760,12 @@ inComment = true;
       // Handle flip animations
       if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && !isFlippingOut) {
         e.preventDefault();
-        const direction = e.code === 'ArrowRight' ? 'left' : 'right';
+        let direction;
+        if (e.code === 'Space') {
+          direction = 'left'; // Space moves to next card (right) but flips left
+        } else {
+          direction = e.code === 'ArrowRight' ? 'left' : 'right';
+        }
         handleCardFlip(direction);
         return;
       }
@@ -3761,8 +3783,8 @@ inComment = true;
         return;
       }
       
-      // Handle Enter for zoom toggle (only in presentation mode)
-      if (e.key === 'Enter' && !editorVisible && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+      // Handle Enter or Z for zoom toggle (only in presentation mode)
+      if ((e.key === 'Enter' || e.key.toLowerCase() === 'z') && !editorVisible && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         // Emulate a click on the zoom button
         zoomOutButton.click();
@@ -3773,6 +3795,96 @@ inComment = true;
       if (e.key.toLowerCase() === 's' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         exportButton.click(); // Trigger the existing export functionality
+        return;
+      }
+      
+      // Handle Ctrl+X or Cmd+X to close editor (like X button)
+      if (e.key.toLowerCase() === 'x' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        if (editorVisible) {
+          // Close editor by clicking the X button
+          editorToggleBtn.click();
+        }
+        return;
+      }
+      
+      // Handle number keys 1-9 to jump to specific card in current set (only in presentation mode)
+      if (e.key >= '1' && e.key <= '9' && !editorVisible && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        const targetCardNumber = parseInt(e.key, 10);
+        const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
+        const targetCardIndex = currentSetStart + targetCardNumber - 1;
+        
+        // Only jump if the target card exists
+        if (targetCardIndex <= maxCardIndex) {
+          // Load the target card directly
+          loadCard(targetCardIndex);
+        }
+        return;
+      }
+      
+      // Handle up/down arrow keys in zoomed-out mode to navigate card selection
+      if ((e.code === 'ArrowUp' || e.code === 'ArrowDown') && !editorVisible && isZoomedOut() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        
+        const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
+        const positionInSet = currentCardIndex - currentSetStart + 1; // 1-11
+        
+        let newPosition;
+        
+        if (e.code === 'ArrowDown') {
+          // Down arrow: increment through cards
+          const nextCardIndex = currentSetStart + positionInSet; // Next card in sequence
+          
+          if (nextCardIndex <= maxCardIndex && nextCardIndex <= currentSetStart + CARD_BLOCK_SIZE - 1) {
+            // Move to next card in set (if it exists and is within the set)
+            newPosition = positionInSet + 1;
+          } else {
+            // Wrap around to first card of set
+            newPosition = 1;
+          }
+        } else { // ArrowUp
+          // Up arrow: decrement through cards
+          if (positionInSet > 1) {
+            // Move to previous card in set
+            newPosition = positionInSet - 1;
+          } else {
+            // Wrap around to last card of set
+            const setEnd = Math.min(currentSetStart + CARD_BLOCK_SIZE - 1, maxCardIndex);
+            newPosition = setEnd - currentSetStart + 1;
+          }
+        }
+        
+        const targetCardIndex = currentSetStart + newPosition - 1;
+        if (targetCardIndex <= maxCardIndex) {
+          // Update currentCardIndex before calling loadCard
+          currentCardIndex = targetCardIndex;
+          loadCard(targetCardIndex);
+          
+          // Update visual selection in the grid
+          const gridContainer = document.querySelector('.grid-container');
+          if (gridContainer) {
+            // Remove previous selection
+            const previousSelected = gridContainer.querySelector('.card-wrapper.selected');
+            if (previousSelected) {
+              previousSelected.classList.remove('selected');
+              console.log('Removed selection from previous card');
+            }
+            
+            // Add selection to new card
+            const cardWrappers = gridContainer.querySelectorAll('.card-wrapper');
+            const targetPosition = newPosition - 1; // Convert to 0-based index
+            console.log('Target position:', targetPosition, 'Total cards:', cardWrappers.length);
+            if (cardWrappers[targetPosition]) {
+              cardWrappers[targetPosition].classList.add('selected');
+              console.log('Added selection to card at position:', targetPosition);
+            } else {
+              console.log('No card found at position:', targetPosition);
+            }
+          } else {
+            console.log('No grid container found');
+          }
+        }
         return;
       }
     });
