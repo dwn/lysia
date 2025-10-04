@@ -508,7 +508,7 @@ ef,BB`;
         inset 0 -2px 4px rgba(0,0,0,0.1),
         0 8px 32px rgba(0,0,0,0.3),
         0 0 0 1px rgba(255,255,255,0.1);
-      filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+      /* filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3)); */
       border-radius: 16px;
       padding: 1.5rem;
       position: relative;
@@ -666,8 +666,8 @@ ef,BB`;
   <main class="container-fluid">
     <div class="grid">
       <div>
-        <div id="canvasWrapper" style="position: relative; overflow: hidden; padding-bottom: 1.5rem; border-radius: 16px;">
-          <canvas id="board" width="600" height="1000" aria-label="drawing canvas"></canvas>
+        <div id="canvasWrapper" style="position: relative; overflow: hidden; border-radius: 16px;">
+          <canvas id="board" width="600" height="1000" aria-label="drawing canvas" style="position: relative; z-index: 1;"></canvas>
         </div>
 </div>
       <aside>
@@ -894,7 +894,7 @@ a     xxx    b    yyy</div>
       if (editorVisible) return;
       
       const backgroundColor = bgColorSelectEl.value;
-      const blendedColor = blendColors(backgroundColor, '#404040', 0.5);
+      const blendedColor = blendColors(backgroundColor, '#606060', 0.4);
       
       ctx.strokeStyle = blendedColor;
       ctx.lineWidth = thickness * (isPoint ? THICKNESS_MULTIPLIERS.pointOutline : THICKNESS_MULTIPLIERS.outline);
@@ -1071,7 +1071,7 @@ a     xxx    b    yyy</div>
           svgBackground.style.left = '0';
           svgBackground.style.width = '100%';
           svgBackground.style.height = '100%';
-        svgBackground.style.zIndex = '-1';
+        svgBackground.style.zIndex = '0';
           svgBackground.style.pointerEvents = 'none';
 
           // Add it as a child of the wrapper
@@ -2857,8 +2857,8 @@ inComment = true;
       if (mainCardContainer) {
         // Clear the grid and restore the original canvas
         mainCardContainer.innerHTML = `
-          <div id="canvasWrapper" style="position: relative; overflow: hidden; padding-bottom: 1.5rem; border-radius: 16px;">
-            <canvas id="board" width="600" height="1000" aria-label="drawing canvas"></canvas>
+          <div id="canvasWrapper" style="position: relative; overflow: hidden; border-radius: 16px;">
+            <canvas id="board" width="600" height="1000" aria-label="drawing canvas" style="position: relative; z-index: 1;"></canvas>
           </div>
         `;
         
@@ -3399,35 +3399,54 @@ inComment = true;
     function generateGradientFromColor(baseColor) {
       const rgb = hexToRgb(baseColor);
       
-      // Create gradient with varying opacity (slightly lighter at bottom)
+      // Create gradient with varying opacity (brighter overall)
       return `linear-gradient(135deg, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.8) 0%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.6) 25%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.4) 50%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.25) 75%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.15) 100%)`;
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.95) 0%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.85) 25%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.75) 50%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.65) 75%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.55) 100%)`;
     }
     
     // Generate lighter gradient for zoomed-out cards
     function generateLightGradientFromColor(baseColor) {
       const rgb = hexToRgb(baseColor);
       
-      // Create gradient with varying opacity - lighter in bottom half
+      // Create gradient with varying opacity - brighter overall for zoomed-out mode
       return `linear-gradient(135deg, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.8) 0%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.6) 25%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.5) 50%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.4) 75%, 
-        rgba(${rgb.r},${rgb.g},${rgb.b},0.3) 100%)`;
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.9) 0%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.8) 25%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.7) 50%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.6) 75%, 
+        rgba(${rgb.r},${rgb.g},${rgb.b},0.5) 100%)`;
     }
     
     // Update canvas background based on editor mode and selected color
     function updateCanvasBackground(selectedColor) {
       const canvasElement = document.getElementById('board');
+      const canvasWrapper = document.getElementById('canvasWrapper');
+      
       if (!editorVisible) {
-        canvasElement.style.background = generateGradientFromColor(selectedColor);
+        // Check if there's an SVG background - if so, keep canvas transparent and apply gradient to canvas wrapper
+        const svgBackgroundElement = document.getElementById('svgBackground');
+        const hasSvgBackground = svgBackgroundElement && svgBackgroundElement.style.display !== 'none' && svgBackgroundElement.innerHTML.trim();
+        
+        if (hasSvgBackground) {
+          canvasElement.style.background = 'transparent';
+          if (canvasWrapper) {
+            canvasWrapper.style.background = generateGradientFromColor(selectedColor);
+          }
+        } else {
+          canvasElement.style.background = generateGradientFromColor(selectedColor);
+          if (canvasWrapper) {
+            canvasWrapper.style.background = '';
+          }
+        }
       } else {
         canvasElement.style.background = '';
+        if (canvasWrapper) {
+          canvasWrapper.style.background = '';
+        }
       }
     }
     
