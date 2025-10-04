@@ -1106,16 +1106,8 @@ a     xxx    b    yyy</div>
       
       svgBackground.innerHTML = `
         <style>
-          #svgBackground svg {
-              width: 100%;
-              height: 100%;
-              display: block;
-              object-fit: contain;
-              object-position: center;
-              transform: scale(${hasZRotation ? '0.707' : '1'});
-              opacity: 0.62;
-              /* filter: drop-shadow(0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)) drop-shadow(0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)) drop-shadow(0 0 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)); */
-          }
+          #svgBackground ${createSvgStyle(true, hasZRotation ? '0.707' : '1')}
+          /* filter: drop-shadow(0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)) drop-shadow(0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)) drop-shadow(0 0 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)); */
         </style>
         ${processedSvg}
       `;
@@ -2607,6 +2599,7 @@ inComment = true;
           display: block;
         `;
         
+        
         // Create SVG background container
         const svgContainer = document.createElement('div');
         svgContainer.style.cssText = `
@@ -2615,7 +2608,7 @@ inComment = true;
           left: 0;
           width: 100%;
           height: 100%;
-          z-index: -1;
+          z-index: 0;
           pointer-events: none;
         `;
         
@@ -2634,6 +2627,13 @@ inComment = true;
               cardCache.set(i, cardData);
             }
           }
+          
+          // Set card background gradient (will be overridden if SVG is present)
+          const cardColor = getCardColor(cardData);
+          cardCanvas.style.background = generateGradientFromColor(cardColor);
+          
+          // Also set the wrapper background initially
+          cardWrapper.style.background = generateGradientFromColor(cardColor);
           
           if (cardData) {
             // Set background color
@@ -2686,33 +2686,27 @@ inComment = true;
                 if (svgContent) {
                   svgContainer.innerHTML = `
                     <style>
-                      svg {
-                        width: 100%;
-                        height: 100%;
-                        display: block;
-                        object-fit: contain;
-                        object-position: center;
-                        opacity: 0.62;
-                      }
+                      ${createSvgStyle()}
                     </style>
                     ${svgContent}
                   `;
+                  
+                  // Make canvas transparent and apply gradient to wrapper when SVG is present
+                  cardCanvas.style.background = 'transparent';
+                  cardWrapper.style.background = generateGradientFromColor(getCardColor(cardData));
                 }
               } else {
                 // Direct SVG content
                 svgContainer.innerHTML = `
                   <style>
-                    svg {
-                      width: 100%;
-                      height: 100%;
-                      display: block;
-                      object-fit: contain;
-                      object-position: center;
-                      opacity: 0.62;
-                    }
+                    ${createSvgStyle()}
                   </style>
                   ${svgValue}
                 `;
+                
+                // Make canvas transparent and apply gradient to wrapper when SVG is present
+                cardCanvas.style.background = 'transparent';
+                cardWrapper.style.background = generateGradientFromColor(getCardColor(cardData));
               }
             }
             
@@ -2742,8 +2736,7 @@ inComment = true;
           }
         } catch (error) {
           console.error(`Failed to load card ${i}:`, error);
-          // Show card number as fallback
-          cardCanvas.style.background = '#333';
+          // Show card number as fallback - keep the background that was already set
           const ctx = cardCanvas.getContext('2d');
           ctx.fillStyle = 'white';
           ctx.font = '120px Arial';
@@ -3039,6 +3032,23 @@ inComment = true;
     // Utility function for delays
     function delay(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    function createSvgStyle(hasTransform = false, transformValue = '1') {
+      return `svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+        object-position: center;
+        ${hasTransform ? `transform: scale(${transformValue});` : ''}
+        opacity: 0.62;
+      }`;
+    }
+    
+    function getCardColor(cardData, fallback = '#333333') {
+      if (!cardData) return fallback;
+      return cardData.options?.backgroundColor || cardData.color || fallback;
     }
     
     // Calculate optimal zoom level to fit content in viewport
