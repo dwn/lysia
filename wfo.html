@@ -524,10 +524,11 @@ ef,BB`;
     
     body:not(.canvas-only) .container-fluid .grid > aside {
       overflow-y: auto;
-      height: calc(100vh - 2rem);
+      height: 100%;
       position: relative;
       z-index: 1;
       background: var(--pico-background-color);
+      margin-left: 15px;
     }
     
     /* Ensure textareas don't resize the layout in editor mode */
@@ -724,7 +725,7 @@ a     xxx    b    yyy</div>
         </details>
         
         
-        <details>
+        <details open>
           <summary>Rule</summary>
           <div id="strRule" class="ce-editor" contenteditable="true" role="textbox" aria-multiline="true">
           </div>
@@ -854,6 +855,7 @@ a     xxx    b    yyy</div>
     const DEFAULT_PANEL_COLOR_INDEX = 1;
     
     let currentLetterHexPairIndex = 0;
+    let highlightTimeout = null; // Timeout to prevent infinite highlighting loops
     
     // ===== CANVAS CONTEXT SETUP =====
     ctx.lineCap = 'round';
@@ -1661,6 +1663,13 @@ a     xxx    b    yyy</div>
       const ops=[]; const visited=[{xi,yi}];
       let currentLetterIndex = getCurrentLetterIndex();
       let letterIndex = 0;
+      
+      // Check if input has pipes to determine letter counting strategy
+      const inputRaw = getPlainText(inputEl);
+      const hasPipes = inputRaw.includes('|');
+      
+      // Reset hex pair counter for consistent color cycling
+      currentLetterHexPairIndex = 0;
 
       for(const item of coloredItems){
         if(item.newline){
@@ -1668,15 +1677,19 @@ a     xxx    b    yyy</div>
           yi = pad.top + 8 * (Math.floor((yi - pad.top) / 8) + 1);
           xi = pad.left; 
           visited.push({xi,yi});
-          // Newline counts as a new letter
-          letterIndex++;
-          currentLetterHexPairIndex = 0; // Reset hex pair counter
+          // Newline counts as a new letter only if pipes are present
+          if (hasPipes) {
+            letterIndex++;
+            currentLetterHexPairIndex = 0; // Reset hex pair counter
+          }
           continue;
         }
         if (item.pipe) {
-          // literal single '|', increment letter index
-          letterIndex++;
-          currentLetterHexPairIndex = 0; // Reset hex pair counter
+          // literal single '|', increment letter index only if pipes are present
+          if (hasPipes) {
+            letterIndex++;
+            currentLetterHexPairIndex = 0; // Reset hex pair counter
+          }
           continue;
         }
         if (item.text && item.byte === undefined) {
@@ -1876,6 +1889,10 @@ a     xxx    b    yyy</div>
       const currentLetterIndex = getCurrentLetterIndex();
       const esc = escapeHTML(raw);
       
+      // Check if input has pipes to determine letter counting strategy
+      const hasPipes = raw.includes('|');
+      
+      
       let letterIndex = 0;
       let hexPairIndex = 0; // Track hex pairs within current letter
       let html = '';
@@ -1902,23 +1919,138 @@ inComment = true;
         if(ch === '|'){
           const next = esc[i+1];
           if(next === '|'){
-            // Newline token - this counts as a new letter
-            letterIndex++;
-            hexPairIndex = 0; // Reset hex pair counter for new letter
+            // Newline token - this counts as a new letter only if pipes are present
+            if (hasPipes) {
+              letterIndex++;
+              hexPairIndex = 0; // Reset hex pair counter for new letter
+            }
             html += '||';
             i += 2;
           } else {
-            // Letter separator
-            letterIndex++;
-            hexPairIndex = 0; // Reset hex pair counter for new letter
+            // Letter separator - increment letter index after processing current letter
             html += '|';
             i++;
+            if (hasPipes) {
+              letterIndex++;
+              hexPairIndex = 0; // Reset hex pair counter for new letter
+            }
           }
         } else if(HEX_CHAR_RE.test(ch) && HEX_CHAR_RE.test(esc[i+1])){
           // Found a hex pair
           const pair = esc.substr(i, 2);
           const isInputFocused = document.activeElement === inputEl;
           const isCurrentLetter = letterIndex === currentLetterIndex && isInputFocused;
+          
+          
+          // Check if this is an invisible move
+          const byte = parseInt(pair, 16);
+          const a = (byte >> 7) & 1;
+          const xxx = (byte >> 4) & 0b111;
+          const bitB = (byte >> 3) & 1;
+          const yyy = byte & 0b111;
+          const isZero = (xxx === 0 && yyy === 0);
+          const ab = (a << 1) | bitB;
+          
+          // Invisible moves: ab===0b11 (both a and bitB are 1)
+          const isInvisibleMove = ab === 0b11;
+          
+          if(isCurrentLetter && !isInvisibleMove){
+            // Make current letter bold (skip invisible moves)
+            html += `<strong>${pair}</strong>`;
+            hexPairIndex++;
+          } else if(isInvisibleMove && !inComment){
+            html += `<span class="hex-hit">${pair}</span>`;
+          } else {
+            html += pair;
+          }
+          i += 2;
+        } else {
+          html += ch;
+          i++;
+        }
+      }
+      
+      return html;
+    }
+
+    // ===== HIGHLIGHTING FUNCTIONS =====
+    function highlightEditor(){
+      // Clear any pending highlight timeout
+      if (highlightTimeout) {
+        clearTimeout(highlightTimeout);
+      }
+      
+      // Debounce highlighting to prevent loops
+      highlightTimeout = setTimeout(() => {
+        const raw = getPlainText(inputEl);
+        const html = basicHighlightHTML(raw);
+        inputEl.innerHTML = html;
+        highlightTimeout = null;
+      }, 10); // Small delay to break the cycle
+    }
+
+    function highlightOutput(){
+      const outputText = getPlainText(outputEl);
+      if (!outputText.trim()) {
+        // No output to highlight
+        return;
+      }
+      
+      // Get the current letter index from the input field
+      const currentLetterIndex = getCurrentLetterIndex();
+      
+      // Create highlighting for output using the same letter index logic
+      const esc = escapeHTML(outputText);
+      
+      // Check if output has pipes to determine letter counting strategy
+      const hasPipes = outputText.includes('|');
+      
+      let letterIndex = 0;
+      let hexPairIndex = 0; // Track hex pairs within current letter
+      let html = '';
+      let i = 0;
+      let inComment = false;
+      
+      while(i < esc.length){
+        const ch = esc[i];
+        
+        // Handle comment detection
+        if(ch === '/' && esc[i+1] === '/'){
+          inComment = true;
+          html += '//';
+          i += 2;
+          continue;
+        }
+        if(inComment && (ch === '\n' || ch === '\r')){
+          inComment = false;
+          html += ch;
+          i++;
+          continue;
+        }
+        
+        if(ch === '|'){
+          const next = esc[i+1];
+          if(next === '|'){
+            // Newline token - this counts as a new letter only if pipes are present
+            if (hasPipes) {
+              letterIndex++;
+              hexPairIndex = 0; // Reset hex pair counter for new letter
+            }
+            html += '||';
+            i += 2;
+          } else {
+            // Letter separator - increment letter index after processing current letter
+            html += '|';
+            i++;
+            if (hasPipes) {
+              letterIndex++;
+              hexPairIndex = 0; // Reset hex pair counter for new letter
+            }
+          }
+        } else if(HEX_CHAR_RE.test(ch) && HEX_CHAR_RE.test(esc[i+1])){
+          // Found a hex pair
+          const pair = esc.substr(i, 2);
+          const isCurrentLetter = letterIndex === currentLetterIndex;
           
           // Check if this is an invisible move
           const byte = parseInt(pair, 16);
@@ -1950,16 +2082,7 @@ inComment = true;
         }
       }
       
-      return html;
-    }
-
-    // ===== HIGHLIGHTING FUNCTIONS =====
-    function highlightEditor(){
-      const raw = getPlainText(inputEl);
-      const caret = getCaretOffset(inputEl);
-      const html = basicHighlightHTML(raw);
-      inputEl.innerHTML = html;
-      setCaretOffset(inputEl, caret);
+      outputEl.innerHTML = html;
     }
 
     // ===== EDITOR FUNCTIONS =====
@@ -1976,6 +2099,15 @@ inComment = true;
     function getCurrentLetterIndex(){
       const raw = getPlainText(inputEl);
       const caret = getCaretOffset(inputEl);
+      
+      
+      // Check if there are any pipes in the input
+      const hasPipes = raw.includes('|');
+      
+      if (!hasPipes) {
+        // If no pipes, treat the entire input as one letter (index 0)
+        return 0;
+      }
       
       let letterIndex = 0;
       let currentPos = 0;
@@ -2021,7 +2153,9 @@ inComment = true;
       sel.addRange(range);
 
       // trigger highlight & render
+      const caret = getCaretOffset(inputEl);
       highlightEditor();
+      setCaretOffset(inputEl, caret);
       renderNow();
     }
 
@@ -2298,7 +2432,9 @@ inComment = true;
       insertTextAtCaret(inputEl, text);
       // Delay highlighting to allow selection to be preserved
       setTimeout(() => {
+      const caret = getCaretOffset(inputEl);
       highlightEditor();
+      setCaretOffset(inputEl, caret);
       renderNow();
       scheduleSnapshot();
       }, 0);
@@ -2861,6 +2997,7 @@ inComment = true;
       if (!ruleText.trim()) {
         // No rules, just copy input to output
         outputEl.textContent = inputText;
+        highlightOutput();
         return;
       }
       
@@ -2872,6 +3009,9 @@ inComment = true;
         console.error('Text replacement error:', error);
         outputEl.textContent = inputText; // Fallback to original input
       }
+      
+      // Highlight the output after text replacement
+      highlightOutput();
     }
     
     // Debounced version of processTextReplacement
@@ -3189,6 +3329,25 @@ inComment = true;
       debouncedProcessTextReplacement(); // process text replacement and update canvas
       scheduleSnapshot();  // coalesce undo snapshots
     });
+
+    // Handle highlighting when clicking in the input field
+    inputEl.addEventListener('click', () => {
+      setTimeout(() => {
+        highlightOutput();
+        renderNow();
+      }, 0);
+    });
+
+    // Handle highlighting when using arrow keys to move cursor
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        setTimeout(() => {
+          highlightOutput();
+          renderNow();
+        }, 0);
+      }
+    });
+
     
     // Process text replacement when rule field changes
     ruleEl.addEventListener('input', () => {
@@ -3196,16 +3355,25 @@ inComment = true;
     });
 
     // Update highlighting when cursor position changes (click, arrow keys, etc.)
+    // DISABLED - causing infinite loops. Using input event only.
+    /*
     document.addEventListener('selectionchange', () => {
       if (document.activeElement === inputEl) {
         // Only update if there's no active selection (just cursor movement)
         const sel = getSelection();
         if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
-          highlightEditor();
-          renderNow();
+          // Small delay to ensure cursor position is fully established
+          setTimeout(() => {
+            const caret = getCaretOffset(inputEl);
+            highlightEditor();
+            highlightOutput();
+            setCaretOffset(inputEl, caret);
+            renderNow();
+          }, 0);
         }
       }
     });
+    */
 
     
     // ===== COLOR & BACKGROUND FUNCTIONS =====
@@ -3286,20 +3454,18 @@ inComment = true;
     
     // Animate checkbox event listener
     animateCheckbox.addEventListener('change', () => {
-      if (!editorVisible) {
-        // Update the current presentation based on checkbox state
-        const coloredItems = parseBytesWithColors(getEditorValue());
-        const { ops, visited } = buildOps(coloredItems);
-        
-        // Stop any current animation
-        stopAnim();
-        
-        // Render based on checkbox state
-        if (animateCheckbox.checked) {
-          startAnim(ops, visited);
-        } else {
-          renderInstant(ops, visited);
-        }
+      // Update the current presentation based on checkbox state (works in both modes)
+      const coloredItems = parseBytesWithColors(getEditorValue());
+      const { ops, visited } = buildOps(coloredItems);
+      
+      // Stop any current animation
+      stopAnim();
+      
+      // Render based on checkbox state
+      if (animateCheckbox.checked) {
+        startAnim(ops, visited);
+      } else {
+        renderInstant(ops, visited);
       }
     });
     
