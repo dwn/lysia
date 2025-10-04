@@ -3807,8 +3807,8 @@ inComment = true;
     });
 
     document.addEventListener('keydown', async (e) => {
-      // Handle flip animations
-      if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && !isFlippingOut) {
+      // Handle flip animations (only when not in zoomed-out mode)
+      if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && !isFlippingOut && !isZoomedOut()) {
         e.preventDefault();
         let direction;
         if (e.code === 'Space') {
@@ -3860,8 +3860,38 @@ inComment = true;
         return;
       }
       
-      // Handle up/down arrow keys in zoomed-out mode to navigate card selection
+      // Handle up/down arrow keys in zoomed-out mode to change sets
       if ((e.code === 'ArrowUp' || e.code === 'ArrowDown') && !editorVisible && isZoomedOut() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        
+        const currentSetNumber = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE);
+        let targetSetNumber;
+        
+        if (e.code === 'ArrowUp') {
+          // Up arrow: go to previous set
+          targetSetNumber = Math.max(0, currentSetNumber - 1);
+        } else { // ArrowDown
+          // Down arrow: go to next set
+          const maxSetNumber = Math.floor((maxCardIndex - 1) / CARD_BLOCK_SIZE);
+          targetSetNumber = Math.min(maxSetNumber, currentSetNumber + 1);
+        }
+        
+        // Calculate the target card index (first card of the target set)
+        const targetCardIndex = targetSetNumber * CARD_BLOCK_SIZE + 1;
+        
+        // Only navigate if the target set exists
+        if (targetCardIndex <= maxCardIndex) {
+          currentCardIndex = targetCardIndex;
+          loadCard(targetCardIndex);
+          
+          // Update the zoomed-out view to show the new set
+          showCardBlockOverview();
+        }
+        return;
+      }
+      
+      // Handle left/right arrow keys in zoomed-out mode to navigate within current set
+      if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && isZoomedOut() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         
         const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
@@ -3869,8 +3899,8 @@ inComment = true;
         
         let newPosition;
         
-        if (e.code === 'ArrowDown') {
-          // Down arrow: increment through cards
+        if (e.code === 'ArrowRight') {
+          // Right arrow: increment through cards in set
           const nextCardIndex = currentSetStart + positionInSet; // Next card in sequence
           
           if (nextCardIndex <= maxCardIndex && nextCardIndex <= currentSetStart + CARD_BLOCK_SIZE - 1) {
@@ -3880,8 +3910,8 @@ inComment = true;
             // Wrap around to first card of set
             newPosition = 1;
           }
-        } else { // ArrowUp
-          // Up arrow: decrement through cards
+        } else { // ArrowLeft
+          // Left arrow: decrement through cards in set
           if (positionInSet > 1) {
             // Move to previous card in set
             newPosition = positionInSet - 1;
@@ -3892,9 +3922,11 @@ inComment = true;
           }
         }
         
+        // Calculate the target card index
         const targetCardIndex = currentSetStart + newPosition - 1;
+        
+        // Only navigate if the target card exists
         if (targetCardIndex <= maxCardIndex) {
-          // Update currentCardIndex before calling loadCard
           currentCardIndex = targetCardIndex;
           loadCard(targetCardIndex);
           
