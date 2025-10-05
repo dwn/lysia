@@ -688,10 +688,10 @@ a     xxx    b    yyy</div>
 11 invisible (move only)</div>
         <br>
         <strong>Zero move:</strong> If <code>xxx=000</code> and <code>yyy=000</code>, behavior depends on ab:
-        <div class="mono-grid">00 point
-01 circle radius 1
+        <div class="mono-grid">00 snap to top of textline (move only)
+01 point
 10 circle radius 1/2
-11 snap to top of textline (move only)</div>
+11 extension code</div>
         <br>
             <strong>Pipes:</strong>
             <br>
@@ -1785,10 +1785,10 @@ a     xxx    b    yyy</div>
         }
 
         if(isZero){
-          if(ab===0b00){ ops.push({type:'point', xi, yi, color:stroke}); }
-          else if(ab===0b01){ ops.push({type:'arc', cx:toCanvas({xi,yi}).x, cy:toCanvas({xi,yi}).y, rx:s, ry:s, start:0, end:Math.PI*2, acw:false, color:stroke}); }
+          if(ab===0b00){ yi=snapToLineTop(yi); }
+          else if(ab===0b01){ ops.push({type:'point', xi, yi, color:stroke}); }
           else if(ab===0b10){ ops.push({type:'arc', cx:toCanvas({xi,yi}).x, cy:toCanvas({xi,yi}).y, rx:s*0.5, ry:s*0.5, start:0, end:Math.PI*2, acw:false, color:stroke}); }
-          else { yi=snapToLineTop(yi); }
+          else { /* ab===0b11: extension code - not implemented yet */ }
           visited.push({xi,yi});
           continue;
         }
