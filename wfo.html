@@ -557,7 +557,7 @@
 
   <!-- Upload button -->
   <button id="exportButton" class="editor-toggle" title="Upload Card to Storage (⌘S)" style="left: 120px; width: 80px;">
-    📁
+    💾
   </button>
 
   <!-- Zoom out button -->
@@ -631,6 +631,12 @@ a     xxx    b    yyy</div>
             <div>
               <input id="svgColorCheckbox" type="checkbox"/>
               <label for="svgColorCheckbox">SVG Color</label>
+            </div>
+            <div>
+              <label>Position</label>
+              <div id="positionDisplay" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 0.9em; color: var(--pico-muted-color); margin-top: 0.25rem; padding: 0.25rem 0.5rem; background: var(--pico-form-element-background-color); border: 1px solid var(--pico-form-element-border-color); border-radius: 4px;">
+                Not set
+              </div>
             </div>
           </div>
           <div style="margin-top: 1rem;">
@@ -2756,7 +2762,8 @@ inComment = true;
 
     // Load card positions from card JSON files
     async function loadCardPositions(range) {
-      const savedPositions = [];
+      const cardsWithPositions = [];
+      const cardsWithoutPositions = [];
       
       for (let i = range.start; i <= range.end; i++) {
         try {
@@ -2774,36 +2781,30 @@ inComment = true;
           // Check if card has a saved position
           if (cardData && cardData.options && cardData.options.position) {
             const position = cardData.options.position;
-            savedPositions.push({ 
+            cardsWithPositions.push({ 
               row: position.row, 
               col: position.col, 
               cardIndex: i 
             });
           } else {
-            // Use default position if no saved position
-            const defaultIndex = i - range.start;
-            const row = Math.floor(defaultIndex / 3) + 1;
-            const col = (defaultIndex % 3) + 1;
-            savedPositions.push({ row, col, cardIndex: i });
+            // Card doesn't have a saved position - will be placed in empty spaces
+            cardsWithoutPositions.push({ cardIndex: i });
           }
         } catch (error) {
-          console.warn(`Failed to load position for card ${i}, using default:`, error);
-          // Use default position on error
-          const defaultIndex = i - range.start;
-          const row = Math.floor(defaultIndex / 3) + 1;
-          const col = (defaultIndex % 3) + 1;
-          savedPositions.push({ row, col, cardIndex: i });
+          console.warn(`Failed to load position for card ${i}, will place in empty space:`, error);
+          // Card without position - will be placed in empty spaces
+          cardsWithoutPositions.push({ cardIndex: i });
         }
       }
       
-      return savedPositions;
+      return { cardsWithPositions, cardsWithoutPositions };
     }
 
     // Add empty placeholders for unused grid positions
-    function addEmptyPlaceholders(gridContainer, savedPositions) {
+    function addEmptyPlaceholders(gridContainer, cardsWithPositions) {
       // Create a set of occupied positions
       const occupiedPositions = new Set();
-      savedPositions.forEach(pos => {
+      cardsWithPositions.forEach(pos => {
         occupiedPositions.add(`${pos.row}-${pos.col}`);
       });
       
@@ -3129,32 +3130,57 @@ inComment = true;
       const cards = gridContainer.children;
       
       // Load saved card positions from card JSON files
-      let savedPositions = await loadCardPositions(range);
+      const { cardsWithPositions, cardsWithoutPositions } = await loadCardPositions(range);
       
-      // Place cards according to their saved positions
+      // Phase 1: Place cards that have saved positions
       for (let i = 0; i < cards.length; i++) {
         const cardIndex = range.start + i;
-        const savedPosition = savedPositions.find(pos => pos.cardIndex === cardIndex);
+        const savedPosition = cardsWithPositions.find(pos => pos.cardIndex === cardIndex);
         
         if (savedPosition) {
           cards[i].style.gridColumn = savedPosition.col.toString();
           cards[i].style.gridRow = savedPosition.row.toString();
-        } else {
-          // Fallback to sequential positioning
-          const row = Math.floor(i / 3) + 1;
-          const col = (i % 3) + 1;
-          cards[i].style.gridColumn = col.toString();
-          cards[i].style.gridRow = row.toString();
+          cards[i].setAttribute('data-original-position', `${savedPosition.row}-${savedPosition.col}`);
         }
         
         // Add drag and drop attributes
         cards[i].draggable = true;
         cards[i].setAttribute('data-card-index', cardIndex);
-        cards[i].setAttribute('data-original-position', `${savedPosition?.row || Math.floor(i / 3) + 1}-${savedPosition?.col || (i % 3) + 1}`);
+      }
+      
+      // Phase 2: Place cards without saved positions in empty spaces
+      const occupiedPositions = new Set();
+      cardsWithPositions.forEach(pos => {
+        occupiedPositions.add(`${pos.row}-${pos.col}`);
+      });
+      
+      const availablePositions = [];
+      for (let row = 1; row <= 5; row++) {
+        for (let col = 1; col <= 3; col++) {
+          const positionKey = `${row}-${col}`;
+          if (!occupiedPositions.has(positionKey)) {
+            availablePositions.push({ row, col });
+          }
+        }
+      }
+      
+      // Place cards without positions in available spaces
+      for (let i = 0; i < cards.length; i++) {
+        const cardIndex = range.start + i;
+        const cardWithoutPosition = cardsWithoutPositions.find(card => card.cardIndex === cardIndex);
+        
+        if (cardWithoutPosition) {
+          const availablePosition = availablePositions.shift();
+          if (availablePosition) {
+            cards[i].style.gridColumn = availablePosition.col.toString();
+            cards[i].style.gridRow = availablePosition.row.toString();
+            cards[i].setAttribute('data-original-position', `${availablePosition.row}-${availablePosition.col}`);
+          }
+        }
       }
       
       // Add empty placeholders for remaining positions
-      addEmptyPlaceholders(gridContainer, savedPositions);
+      addEmptyPlaceholders(gridContainer, cardsWithPositions);
       
       // Add drag and drop event handlers
       setupDragAndDrop(gridContainer, blockStart, range);
@@ -3570,6 +3596,22 @@ inComment = true;
           svgColorCheckbox.checked = cardData.options.svgColor === true;
           
           svgInputEl.value = cardData.options.svgBackground || '';
+          
+          // Update position display
+          const positionDisplay = document.getElementById('positionDisplay');
+          if (positionDisplay) {
+            if (cardData.options.position) {
+              positionDisplay.textContent = `Row ${cardData.options.position.row}, Col ${cardData.options.position.col}`;
+            } else {
+              positionDisplay.textContent = 'Not set';
+            }
+          }
+        } else {
+          // Update position display even if no options
+          const positionDisplay = document.getElementById('positionDisplay');
+          if (positionDisplay) {
+            positionDisplay.textContent = 'Not set';
+          }
         }
         
         // Load content
@@ -4289,16 +4331,17 @@ inComment = true;
         
         const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
         const range = getBlockRange(currentSetStart);
-        const savedPositions = await loadCardPositions(range);
+        const { cardsWithPositions, cardsWithoutPositions } = await loadCardPositions(range);
         
         // Get current card's grid position
-        const currentCardPosition = savedPositions ? savedPositions.find(pos => pos.cardIndex === currentCardIndex) : null;
+        const currentCardPosition = cardsWithPositions.find(pos => pos.cardIndex === currentCardIndex);
         if (!currentCardPosition) return; // Can't navigate if position not found
         
         let targetCardPosition = null;
         
         // Create a sorted list of all card positions for easier navigation
-        const sortedPositions = savedPositions.sort((a, b) => {
+        const allPositions = [...cardsWithPositions];
+        const sortedPositions = allPositions.sort((a, b) => {
           const aValue = (a.row - 1) * 3 + a.col;
           const bValue = (b.row - 1) * 3 + b.col;
           return aValue - bValue;
