@@ -3715,8 +3715,19 @@ inComment = true;
 
     async function uploadCard() {
       try {
-        // Collect all settings
+        // Get existing card data to preserve position and other settings
+        let existingCardData = cardCache.get(currentCardIndex);
+        if (!existingCardData) {
+          // Fallback to direct fetch if not in cache
+          const cacheBuster = `?t=${Date.now()}`;
+          const response = await fetch(`${CARD_BASE_URL}${currentCardIndex}.json${cacheBuster}`);
+          if (response.ok) {
+            existingCardData = await response.json();
+            cardCache.set(currentCardIndex, existingCardData);
+          }
+        }
         
+        // Collect all settings, preserving existing position and other data
         const settings = {
           options: {
             size: parseInt(sInputEl.value, 10),
@@ -3724,7 +3735,9 @@ inComment = true;
             italics: italicsCheckbox.checked,
             animate: animateCheckbox.checked,
             svgColor: svgColorCheckbox.checked,
-            svgBackground: svgInputEl.value.trim()
+            svgBackground: svgInputEl.value.trim(),
+            // Preserve existing position if it exists
+            ...(existingCardData?.options?.position && { position: existingCardData.options.position })
           },
           rule: getPlainText(ruleEl),
           input: getPlainText(inputEl)
@@ -3755,6 +3768,9 @@ inComment = true;
 
         // Upload successful
         alert(`Card ${currentCardIndex} uploaded successfully!`);
+        
+        // Update cache with new data
+        cardCache.set(currentCardIndex, settings);
         
         // Update max card index if we uploaded a new card
         if (currentCardIndex > maxCardIndex) {
