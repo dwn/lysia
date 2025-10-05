@@ -2613,6 +2613,7 @@ inComment = true;
         
         // Create SVG background container
         const svgContainer = document.createElement('div');
+        svgContainer.className = `svg-container svg-card-${i}`;
         svgContainer.style.cssText = `
           position: absolute;
           top: 0;
@@ -2681,9 +2682,11 @@ inComment = true;
             // Load SVG background
             if (cardData.options && cardData.options.svgBackground) {
               const svgValue = cardData.options.svgBackground;
+              let svgContent = null; // Initialize svgContent outside the if block
+              
               if (svgValue.startsWith('http://') || svgValue.startsWith('https://')) {
                 // Check cache first
-                let svgContent = svgCache.get(svgValue);
+                svgContent = svgCache.get(svgValue);
                 if (!svgContent) {
                   try {
                     const response = await fetch(svgValue);
@@ -2693,17 +2696,30 @@ inComment = true;
                     console.error('Failed to fetch SVG:', error);
                   }
                 }
-                
-                if (svgContent) {
+              }
+              
+              // Process SVG content (either fetched or direct)
+              try {
+                const svgContentToUse = svgContent || svgValue;
+                if (svgContentToUse) {
                   // Strip SVG colors and calculate text color
                   const cardColor = getCardColor(cardData);
                   const textColor = calculateSvgTextColor(cardColor, false); // Always presentation mode in zoomed-out
                   const useNaturalColors = cardData.options && cardData.options.svgColor === true;
-                  const cleanedSvgContent = stripSvgColors(svgContent, useNaturalColors);
+                  const cleanedSvgContent = stripSvgColors(svgContentToUse, useNaturalColors);
                   
                   svgContainer.innerHTML = `
                     <style>
-                      ${createSvgStyle(false, '1', textColor, useNaturalColors)}
+                      .svg-card-${i} svg {
+                        width: 100%;
+                        height: 100%;
+                        display: block;
+                        object-fit: contain;
+                        object-position: center;
+                        opacity: 0.5;
+                        ${!useNaturalColors ? `color: ${textColor};` : ''}
+                      }
+                      ${!useNaturalColors ? `.svg-card-${i} svg * { fill: currentColor; stroke: currentColor; }` : ''}
                     </style>
                     ${cleanedSvgContent}
                   `;
@@ -2712,24 +2728,8 @@ inComment = true;
                   cardCanvas.style.background = 'transparent';
                   cardWrapper.style.background = generateGradientFromColor(getCardColor(cardData));
                 }
-              } else {
-                // Direct SVG content
-                // Strip SVG colors and calculate text color
-                const cardColor = getCardColor(cardData);
-                const textColor = calculateSvgTextColor(cardColor, false); // Always presentation mode in zoomed-out
-                const useNaturalColors = cardData.options && cardData.options.svgColor === true;
-                const cleanedSvgValue = stripSvgColors(svgValue, useNaturalColors);
-                
-                svgContainer.innerHTML = `
-                  <style>
-                    ${createSvgStyle(false, '1', textColor, useNaturalColors)}
-                  </style>
-                  ${cleanedSvgValue}
-                `;
-                
-                // Make canvas transparent and apply gradient to wrapper when SVG is present
-                cardCanvas.style.background = 'transparent';
-                cardWrapper.style.background = generateGradientFromColor(getCardColor(cardData));
+              } catch (svgError) {
+                console.error(`Card ${i}: SVG processing error:`, svgError);
               }
             }
             
@@ -3133,15 +3133,15 @@ inComment = true;
         return '#ffffff';
       }
       
-      // For presentation mode, use adaptive colors based on background luminosity
+      // For presentation mode, use pure black or white (no color blending to avoid tints)
       const luminosity = getLuminosity(backgroundColor);
       
       if (luminosity > 0.5) {
-        // Bright background - use dark text
-        return blendColors(backgroundColor, '#000000', 0.8);
+        // Bright background - use pure black
+        return '#000000';
       } else {
-        // Dark background - use light text
-        return blendColors(backgroundColor, '#ffffff', 0.7);
+        // Dark background - use pure white
+        return '#ffffff';
       }
     }
     
