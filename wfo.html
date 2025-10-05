@@ -2419,17 +2419,41 @@ inComment = true;
       let setStart = cardIndex;
       let setEnd = cardIndex;
       
-      // Look backward to find set start (card with order: 1)
-      for (let i = cardIndex - 1; i >= 1; i--) {
-        const cardData = await getCardData(i);
-        if (cardData && cardData.options && cardData.options.order === 1) {
-          setStart = i;
-          break;
+      // Check if current card itself starts a new set
+      const currentCardData = await getCardData(cardIndex);
+      if (currentCardData && currentCardData.options && currentCardData.options.order === 1) {
+        // Current card starts a new set
+        setStart = cardIndex;
+        // For a set starter, find the end by looking forward
+        for (let i = cardIndex + 1; i <= maxCardIndex; i++) {
+          const cardData = await getCardData(i);
+          if (cardData && cardData.options && cardData.options.order === 1) {
+            setEnd = i - 1; // Previous card is the end of this set
+            break;
+          }
+          // If we've gone forward too far (more than MAX_CARDS_PER_SET), assume this is the end
+          if (i - setStart >= MAX_CARDS_PER_SET) {
+            setEnd = i - 1;
+            break;
+          }
         }
-        // If we've gone back too far (more than MAX_CARDS_PER_SET), assume this is the start
-        if (cardIndex - i >= MAX_CARDS_PER_SET) {
-          setStart = i + 1;
-          break;
+        // If no end found, use the last available card
+        if (setEnd === cardIndex) {
+          setEnd = Math.min(maxCardIndex, cardIndex + MAX_CARDS_PER_SET - 1);
+        }
+      } else {
+        // Look backward to find set start (card with order: 1)
+        for (let i = cardIndex - 1; i >= 1; i--) {
+          const cardData = await getCardData(i);
+          if (cardData && cardData.options && cardData.options.order === 1) {
+            setStart = i;
+            break;
+          }
+          // If we've gone back too far (more than MAX_CARDS_PER_SET), assume this is the start
+          if (cardIndex - i >= MAX_CARDS_PER_SET) {
+            setStart = i + 1;
+            break;
+          }
         }
       }
       
@@ -2449,7 +2473,9 @@ inComment = true;
       
       // If no explicit boundaries found, use intelligent grouping
       if (setStart === cardIndex && setEnd === cardIndex) {
+        console.log('Using intelligent grouping for card', cardIndex);
         const result = await detectIntelligentSetBoundaries(cardIndex);
+        console.log('Intelligent grouping result:', result);
         setStart = result.start;
         setEnd = result.end;
       }
@@ -3027,6 +3053,13 @@ inComment = true;
       if (!range || range.start === undefined || range.end === undefined) {
         return;
       }
+      
+      // Console log the cards being displayed
+      console.log('=== Card Block Overview ===');
+      console.log('Current card index:', currentCardIndex);
+      console.log('Block range:', range.start, 'to', range.end);
+      console.log('Cards being displayed:', Array.from({length: range.end - range.start + 1}, (_, i) => range.start + i));
+      console.log('========================');
       
       // Find the main card container
       const mainCardContainer = document.querySelector('.canvas-only .grid > div:first-child');
@@ -4350,8 +4383,13 @@ inComment = true;
       let newBlockStart;
       
       if (direction === 'left') {
-        // Go to next set
-        newBlockStart = Math.min(currentSetInfo.end + 1, maxCardIndex);
+        // Go to next set - check if there's actually a next set
+        const nextSetStart = currentSetInfo.end + 1;
+        if (nextSetStart > maxCardIndex) {
+          // Already at the last set, don't navigate
+          return;
+        }
+        newBlockStart = nextSetStart;
       } else {
         // Go to previous set - find the actual start of the previous set
         if (currentSetInfo.start > 1) {
@@ -4551,8 +4589,12 @@ inComment = true;
             return;
           }
         } else { // ArrowDown
-          // Down arrow: go to next set
-          const nextSetStart = Math.min(maxCardIndex, currentSetInfo.end + 1);
+          // Down arrow: go to next set - check if there's actually a next set
+          const nextSetStart = currentSetInfo.end + 1;
+          if (nextSetStart > maxCardIndex) {
+            // Already at the last set, don't navigate
+            return;
+          }
           targetCardIndex = nextSetStart;
         }
         
@@ -4746,8 +4788,12 @@ inComment = true;
           return;
         }
       } else {
-        // Go to next set
-        const nextSetStart = Math.min(maxCardIndex, currentSetInfo.end + 1);
+        // Go to next set - check if there's actually a next set
+        const nextSetStart = currentSetInfo.end + 1;
+        if (nextSetStart > maxCardIndex) {
+          // Already at the last set, don't navigate
+          return;
+        }
         targetCardIndex = nextSetStart;
       }
       
