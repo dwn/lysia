@@ -578,6 +578,9 @@
         </div>
 </div>
       <aside>
+        <div id="cardFileName" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 0.9em; color: var(--pico-muted-color); margin-bottom: 1rem; padding: 0.5rem; background: var(--pico-form-element-background-color); border: 1px solid var(--pico-form-element-border-color); border-radius: 4px; text-align: center;">
+          card-1.json
+        </div>
         <details>
           <summary>Instruction</summary>
       <small>
@@ -629,17 +632,38 @@ a     xxx    b    yyy</div>
               <label for="animateCheckbox">Animate</label>
             </div>
             <div>
-              <input id="svgColorCheckbox" type="checkbox"/>
-              <label for="svgColorCheckbox">SVG Color</label>
-            </div>
-            <div>
               <label>Position</label>
               <div id="positionDisplay" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 0.9em; color: var(--pico-muted-color); margin-top: 0.25rem; padding: 0.25rem 0.5rem; background: var(--pico-form-element-background-color); border: 1px solid var(--pico-form-element-border-color); border-radius: 4px;">
                 Not set
               </div>
             </div>
+            <div>
+              <label for="orderSelect">Order</label>
+              <select id="orderSelect">
+                <option value="">Undefined</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+              </select>
+            </div>
           </div>
           <div style="margin-top: 1rem;">
+            <div>
+              <input id="svgColorCheckbox" type="checkbox"/>
+              <label for="svgColorCheckbox">SVG Color</label>
+            </div>
             <label for="svgInput">Background Svg</label>
             <input id="svgInput" type="url" placeholder="https://example.com/image.svg or paste SVG code directly">
             <div id="svgPreview" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; border-radius: 4px; background: white; min-height: 100px; display: none;">
@@ -710,11 +734,12 @@ a     xxx    b    yyy</div>
     let maxCardIndex = 0; // Will be determined by checking available cards
     
     // ===== CARD PRELOADING SYSTEM =====
-    const CARD_BLOCK_SIZE = 11; // Number of cards to preload in each block
+    const MAX_CARDS_PER_SET = 15; // Maximum cards per set
     const cardCache = new Map(); // Cache for card JSON data
     const svgCache = new Map(); // Cache for SVG content
     let currentBlockStart = 1; // Starting index of current preloaded block
     let preloadingInProgress = false;
+    let setBoundaries = new Map(); // Cache for set boundaries: cardIndex -> {start, end, size}
     
     
     // ===== DOM REFERENCES =====
@@ -731,8 +756,10 @@ a     xxx    b    yyy</div>
     const sInputEl = document.getElementById('sInput');
     const sValueEl = document.getElementById('sValue');
     const animateCheckbox = document.getElementById('animateCheckbox');
+    const orderSelectEl = document.getElementById('orderSelect');
     const italicsCheckbox = document.getElementById('italicsCheckbox');
     const svgColorCheckbox = document.getElementById('svgColorCheckbox');
+    const cardFileNameEl = document.getElementById('cardFileName');
     const editorToggleBtn = document.getElementById('editorToggle');
     const exportButton = document.getElementById('exportButton');
     const zoomOutButton = document.getElementById('zoomOutButton');
@@ -2371,17 +2398,150 @@ inComment = true;
 
     // ===== CARD PRELOADING FUNCTIONS =====
     
-    // Calculate which block a card index belongs to
-    function getBlockForCard(cardIndex) {
-      return Math.floor((cardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
+    // Calculate which block a card index belongs to (backward compatibility)
+    async function getBlockForCard(cardIndex) {
+      const setInfo = await getSetForCard(cardIndex);
+      return setInfo.start;
     }
     
-    // Get the range of cards in a block
-    function getBlockRange(blockStart) {
-      return {
-        start: blockStart,
-        end: Math.min(blockStart + CARD_BLOCK_SIZE - 1, maxCardIndex)
+    // Get the range of cards in a block (backward compatibility)
+    async function getBlockRange(blockStart) {
+      return await getSetForCard(blockStart);
+    }
+    
+    // Detect set boundaries for a given card index
+    async function getSetForCard(cardIndex) {
+      // Check cache first
+      if (setBoundaries.has(cardIndex)) {
+        return setBoundaries.get(cardIndex);
+      }
+      
+      let setStart = cardIndex;
+      let setEnd = cardIndex;
+      
+      // Look backward to find set start (card with order: 1)
+      for (let i = cardIndex - 1; i >= 1; i--) {
+        const cardData = await getCardData(i);
+        if (cardData && cardData.options && cardData.options.order === 1) {
+          setStart = i;
+          break;
+        }
+        // If we've gone back too far (more than MAX_CARDS_PER_SET), assume this is the start
+        if (cardIndex - i >= MAX_CARDS_PER_SET) {
+          setStart = i + 1;
+          break;
+        }
+      }
+      
+      // Look forward to find set end (next card with order: 1 or end of cards)
+      for (let i = cardIndex + 1; i <= maxCardIndex; i++) {
+        const cardData = await getCardData(i);
+        if (cardData && cardData.options && cardData.options.order === 1) {
+          setEnd = i - 1; // Previous card is the end of this set
+          break;
+        }
+        // If we've gone forward too far (more than MAX_CARDS_PER_SET), assume this is the end
+        if (i - setStart >= MAX_CARDS_PER_SET) {
+          setEnd = i - 1;
+          break;
+        }
+      }
+      
+      // If no explicit boundaries found, use intelligent grouping
+      if (setStart === cardIndex && setEnd === cardIndex) {
+        const result = await detectIntelligentSetBoundaries(cardIndex);
+        setStart = result.start;
+        setEnd = result.end;
+      }
+      
+      const setInfo = {
+        start: setStart,
+        end: setEnd,
+        size: setEnd - setStart + 1
       };
+      
+      // Cache the result for all cards in this set
+      for (let i = setStart; i <= setEnd; i++) {
+        setBoundaries.set(i, setInfo);
+      }
+      
+      return setInfo;
+    }
+    
+    // Helper function to get card data (from cache or fetch)
+    async function getCardData(cardIndex) {
+      if (cardIndex === undefined || cardIndex === null) {
+        return null;
+      }
+      
+      let cardData = cardCache.get(cardIndex);
+      if (!cardData) {
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json${cacheBuster}`);
+        if (response.ok) {
+          cardData = await response.json();
+          cardCache.set(cardIndex, cardData);
+        }
+      }
+      return cardData;
+    }
+    
+    // Detect set boundaries intelligently based on card positions and order numbers
+    async function detectIntelligentSetBoundaries(cardIndex) {
+      if (cardIndex === undefined || cardIndex === null) {
+        return { start: 1, end: 1 };
+      }
+      
+      let setStart = cardIndex;
+      let setEnd = cardIndex;
+      
+      // Look for cards with similar position patterns or order numbers
+      const currentCardData = await getCardData(cardIndex);
+      const currentPosition = currentCardData?.options?.position;
+      const currentOrder = currentCardData?.options?.order;
+      
+      // Look backward
+      for (let i = cardIndex - 1; i >= 1; i--) {
+        const cardData = await getCardData(i);
+        if (!cardData) break;
+        
+        const cardPosition = cardData.options?.position;
+        const cardOrder = cardData.options?.order;
+        
+        // If this card has a much higher order number, it might be from a different set
+        if (currentOrder && cardOrder && cardOrder > currentOrder + 5) {
+          setStart = i + 1;
+          break;
+        }
+        
+        // If we've gone back too far, stop
+        if (cardIndex - i >= MAX_CARDS_PER_SET) {
+          setStart = i + 1;
+          break;
+        }
+      }
+      
+      // Look forward
+      for (let i = cardIndex + 1; i <= maxCardIndex; i++) {
+        const cardData = await getCardData(i);
+        if (!cardData) break;
+        
+        const cardOrder = cardData.options?.order;
+        
+        // If this card has a much lower order number, it might be from a different set
+        if (currentOrder && cardOrder && cardOrder < currentOrder - 5) {
+          setEnd = i - 1;
+          break;
+        }
+        
+        // If we've gone forward too far, stop
+        if (i - setStart >= MAX_CARDS_PER_SET) {
+          setEnd = i - 1;
+          break;
+        }
+      }
+      
+      return { start: setStart, end: setEnd };
     }
     
     // Preload a block of cards (JSONs and SVGs)
@@ -2389,7 +2549,7 @@ inComment = true;
       if (preloadingInProgress) return;
       preloadingInProgress = true;
       
-      const range = getBlockRange(blockStart);
+      const range = await getBlockRange(blockStart);
       
       const promises = [];
       
@@ -2451,7 +2611,7 @@ inComment = true;
     
     // Check if we need to preload a new block and do so
     async function ensureBlockPreloaded(cardIndex) {
-      const requiredBlock = getBlockForCard(cardIndex);
+      const requiredBlock = await getBlockForCard(cardIndex);
       
       if (requiredBlock !== currentBlockStart) {
         currentBlockStart = requiredBlock;
@@ -2860,12 +3020,19 @@ inComment = true;
 
     async function showCardBlockOverview() {
       // Get the current block range
-      const blockStart = getBlockForCard(currentCardIndex);
-      const range = getBlockRange(blockStart);
+      const blockStart = await getBlockForCard(currentCardIndex);
+      const range = await getBlockRange(blockStart);
+      
+      // Check if range is valid
+      if (!range || range.start === undefined || range.end === undefined) {
+        return;
+      }
       
       // Find the main card container
       const mainCardContainer = document.querySelector('.canvas-only .grid > div:first-child');
-      if (!mainCardContainer) return;
+      if (!mainCardContainer) {
+        return;
+      }
       
       // Create the grid container for all cards
       const gridContainer = document.createElement('div');
@@ -3099,6 +3266,7 @@ inComment = true;
           // This ensures card data is properly loaded when returning from zoomed-out view
           if (i !== currentCardIndex) {
             currentCardIndex = i;
+            updateCardFileName();
           }
           
           // Load the card and ensure proper rendering
@@ -3597,14 +3765,23 @@ inComment = true;
           
           svgInputEl.value = cardData.options.svgBackground || '';
           
+          // Set order select
+          const orderValue = cardData.options.order;
+          orderSelectEl.value = orderValue !== undefined ? orderValue.toString() : '';
+          
           // Update position display
           const positionDisplay = document.getElementById('positionDisplay');
           if (positionDisplay) {
+            let displayText = '';
+            
+            // Show position if available
             if (cardData.options.position) {
-              positionDisplay.textContent = `Row ${cardData.options.position.row}, Col ${cardData.options.position.col}`;
+              displayText = `Row ${cardData.options.position.row}, Col ${cardData.options.position.col}`;
             } else {
-              positionDisplay.textContent = 'Not set';
+              displayText = 'Not set';
             }
+            
+            positionDisplay.textContent = displayText;
           }
         } else {
           // Update position display even if no options
@@ -3639,7 +3816,10 @@ inComment = true;
         renderNow();
         
         // Update card indicator
-        updateCardIndicator();
+        await updateCardIndicator();
+        
+        // Update card file name display
+        updateCardFileName();
         
         return true;
       } catch (error) {
@@ -3699,17 +3879,24 @@ inComment = true;
       return currentCardIndex > 1;
     }
     
-    function updateCardIndicator() {
+    async function updateCardIndicator() {
       if (cardIndicator) {
         if (isZoomedOut()) {
           // Show set number in zoomed-out mode
-          const currentSet = Math.ceil(currentCardIndex / CARD_BLOCK_SIZE);
-          const totalSets = Math.ceil(maxCardIndex / CARD_BLOCK_SIZE);
+          const currentSetInfo = await getSetForCard(currentCardIndex);
+          const currentSet = Math.ceil(currentCardIndex / MAX_CARDS_PER_SET); // Approximate for now
+          const totalSets = Math.ceil(maxCardIndex / MAX_CARDS_PER_SET); // Approximate for now
           cardIndicator.textContent = `${currentSet} / ${totalSets}`;
         } else {
           // Show individual card number in normal mode
           cardIndicator.textContent = `${currentCardIndex} / ${maxCardIndex}`;
         }
+      }
+    }
+    
+    function updateCardFileName() {
+      if (cardFileNameEl) {
+        cardFileNameEl.textContent = `card-${currentCardIndex}.json`;
       }
     }
 
@@ -3736,6 +3923,7 @@ inComment = true;
             animate: animateCheckbox.checked,
             svgColor: svgColorCheckbox.checked,
             svgBackground: svgInputEl.value.trim(),
+            ...(orderSelectEl.value && { order: parseInt(orderSelectEl.value, 10) }),
             // Preserve existing position if it exists
             ...(existingCardData?.options?.position && { position: existingCardData.options.position })
           },
@@ -3775,7 +3963,7 @@ inComment = true;
         // Update max card index if we uploaded a new card
         if (currentCardIndex > maxCardIndex) {
           maxCardIndex = currentCardIndex;
-          updateCardIndicator();
+          await updateCardIndicator();
         }
         
       } catch (error) {
@@ -4016,7 +4204,7 @@ inComment = true;
     });
     
     // Zoom out button event listener
-    zoomOutButton.addEventListener('click', (e) => {
+    zoomOutButton.addEventListener('click', async (e) => {
       preventCardFlip(e);
       
       // Toggle between zoom modes
@@ -4024,7 +4212,7 @@ inComment = true;
         const optimalZoom = calculateOptimalZoom();
         document.body.style.zoom = optimalZoom.toString();
         setButtonState('zoomedOut');
-        updateCardIndicator();
+        await updateCardIndicator();
         showCardBlockOverview();
       } else {
         document.body.style.zoom = '0.75';
@@ -4126,9 +4314,9 @@ inComment = true;
           
           
           // Trigger background preloading for adjacent blocks
-          const currentBlock = getBlockForCard(currentCardIndex);
-          const nextBlock = currentBlock + CARD_BLOCK_SIZE;
-          const prevBlock = currentBlock - CARD_BLOCK_SIZE;
+          const currentSetInfo = await getSetForCard(currentCardIndex);
+          const nextBlock = currentSetInfo.end + 1;
+          const prevBlock = currentSetInfo.start - MAX_CARDS_PER_SET;
           
           // Preload next block if it exists
           if (nextBlock <= maxCardIndex) {
@@ -4158,13 +4346,35 @@ inComment = true;
       if (editorVisible || isFlippingOut) return;
       
       // Check if we can navigate to another set
-      const currentBlockStart = getBlockForCard(currentCardIndex);
-      const newBlockStart = direction === 'left' ? 
-        Math.min(currentBlockStart + CARD_BLOCK_SIZE, getBlockForCard(maxCardIndex)) :
-        Math.max(currentBlockStart - CARD_BLOCK_SIZE, 1);
+      const currentSetInfo = await getSetForCard(currentCardIndex);
+      let newBlockStart;
+      
+      if (direction === 'left') {
+        // Go to next set
+        newBlockStart = Math.min(currentSetInfo.end + 1, maxCardIndex);
+      } else {
+        // Go to previous set - find the actual start of the previous set
+        if (currentSetInfo.start > 1) {
+          // Look for the previous set start by checking cards before the current set
+          for (let i = currentSetInfo.start - 1; i >= 1; i--) {
+            const cardData = await getCardData(i);
+            if (cardData && cardData.options && cardData.options.order === 1) {
+              newBlockStart = i;
+              break;
+            }
+          }
+          // If no previous set start found, go to card 1
+          if (!newBlockStart) {
+            newBlockStart = 1;
+          }
+        } else {
+          // Already at first set, don't navigate
+          return;
+        }
+      }
       
       // If we're already at the boundary, don't navigate
-      if (newBlockStart === currentBlockStart) {
+      if (newBlockStart === currentSetInfo.start) {
         return;
       }
       
@@ -4181,11 +4391,13 @@ inComment = true;
       await delay(400);
       
       // Update to new block
-      const newCardIndex = direction === 'left' ? 
-        Math.min(currentCardIndex + CARD_BLOCK_SIZE, maxCardIndex) :
-        Math.max(currentCardIndex - CARD_BLOCK_SIZE, 1);
+      const newCardIndex = newBlockStart;
+      
+      // Clear set boundaries cache to ensure fresh detection
+      setBoundaries.clear();
       
       currentCardIndex = newCardIndex;
+      updateCardFileName();
       
       // Show new set
       await showCardBlockOverview();
@@ -4209,7 +4421,7 @@ inComment = true;
       }
       
       isFlippingOut = false;
-      updateCardIndicator();
+      await updateCardIndicator();
     }
     
     // Consolidated input handlers
@@ -4300,7 +4512,8 @@ inComment = true;
       if (e.key >= '1' && e.key <= '9' && !editorVisible && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         const targetCardNumber = parseInt(e.key, 10);
-        const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
+        const currentSetInfo = await getSetForCard(currentCardIndex);
+        const currentSetStart = currentSetInfo.start;
         const targetCardIndex = currentSetStart + targetCardNumber - 1;
         
         // Only jump if the target card exists
@@ -4315,24 +4528,41 @@ inComment = true;
       if ((e.code === 'ArrowUp' || e.code === 'ArrowDown') && !editorVisible && isZoomedOut() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         
-        const currentSetNumber = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE);
-        let targetSetNumber;
+        const currentSetInfo = await getSetForCard(currentCardIndex);
+        let targetCardIndex;
         
         if (e.code === 'ArrowUp') {
-          // Up arrow: go to previous set
-          targetSetNumber = Math.max(0, currentSetNumber - 1);
+          // Up arrow: go to previous set - find the actual start of the previous set
+          if (currentSetInfo.start > 1) {
+            // Look for the previous set start by checking cards before the current set
+            for (let i = currentSetInfo.start - 1; i >= 1; i--) {
+              const cardData = await getCardData(i);
+              if (cardData && cardData.options && cardData.options.order === 1) {
+                targetCardIndex = i;
+                break;
+              }
+            }
+            // If no previous set start found, go to card 1
+            if (!targetCardIndex) {
+              targetCardIndex = 1;
+            }
+          } else {
+            // Already at first set, don't navigate
+            return;
+          }
         } else { // ArrowDown
           // Down arrow: go to next set
-          const maxSetNumber = Math.floor((maxCardIndex - 1) / CARD_BLOCK_SIZE);
-          targetSetNumber = Math.min(maxSetNumber, currentSetNumber + 1);
+          const nextSetStart = Math.min(maxCardIndex, currentSetInfo.end + 1);
+          targetCardIndex = nextSetStart;
         }
-        
-        // Calculate the target card index (first card of the target set)
-        const targetCardIndex = targetSetNumber * CARD_BLOCK_SIZE + 1;
         
         // Only navigate if the target set exists
         if (targetCardIndex <= maxCardIndex) {
+          // Clear set boundaries cache to ensure fresh detection
+          setBoundaries.clear();
+          
           currentCardIndex = targetCardIndex;
+          updateCardFileName();
           loadCard(targetCardIndex);
           
           // Update the zoomed-out view to show the new set
@@ -4345,8 +4575,8 @@ inComment = true;
       if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !editorVisible && isZoomedOut() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         
-        const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
-        const range = getBlockRange(currentSetStart);
+        const currentSetInfo = await getSetForCard(currentCardIndex);
+        const range = currentSetInfo;
         const { cardsWithPositions, cardsWithoutPositions } = await loadCardPositions(range);
         
         // Get current card's grid position
@@ -4389,6 +4619,7 @@ inComment = true;
           // Only navigate if the target card exists
           if (targetCardIndex <= maxCardIndex) {
             currentCardIndex = targetCardIndex;
+            updateCardFileName();
             loadCard(targetCardIndex);
             
             // Update visual selection in the grid
@@ -4436,7 +4667,7 @@ inComment = true;
       touchStartTime = Date.now();
     });
 
-    document.addEventListener('touchend', (e) => {
+    document.addEventListener('touchend', async (e) => {
       if (editorVisible || !isZoomedOut()) return;
       
       const touch = e.changedTouches[0];
@@ -4457,16 +4688,16 @@ inComment = true;
         
         if (deltaY > 0) {
           // Swipe up - go to previous set
-          navigateToSet('up');
+          await navigateToSet('up');
         } else {
           // Swipe down - go to next set
-          navigateToSet('down');
+          await navigateToSet('down');
         }
       }
     });
 
     // Wheel events for touchpad two-finger scrolling
-    document.addEventListener('wheel', (e) => {
+    document.addEventListener('wheel', async (e) => {
       if (editorVisible || !isZoomedOut()) return;
       
       // Only handle vertical scrolling
@@ -4475,16 +4706,16 @@ inComment = true;
         
         if (e.deltaY > 0) {
           // Scroll down - go to next set
-          navigateToSet('down');
+          await navigateToSet('down');
         } else {
           // Scroll up - go to previous set
-          navigateToSet('up');
+          await navigateToSet('up');
         }
       }
     }, { passive: false });
 
     // Helper function to navigate between sets
-    function navigateToSet(direction) {
+    async function navigateToSet(direction) {
       // Debounce rapid navigation calls
       const now = Date.now();
       if (now - lastNavigationTime < NAVIGATION_DEBOUNCE) {
@@ -4492,24 +4723,41 @@ inComment = true;
       }
       lastNavigationTime = now;
       
-      const currentSetNumber = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE);
-      let targetSetNumber;
+      const currentSetInfo = await getSetForCard(currentCardIndex);
+      let targetCardIndex;
       
       if (direction === 'up') {
-        // Go to previous set
-        targetSetNumber = Math.max(0, currentSetNumber - 1);
+        // Go to previous set - find the actual start of the previous set
+        if (currentSetInfo.start > 1) {
+          // Look for the previous set start by checking cards before the current set
+          for (let i = currentSetInfo.start - 1; i >= 1; i--) {
+            const cardData = await getCardData(i);
+            if (cardData && cardData.options && cardData.options.order === 1) {
+              targetCardIndex = i;
+              break;
+            }
+          }
+          // If no previous set start found, go to card 1
+          if (!targetCardIndex) {
+            targetCardIndex = 1;
+          }
+        } else {
+          // Already at first set, don't navigate
+          return;
+        }
       } else {
         // Go to next set
-        const maxSetNumber = Math.floor((maxCardIndex - 1) / CARD_BLOCK_SIZE);
-        targetSetNumber = Math.min(maxSetNumber, currentSetNumber + 1);
+        const nextSetStart = Math.min(maxCardIndex, currentSetInfo.end + 1);
+        targetCardIndex = nextSetStart;
       }
-      
-      // Calculate the target card index (first card of the target set)
-      const targetCardIndex = targetSetNumber * CARD_BLOCK_SIZE + 1;
       
       // Only navigate if the target set exists and is different from current
       if (targetCardIndex <= maxCardIndex && targetCardIndex !== currentCardIndex) {
+        // Clear set boundaries cache to ensure fresh detection
+        setBoundaries.clear();
+        
         currentCardIndex = targetCardIndex;
+        updateCardFileName();
         loadCard(targetCardIndex);
         
         // Update the zoomed-out view to show the new set
@@ -4531,7 +4779,7 @@ inComment = true;
       maxCardIndex = await findMaxCardIndex();
       
       // Update card indicator with max count
-      updateCardIndicator();
+      await updateCardIndicator();
       
       // Load the first card (index 1)
       const loadSuccess = await loadCard(1);
@@ -4592,6 +4840,20 @@ inComment = true;
           }
         });
       }
+      
+      // Order select event listener
+      if (orderSelectEl) {
+        orderSelectEl.addEventListener('change', () => {
+          // Clear set boundaries cache so new order takes effect
+          setBoundaries.clear();
+          
+          // If in zoomed-out mode, redraw the overview to reflect new boundaries
+          if (isZoomedOut()) {
+            showCardBlockOverview();
+          }
+        });
+      }
+      
     });
 
     // Update editor toggle button state periodically
