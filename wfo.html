@@ -88,6 +88,29 @@
       border: 2px solid #666 !important;
     }
     
+    /* Drag and drop styling */
+    .canvas-only .grid-container .card-wrapper[draggable="true"] {
+      cursor: grab;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    
+    .canvas-only .grid-container .card-wrapper[draggable="true"]:active {
+      cursor: grabbing;
+    }
+    
+    .canvas-only .grid-container .card-wrapper.drag-over {
+      border-color: #4CAF50 !important;
+      transform: scale(1.05) !important;
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.3) !important;
+    }
+    
+    .canvas-only .grid-container .card-wrapper.dragging {
+      opacity: 0.5 !important;
+      transform: rotate(5deg) scale(1.1) !important;
+      z-index: 1000 !important;
+    }
+    
     @keyframes cardFlipIn {
       0% {
         transform: translateX(100vw) rotateY(90deg);
@@ -2437,6 +2460,403 @@ inComment = true;
     // ===== CARD BLOCK OVERVIEW FUNCTIONS =====
     
     // Show the current block of cards in zoomed out mode
+    // Setup drag and drop functionality for the card grid
+    function setupDragAndDrop(gridContainer, blockStart, range) {
+      let draggedElement = null;
+      let dragStarted = false;
+      
+      // Add drag start event to all cards
+      gridContainer.addEventListener('dragstart', (e) => {
+        if (e.target.classList.contains('card-wrapper')) {
+          draggedElement = e.target;
+          dragStarted = true;
+          e.target.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', e.target.outerHTML);
+          console.log('Drag started for card:', e.target.getAttribute('data-card-index'));
+        }
+      });
+      
+      // Add drag end event
+      gridContainer.addEventListener('dragend', (e) => {
+        if (e.target.classList.contains('card-wrapper')) {
+          e.target.classList.remove('dragging');
+          // Remove any drag-over classes from all cards
+          const allCards = gridContainer.querySelectorAll('.card-wrapper');
+          allCards.forEach(card => card.classList.remove('drag-over'));
+          
+          // Set global drag tracking variables
+          window.lastDragEnd = Date.now();
+          window.dragStarted = dragStarted;
+          
+          // Reset drag state after a short delay to allow drop event to complete
+          setTimeout(() => {
+            draggedElement = null;
+            dragStarted = false;
+            window.dragStarted = false;
+          }, 100);
+        }
+      });
+      
+      // Add dragover event to allow dropping
+      gridContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      
+      // Add drop event to handle card swapping
+      gridContainer.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Drop event fired', { draggedElement, target: e.target });
+        
+        if (!draggedElement) {
+          console.log('No dragged element');
+          return;
+        }
+        
+        // Find the target element (either card wrapper or empty placeholder)
+        let targetElement = e.target;
+        while (targetElement && !targetElement.classList.contains('card-wrapper') && !targetElement.classList.contains('empty-placeholder')) {
+          targetElement = targetElement.parentElement;
+        }
+        
+        if (!targetElement || (!targetElement.classList.contains('card-wrapper') && !targetElement.classList.contains('empty-placeholder'))) {
+          console.log('Invalid drop target - no valid target found');
+          return;
+        }
+        
+        console.log('Found target element:', targetElement.className, targetElement.getAttribute('data-card-index') || 'empty');
+        
+        // Don't allow dropping on the same element
+        if (draggedElement === targetElement) {
+          console.log('Dropping on same element');
+          return;
+        }
+        
+        // Get current positions
+        const draggedCardIndex = parseInt(draggedElement.getAttribute('data-card-index'));
+        
+        // Get current grid positions
+        const draggedRow = parseInt(draggedElement.style.gridRow);
+        const draggedCol = parseInt(draggedElement.style.gridColumn);
+        
+        if (targetElement.classList.contains('card-wrapper')) {
+          // Card-to-card swap
+          const targetCardIndex = parseInt(targetElement.getAttribute('data-card-index'));
+          const targetRow = parseInt(targetElement.style.gridRow);
+          const targetCol = parseInt(targetElement.style.gridColumn);
+          
+          console.log('Swapping cards:', {
+            dragged: { row: draggedRow, col: draggedCol, cardIndex: draggedCardIndex },
+            target: { row: targetRow, col: targetCol, cardIndex: targetCardIndex }
+          });
+          
+          // Swap the grid positions
+          draggedElement.style.gridRow = targetRow.toString();
+          draggedElement.style.gridColumn = targetCol.toString();
+          targetElement.style.gridRow = draggedRow.toString();
+          targetElement.style.gridColumn = draggedCol.toString();
+          
+          // Update the data attributes
+          draggedElement.setAttribute('data-original-position', `${targetRow}-${targetCol}`);
+          targetElement.setAttribute('data-original-position', `${draggedRow}-${draggedCol}`);
+          
+          // Update the visual feedback
+          draggedElement.classList.remove('selected');
+          targetElement.classList.add('selected');
+          
+          console.log('Cards swapped successfully');
+        } else if (targetElement.classList.contains('empty-placeholder')) {
+          // Card-to-empty-placeholder drop
+          const targetRow = parseInt(targetElement.getAttribute('data-row'));
+          const targetCol = parseInt(targetElement.getAttribute('data-col'));
+          
+          console.log('Moving card to empty position:', {
+            dragged: { row: draggedRow, col: draggedCol, cardIndex: draggedCardIndex },
+            target: { row: targetRow, col: targetCol, empty: true }
+          });
+          
+          // Move the card to the empty position
+          draggedElement.style.gridRow = targetRow.toString();
+          draggedElement.style.gridColumn = targetCol.toString();
+          draggedElement.setAttribute('data-original-position', `${targetRow}-${targetCol}`);
+          
+          // Remove the empty placeholder
+          targetElement.remove();
+          
+          // Create a new empty placeholder at the old position
+          const newEmptyPlaceholder = document.createElement('div');
+          newEmptyPlaceholder.className = 'empty-placeholder';
+          newEmptyPlaceholder.style.cssText = `
+            width: 600px;
+            height: 1000px;
+            border: 2px dashed #999;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 24px;
+            font-weight: bold;
+          `;
+          // No text content - just an empty placeholder
+          newEmptyPlaceholder.setAttribute('data-row', draggedRow);
+          newEmptyPlaceholder.setAttribute('data-col', draggedCol);
+          newEmptyPlaceholder.setAttribute('data-empty', 'true');
+          newEmptyPlaceholder.style.gridColumn = draggedCol.toString();
+          newEmptyPlaceholder.style.gridRow = draggedRow.toString();
+          
+          // Add hover effect for the new empty placeholder
+          newEmptyPlaceholder.addEventListener('mouseenter', () => {
+            newEmptyPlaceholder.style.borderColor = '#4CAF50';
+            newEmptyPlaceholder.style.background = 'rgba(76, 175, 80, 0.1)';
+            newEmptyPlaceholder.style.color = '#4CAF50';
+          });
+          
+          newEmptyPlaceholder.addEventListener('mouseleave', () => {
+            newEmptyPlaceholder.style.borderColor = '#999';
+            newEmptyPlaceholder.style.background = 'rgba(255, 255, 255, 0.1)';
+            newEmptyPlaceholder.style.color = '#999';
+          });
+          
+          gridContainer.appendChild(newEmptyPlaceholder);
+          
+          console.log('Card moved to empty position successfully');
+        }
+        
+        // Save the new positions to card JSON files
+        await saveCardPositions(gridContainer, blockStart);
+      });
+      
+      // Add drag enter/leave events for visual feedback
+      gridContainer.addEventListener('dragenter', (e) => {
+        // Find the target element (card wrapper or empty placeholder)
+        let targetElement = e.target;
+        while (targetElement && !targetElement.classList.contains('card-wrapper') && !targetElement.classList.contains('empty-placeholder')) {
+          targetElement = targetElement.parentElement;
+        }
+        
+        if (targetElement && (targetElement.classList.contains('card-wrapper') || targetElement.classList.contains('empty-placeholder')) && targetElement !== draggedElement) {
+          if (targetElement.classList.contains('empty-placeholder')) {
+            // Special styling for empty placeholders
+            targetElement.style.borderColor = '#4CAF50';
+            targetElement.style.background = 'rgba(76, 175, 80, 0.2)';
+            targetElement.style.color = '#4CAF50';
+          } else {
+            targetElement.classList.add('drag-over');
+          }
+        }
+      });
+      
+      gridContainer.addEventListener('dragleave', (e) => {
+        // Find the target element (card wrapper or empty placeholder)
+        let targetElement = e.target;
+        while (targetElement && !targetElement.classList.contains('card-wrapper') && !targetElement.classList.contains('empty-placeholder')) {
+          targetElement = targetElement.parentElement;
+        }
+        
+        if (targetElement) {
+          if (targetElement.classList.contains('empty-placeholder')) {
+            // Reset empty placeholder styling
+            targetElement.style.borderColor = '#999';
+            targetElement.style.background = 'rgba(255, 255, 255, 0.1)';
+            targetElement.style.color = '#999';
+          } else if (targetElement.classList.contains('card-wrapper')) {
+            targetElement.classList.remove('drag-over');
+          }
+        }
+      });
+    }
+    
+    // Save card positions to card JSON files in Supabase storage
+    async function saveCardPositions(gridContainer, blockStart) {
+      try {
+        const positions = [];
+        const allElements = gridContainer.children;
+        
+        // Collect all card positions
+        for (let i = 0; i < allElements.length; i++) {
+          const element = allElements[i];
+          
+          if (element.classList.contains('card-wrapper')) {
+            const cardIndex = parseInt(element.getAttribute('data-card-index'));
+            const row = parseInt(element.style.gridRow);
+            const col = parseInt(element.style.gridColumn);
+            
+            positions.push({ row, col, cardIndex });
+          }
+        }
+        
+        // Update each card's JSON file with its new position
+        for (const position of positions) {
+          await updateCardPosition(position.cardIndex, position.row, position.col);
+        }
+        
+        console.log('Card positions saved successfully');
+      } catch (error) {
+        console.error('Error saving card positions:', error);
+        alert(`Failed to save card positions: ${error.message}`);
+      }
+    }
+    
+    // Update a single card's position in its JSON file
+    async function updateCardPosition(cardIndex, row, col) {
+      try {
+        // Get current card data
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(`${CARD_BASE_URL}${cardIndex}.json${cacheBuster}`);
+        
+        if (!response.ok) {
+          console.warn(`Card ${cardIndex} not found, skipping position update`);
+          return;
+        }
+        
+        const cardData = await response.json();
+        
+        // Add or update position field
+        if (!cardData.options) {
+          cardData.options = {};
+        }
+        cardData.options.position = { row, col };
+        
+        // Create JSON string
+        const jsonString = JSON.stringify(cardData, null, 2);
+        
+        // Create blob for upload
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        
+        // Upload to Supabase storage
+        const fileName = `${cardIndex}.json`;
+        
+        const { data, error } = await supabaseClient.storage
+          .from('card')
+          .upload(fileName, blob, {
+            contentType: 'application/json',
+            upsert: true // Overwrite if file exists
+          });
+
+        if (error) {
+          console.error(`Upload error for card ${cardIndex}:`, error);
+          throw error;
+        }
+        
+        // Update cache with new position data
+        cardCache.set(cardIndex, cardData);
+        
+      } catch (error) {
+        console.error(`Failed to update position for card ${cardIndex}:`, error);
+        throw error;
+      }
+    }
+
+    // Load card positions from card JSON files
+    async function loadCardPositions(range) {
+      const savedPositions = [];
+      
+      for (let i = range.start; i <= range.end; i++) {
+        try {
+          // Get card data from cache or load it
+          let cardData = cardCache.get(i);
+          if (!cardData) {
+            const cacheBuster = `?t=${Date.now()}`;
+            const response = await fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`);
+            if (response.ok) {
+              cardData = await response.json();
+              cardCache.set(i, cardData);
+            }
+          }
+          
+          // Check if card has a saved position
+          if (cardData && cardData.options && cardData.options.position) {
+            const position = cardData.options.position;
+            savedPositions.push({ 
+              row: position.row, 
+              col: position.col, 
+              cardIndex: i 
+            });
+          } else {
+            // Use default position if no saved position
+            const defaultIndex = i - range.start;
+            const row = Math.floor(defaultIndex / 3) + 1;
+            const col = (defaultIndex % 3) + 1;
+            savedPositions.push({ row, col, cardIndex: i });
+          }
+        } catch (error) {
+          console.warn(`Failed to load position for card ${i}, using default:`, error);
+          // Use default position on error
+          const defaultIndex = i - range.start;
+          const row = Math.floor(defaultIndex / 3) + 1;
+          const col = (defaultIndex % 3) + 1;
+          savedPositions.push({ row, col, cardIndex: i });
+        }
+      }
+      
+      return savedPositions;
+    }
+
+    // Add empty placeholders for unused grid positions
+    function addEmptyPlaceholders(gridContainer, savedPositions) {
+      // Create a set of occupied positions
+      const occupiedPositions = new Set();
+      savedPositions.forEach(pos => {
+        occupiedPositions.add(`${pos.row}-${pos.col}`);
+      });
+      
+      // Add empty placeholders for all 15 positions (3x5 grid)
+      for (let row = 1; row <= 5; row++) {
+        for (let col = 1; col <= 3; col++) {
+          const positionKey = `${row}-${col}`;
+          
+          if (!occupiedPositions.has(positionKey)) {
+            // Create empty placeholder for this position
+            const emptyPlaceholder = document.createElement('div');
+            emptyPlaceholder.className = 'empty-placeholder';
+            emptyPlaceholder.style.cssText = `
+              width: 600px;
+              height: 1000px;
+              border: 2px dashed #999;
+              border-radius: 8px;
+              background: rgba(255, 255, 255, 0.1);
+              cursor: pointer;
+              transition: all 0.2s ease;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #999;
+              font-size: 24px;
+              font-weight: bold;
+            `;
+            // No text content - just an empty placeholder
+            emptyPlaceholder.setAttribute('data-row', row);
+            emptyPlaceholder.setAttribute('data-col', col);
+            emptyPlaceholder.setAttribute('data-empty', 'true');
+            emptyPlaceholder.style.gridColumn = col.toString();
+            emptyPlaceholder.style.gridRow = row.toString();
+            
+            // Add hover effect for empty placeholders
+            emptyPlaceholder.addEventListener('mouseenter', () => {
+              emptyPlaceholder.style.borderColor = '#4CAF50';
+              emptyPlaceholder.style.background = 'rgba(76, 175, 80, 0.1)';
+              emptyPlaceholder.style.color = '#4CAF50';
+            });
+            
+            emptyPlaceholder.addEventListener('mouseleave', () => {
+              emptyPlaceholder.style.borderColor = '#999';
+              emptyPlaceholder.style.background = 'rgba(255, 255, 255, 0.1)';
+              emptyPlaceholder.style.color = '#999';
+            });
+            
+            gridContainer.appendChild(emptyPlaceholder);
+          }
+        }
+      }
+    }
+
     async function showCardBlockOverview() {
       // Get the current block range
       const blockStart = getBlockForCard(currentCardIndex);
@@ -2654,6 +3074,14 @@ inComment = true;
         cardWrapper.addEventListener('click', async (e) => {
           preventCardFlip(e);
           
+          // Check if this click is from a drag operation
+          if (cardWrapper.classList.contains('dragging') || 
+              (window.dragStarted && Date.now() - window.lastDragEnd < 200)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          
           // Zoom back in regardless of which card was clicked
             document.body.style.zoom = '0.75';
             setButtonState('normal');
@@ -2697,60 +3125,39 @@ inComment = true;
         gridContainer.appendChild(cardWrapper);
       }
       
-      // Apply the grid layout: 1 card (centered), 3 cards, 3 cards, 3 cards, 1 card (centered)
+      // Apply the grid layout: 3x5 grid with saved positions
       const cards = gridContainer.children;
-      // Place cards according to their position within the block (1-11)
+      
+      // Load saved card positions from card JSON files
+      let savedPositions = await loadCardPositions(range);
+      
+      // Place cards according to their saved positions
       for (let i = 0; i < cards.length; i++) {
         const cardIndex = range.start + i;
-        const positionInBlock = cardIndex - blockStart + 1;
+        const savedPosition = savedPositions.find(pos => pos.cardIndex === cardIndex);
         
-        switch (positionInBlock) {
-          case 1:
-            cards[i].style.gridColumn = '2';
-            cards[i].style.gridRow = '1';
-            break;
-          case 2:
-            cards[i].style.gridColumn = '1';
-            cards[i].style.gridRow = '2';
-            break;
-          case 3:
-            cards[i].style.gridColumn = '2';
-            cards[i].style.gridRow = '2';
-            break;
-          case 4:
-            cards[i].style.gridColumn = '3';
-            cards[i].style.gridRow = '2';
-            break;
-          case 5:
-            cards[i].style.gridColumn = '1';
-            cards[i].style.gridRow = '3';
-            break;
-          case 6:
-            cards[i].style.gridColumn = '2';
-            cards[i].style.gridRow = '3';
-            break;
-          case 7:
-            cards[i].style.gridColumn = '3';
-            cards[i].style.gridRow = '3';
-            break;
-          case 8:
-            cards[i].style.gridColumn = '1';
-            cards[i].style.gridRow = '4';
-            break;
-          case 9:
-            cards[i].style.gridColumn = '2';
-            cards[i].style.gridRow = '4';
-            break;
-          case 10:
-            cards[i].style.gridColumn = '3';
-            cards[i].style.gridRow = '4';
-            break;
-          case 11:
-            cards[i].style.gridColumn = '2';
-            cards[i].style.gridRow = '5';
-            break;
+        if (savedPosition) {
+          cards[i].style.gridColumn = savedPosition.col.toString();
+          cards[i].style.gridRow = savedPosition.row.toString();
+        } else {
+          // Fallback to sequential positioning
+          const row = Math.floor(i / 3) + 1;
+          const col = (i % 3) + 1;
+          cards[i].style.gridColumn = col.toString();
+          cards[i].style.gridRow = row.toString();
         }
+        
+        // Add drag and drop attributes
+        cards[i].draggable = true;
+        cards[i].setAttribute('data-card-index', cardIndex);
+        cards[i].setAttribute('data-original-position', `${savedPosition?.row || Math.floor(i / 3) + 1}-${savedPosition?.col || (i % 3) + 1}`);
       }
+      
+      // Add empty placeholders for remaining positions
+      addEmptyPlaceholders(gridContainer, savedPositions);
+      
+      // Add drag and drop event handlers
+      setupDragAndDrop(gridContainer, blockStart, range);
       
       // Replace the main card with the grid
       mainCardContainer.innerHTML = '';
@@ -3885,55 +4292,86 @@ inComment = true;
         e.preventDefault();
         
         const currentSetStart = Math.floor((currentCardIndex - 1) / CARD_BLOCK_SIZE) * CARD_BLOCK_SIZE + 1;
-        const positionInSet = currentCardIndex - currentSetStart + 1; // 1-11
+        const range = getBlockRange(currentSetStart);
+        const savedPositions = await loadCardPositions(range);
         
-        let newPosition;
+        // Get current card's grid position
+        const currentCardPosition = savedPositions ? savedPositions.find(pos => pos.cardIndex === currentCardIndex) : null;
+        if (!currentCardPosition) return; // Can't navigate if position not found
+        
+        let targetCardPosition = null;
         
         if (e.code === 'ArrowRight') {
-          // Right arrow: increment through cards in set
-          const nextCardIndex = currentSetStart + positionInSet; // Next card in sequence
+          // Right arrow: move to next position (same row, next column, or next row first column)
+          let nextCol = currentCardPosition.col + 1;
+          let nextRow = currentCardPosition.row;
           
-          if (nextCardIndex <= maxCardIndex && nextCardIndex <= currentSetStart + CARD_BLOCK_SIZE - 1) {
-            // Move to next card in set (if it exists and is within the set)
-            newPosition = positionInSet + 1;
-          } else {
-            // Wrap around to first card of set
-            newPosition = 1;
+          if (nextCol > 3) {
+            // Move to next row
+            nextRow++;
+            nextCol = 1;
+          }
+          
+          if (nextRow <= 5) {
+            targetCardPosition = savedPositions.find(pos => pos.row === nextRow && pos.col === nextCol);
+          }
+          
+          // If no card at next position, wrap to first position
+          if (!targetCardPosition) {
+            targetCardPosition = savedPositions.find(pos => pos.row === 1 && pos.col === 1);
           }
         } else { // ArrowLeft
-          // Left arrow: decrement through cards in set
-          if (positionInSet > 1) {
-            // Move to previous card in set
-            newPosition = positionInSet - 1;
-          } else {
-            // Wrap around to last card of set
-            const setEnd = Math.min(currentSetStart + CARD_BLOCK_SIZE - 1, maxCardIndex);
-            newPosition = setEnd - currentSetStart + 1;
+          // Left arrow: move to previous position (same row, previous column, or previous row last column)
+          let prevCol = currentCardPosition.col - 1;
+          let prevRow = currentCardPosition.row;
+          
+          if (prevCol < 1) {
+            // Move to previous row
+            prevRow--;
+            prevCol = 3;
+          }
+          
+          if (prevRow >= 1) {
+            targetCardPosition = savedPositions.find(pos => pos.row === prevRow && pos.col === prevCol);
+          }
+          
+          // If no card at previous position, wrap to last position
+          if (!targetCardPosition) {
+            const lastPosition = savedPositions.reduce((last, pos) => {
+              const posValue = (pos.row - 1) * 3 + pos.col;
+              const lastValue = (last.row - 1) * 3 + last.col;
+              return posValue > lastValue ? pos : last;
+            }, savedPositions[0]);
+            targetCardPosition = lastPosition;
           }
         }
         
-        // Calculate the target card index
-        const targetCardIndex = currentSetStart + newPosition - 1;
-        
-        // Only navigate if the target card exists
-        if (targetCardIndex <= maxCardIndex) {
-          currentCardIndex = targetCardIndex;
-          loadCard(targetCardIndex);
+        if (targetCardPosition) {
+          const targetCardIndex = targetCardPosition.cardIndex;
           
-          // Update visual selection in the grid
-          const gridContainer = document.querySelector('.grid-container');
-          if (gridContainer) {
-            // Remove previous selection
-            const previousSelected = gridContainer.querySelector('.card-wrapper.selected');
-            if (previousSelected) {
-              previousSelected.classList.remove('selected');
-            }
+          // Only navigate if the target card exists
+          if (targetCardIndex <= maxCardIndex) {
+            currentCardIndex = targetCardIndex;
+            loadCard(targetCardIndex);
             
-            // Add selection to new card
-            const cardWrappers = gridContainer.querySelectorAll('.card-wrapper');
-            const targetPosition = newPosition - 1; // Convert to 0-based index
-            if (cardWrappers[targetPosition]) {
-              cardWrappers[targetPosition].classList.add('selected');
+            // Update visual selection in the grid
+            const gridContainer = document.querySelector('.grid-container');
+            if (gridContainer) {
+              // Remove previous selection
+              const previousSelected = gridContainer.querySelector('.card-wrapper.selected');
+              if (previousSelected) {
+                previousSelected.classList.remove('selected');
+              }
+              
+              // Add selection to new card
+              const cardWrappers = gridContainer.querySelectorAll('.card-wrapper');
+              for (let i = 0; i < cardWrappers.length; i++) {
+                const cardIndex = parseInt(cardWrappers[i].getAttribute('data-card-index'));
+                if (cardIndex === targetCardIndex) {
+                  cardWrappers[i].classList.add('selected');
+                  break;
+                }
+              }
             }
           }
         }
