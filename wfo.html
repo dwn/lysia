@@ -4301,48 +4301,30 @@ inComment = true;
         
         let targetCardPosition = null;
         
+        // Create a sorted list of all card positions for easier navigation
+        const sortedPositions = savedPositions.sort((a, b) => {
+          const aValue = (a.row - 1) * 3 + a.col;
+          const bValue = (b.row - 1) * 3 + b.col;
+          return aValue - bValue;
+        });
+        
+        const currentIndex = sortedPositions.findIndex(pos => pos.cardIndex === currentCardIndex);
+        
         if (e.code === 'ArrowRight') {
-          // Right arrow: move to next position (same row, next column, or next row first column)
-          let nextCol = currentCardPosition.col + 1;
-          let nextRow = currentCardPosition.row;
-          
-          if (nextCol > 3) {
-            // Move to next row
-            nextRow++;
-            nextCol = 1;
-          }
-          
-          if (nextRow <= 5) {
-            targetCardPosition = savedPositions.find(pos => pos.row === nextRow && pos.col === nextCol);
-          }
-          
-          // If no card at next position, wrap to first position
-          if (!targetCardPosition) {
-            targetCardPosition = savedPositions.find(pos => pos.row === 1 && pos.col === 1);
+          // Right arrow: move to next card in sorted order
+          if (currentIndex < sortedPositions.length - 1) {
+            targetCardPosition = sortedPositions[currentIndex + 1];
+          } else {
+            // Wrap to first card
+            targetCardPosition = sortedPositions[0];
           }
         } else { // ArrowLeft
-          // Left arrow: move to previous position (same row, previous column, or previous row last column)
-          let prevCol = currentCardPosition.col - 1;
-          let prevRow = currentCardPosition.row;
-          
-          if (prevCol < 1) {
-            // Move to previous row
-            prevRow--;
-            prevCol = 3;
-          }
-          
-          if (prevRow >= 1) {
-            targetCardPosition = savedPositions.find(pos => pos.row === prevRow && pos.col === prevCol);
-          }
-          
-          // If no card at previous position, wrap to last position
-          if (!targetCardPosition) {
-            const lastPosition = savedPositions.reduce((last, pos) => {
-              const posValue = (pos.row - 1) * 3 + pos.col;
-              const lastValue = (last.row - 1) * 3 + last.col;
-              return posValue > lastValue ? pos : last;
-            }, savedPositions[0]);
-            targetCardPosition = lastPosition;
+          // Left arrow: move to previous card in sorted order
+          if (currentIndex > 0) {
+            targetCardPosition = sortedPositions[currentIndex - 1];
+          } else {
+            // Wrap to last card
+            targetCardPosition = sortedPositions[sortedPositions.length - 1];
           }
         }
         
