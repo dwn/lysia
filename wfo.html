@@ -4794,6 +4794,13 @@ inComment = true;
         await drawSvgBackground();
       }
       
+      // Start in zoomed-out mode showing set 1
+      const optimalZoom = calculateOptimalZoom();
+      document.body.style.zoom = optimalZoom.toString();
+      setButtonState('zoomedOut');
+      await updateCardIndicator();
+      showCardBlockOverview();
+      
       // Preload the first block in the background
       if (maxCardIndex > 0) {
         preloadCardBlock(1).catch(error => {
