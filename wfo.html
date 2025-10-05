@@ -1,123 +1,6 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
 <head>
-  <script>
-const defaultContent = `
-//t d
-04|88 ca 05 d5 59 91 10 02|
-//k g
-88 c8 62 88 04|88 b8 01 a5 19 e2 59|
-//m n
-88 c8 40 60 04
-
-//dr@gn
-||88
-9a 05 d5 59 91 10 01 91|1d d5 40|52|88 a8 01 a5 19 e2 59|a9 00|
-
-//trinity
-||88
-98 03 91|1d d5 30|dd 00|8a 00|ae 51 11|88 98 03 91|2e a2 ef 00|
-//u^n
-ca 08|cd 02|d5 81 20|
-//in
-3e a2|e9 00|
-//esens
-88 a8 30 64 88|c8 98 50 82 10|50 82 10|d9 00|88 c8 8a 50 82 10|
-//@nd
-87|8c 00|88 ca 05 d5 59 91 10 02|
-//undivaid&d
-88 ba 02|d5 81 20|88 aa 05 d5 59 91 10 01 91|2e a2|88 20 62 88 04|8e 40 20|fd 02|88 b8 9a 05 d5 59 91 10 02|8e b2|88 9a 05 d5 59 91 10 02
-
-//janlwk
-||88
-19 03 91|88 da 40|e9 00|88 a8 20 e8 03 02|88 8b 28 e1 40|88 a8 62 88 04|
-
-//picard
-88 b8 10 09 50 10 09 50 88 03 91|2e a2|88 a8 62 88 04|88 8a 10 19 91|10 1d d5 30|88 9a 05 d5 59 91 10 02
-
-//uili^m
-||88
-9b 08|8e 00|88 c8 60 03 91|2e a2|ee 02 91|88 40 e8 04|
-
-//ty
-88 b8 03 91|2e a2 88 dd 51 30|
-
-//raikr
-88 19 d1 50 02|8e 40 20|ed 02|88 c8 62 88 03 91|1d d5 30
-
-//dy@n^
-||88
-aa 05 d5 59 91 10 01 91|2e a2 ef 00|88 c8 a8 74|30|88 9a 02|
-
-//troi
-88 a8 03 91|1d d5 30|88 b8 84 2e e6|8a 00
-
-//uorf
-||88
-9b 08|88 c8 84 2e e6 59 b3 10|1d d5 30|88 d8 28 a0 e8 04
-
-//ded^
-||88
-aa 05 d5 59 91 10 02|88 8a 40 10 f8 e8 89 40 10|88 8a 05 d5 59 91 10 02|88 aa 02
-
-//u&sly
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-||88
-9b 08 8d b2|88 b8 8a 50 82 10 61|88 8d 02 05 28 01
-`;
-const defaultSvgBackground = 
-`https://vault.biltmoretoday.com/storage/v1/object/public/image/tree.svg`;
-
-const defaultRuleContent = `====SECTION MAIN
-04,FF
-88,AA
-ca,BB
-05,CC
-d5,DD
-59,EE
-91,FF
-10,00
-02,11
-c8,22
-62,33
-b8,44
-01,55
-a5,66
-19,77
-e2,88
-59,99
-40,AA
-60,BB
-9a,CC
-1d,DD
-52,EE
-a8,FF
-a9,00
-98,11
-03,22
-30,33
-dd,44
-00,55
-8a,66
-ae,77
-51,88
-2e,99
-a2,AA
-ef,BB`;
-</script>
   <meta charset="utf-8" />
   <title>Wfo Writer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23000'/><circle cx='50' cy='50' r='25' fill='%23fff'/></svg>">
@@ -4079,9 +3962,9 @@ inComment = true;
       const loadSuccess = await loadCard(1);
       if (!loadSuccess) {
         // Fallback to default content if card loading fails
-        inputEl.textContent = defaultContent;
-        ruleEl.textContent = defaultRuleContent;
-        svgInputEl.value = defaultSvgBackground;
+        inputEl.textContent = '';
+        ruleEl.textContent = '';
+        svgInputEl.value = '';
         highlightEditor();
         processTextReplacement(); // Process text replacement for default content
         populateColorOptions();
