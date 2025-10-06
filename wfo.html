@@ -4827,20 +4827,10 @@ inComment = true;
       // Update card indicator with max count
       await updateCardIndicator();
       
-      // Load the first card (index 1)
-      const loadSuccess = await loadCard(1);
-      if (!loadSuccess) {
-        // Fallback to default content if card loading fails
-        inputEl.textContent = '';
-        ruleEl.textContent = '';
-        svgInputEl.value = '';
-        highlightEditor();
-        processTextReplacement(); // Process text replacement for default content
-        populateColorOptions();
-        await drawSvgBackground();
-      }
+      // Set current card to 1 (first card of first set)
+      currentCardIndex = 1;
       
-      // Start in zoomed-out mode showing set 1
+      // Start directly in zoomed-out mode showing set 1
       const optimalZoom = calculateOptimalZoom();
       document.body.style.zoom = optimalZoom.toString();
       setButtonState('zoomedOut');
