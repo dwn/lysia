@@ -579,7 +579,7 @@
 </div>
       <aside>
         <div id="cardFileName" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 0.9em; color: var(--pico-muted-color); margin-bottom: 1rem; padding: 0.5rem; background: var(--pico-form-element-background-color); border: 1px solid var(--pico-form-element-border-color); border-radius: 4px; text-align: center;">
-          card-1.json
+          1.json
         </div>
         <details>
           <summary>Instruction</summary>
@@ -2473,9 +2473,7 @@ inComment = true;
       
       // If no explicit boundaries found, use intelligent grouping
       if (setStart === cardIndex && setEnd === cardIndex) {
-        console.log('Using intelligent grouping for card', cardIndex);
         const result = await detectIntelligentSetBoundaries(cardIndex);
-        console.log('Intelligent grouping result:', result);
         setStart = result.start;
         setEnd = result.end;
       }
@@ -2665,7 +2663,6 @@ inComment = true;
           e.target.classList.add('dragging');
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setData('text/html', e.target.outerHTML);
-          console.log('Drag started for card:', e.target.getAttribute('data-card-index'));
         }
       });
       
@@ -2701,10 +2698,7 @@ inComment = true;
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('Drop event fired', { draggedElement, target: e.target });
-        
         if (!draggedElement) {
-          console.log('No dragged element');
           return;
         }
         
@@ -2715,15 +2709,11 @@ inComment = true;
         }
         
         if (!targetElement || (!targetElement.classList.contains('card-wrapper') && !targetElement.classList.contains('empty-placeholder'))) {
-          console.log('Invalid drop target - no valid target found');
           return;
         }
         
-        console.log('Found target element:', targetElement.className, targetElement.getAttribute('data-card-index') || 'empty');
-        
         // Don't allow dropping on the same element
         if (draggedElement === targetElement) {
-          console.log('Dropping on same element');
           return;
         }
         
@@ -2740,11 +2730,6 @@ inComment = true;
           const targetRow = parseInt(targetElement.style.gridRow);
           const targetCol = parseInt(targetElement.style.gridColumn);
           
-          console.log('Swapping cards:', {
-            dragged: { row: draggedRow, col: draggedCol, cardIndex: draggedCardIndex },
-            target: { row: targetRow, col: targetCol, cardIndex: targetCardIndex }
-          });
-          
           // Swap the grid positions
           draggedElement.style.gridRow = targetRow.toString();
           draggedElement.style.gridColumn = targetCol.toString();
@@ -2759,16 +2744,10 @@ inComment = true;
           draggedElement.classList.remove('selected');
           targetElement.classList.add('selected');
           
-          console.log('Cards swapped successfully');
         } else if (targetElement.classList.contains('empty-placeholder')) {
           // Card-to-empty-placeholder drop
           const targetRow = parseInt(targetElement.getAttribute('data-row'));
           const targetCol = parseInt(targetElement.getAttribute('data-col'));
-          
-          console.log('Moving card to empty position:', {
-            dragged: { row: draggedRow, col: draggedCol, cardIndex: draggedCardIndex },
-            target: { row: targetRow, col: targetCol, empty: true }
-          });
           
           // Move the card to the empty position
           draggedElement.style.gridRow = targetRow.toString();
@@ -2818,7 +2797,6 @@ inComment = true;
           
           gridContainer.appendChild(newEmptyPlaceholder);
           
-          console.log('Card moved to empty position successfully');
         }
         
         // Save the new positions to card JSON files
@@ -2889,7 +2867,6 @@ inComment = true;
           await updateCardPosition(position.cardIndex, position.row, position.col);
         }
         
-        console.log('Card positions saved successfully');
       } catch (error) {
         console.error('Error saving card positions:', error);
         alert(`Failed to save card positions: ${error.message}`);
@@ -3053,13 +3030,6 @@ inComment = true;
       if (!range || range.start === undefined || range.end === undefined) {
         return;
       }
-      
-      // Console log the cards being displayed
-      console.log('=== Card Block Overview ===');
-      console.log('Current card index:', currentCardIndex);
-      console.log('Block range:', range.start, 'to', range.end);
-      console.log('Cards being displayed:', Array.from({length: range.end - range.start + 1}, (_, i) => range.start + i));
-      console.log('========================');
       
       // Find the main card container
       const mainCardContainer = document.querySelector('.canvas-only .grid > div:first-child');
@@ -3929,7 +3899,7 @@ inComment = true;
     
     function updateCardFileName() {
       if (cardFileNameEl) {
-        cardFileNameEl.textContent = `card-${currentCardIndex}.json`;
+        cardFileNameEl.textContent = `${currentCardIndex}.json`;
       }
     }
 
