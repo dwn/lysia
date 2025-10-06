@@ -407,6 +407,11 @@
       display: none !important;
     }
     
+    /* Hide add card button in editor mode */
+    body:not(.canvas-only) #addCardButton {
+      display: none !important;
+    }
+    
     /* Monitor/glossy effect for presentation mode */
     .canvas-only canvas {
       background: transparent;
@@ -551,13 +556,18 @@
 </head>
 <body>
   <!-- Editor toggle button -->
-  <button id="editorToggle" class="editor-toggle" title="Toggle Editor Mode (⌘E)" style="left: 20px; width: 80px;">
+  <button id="editorToggle" class="editor-toggle" title="Toggle Editor Mode (⌘E)" style="left: 120px; width: 80px;">
     ✏️
   </button>
 
   <!-- Upload button -->
-  <button id="exportButton" class="editor-toggle" title="Upload Card to Storage (⌘S)" style="left: 120px; width: 80px;">
+  <button id="exportButton" class="editor-toggle" title="Upload Card to Storage (⌘S)" style="left: 220px; width: 80px;">
     💾
+  </button>
+
+  <!-- Add card button -->
+  <button id="addCardButton" class="editor-toggle" title="Add New Card to Current Set" style="left: 20px; width: 80px;">
+    ➕
   </button>
 
   <!-- Zoom out button -->
@@ -762,6 +772,7 @@ a     xxx    b    yyy</div>
     const cardFileNameEl = document.getElementById('cardFileName');
     const editorToggleBtn = document.getElementById('editorToggle');
     const exportButton = document.getElementById('exportButton');
+    const addCardButton = document.getElementById('addCardButton');
     const zoomOutButton = document.getElementById('zoomOutButton');
     const cardIndicator = document.getElementById('cardIndicator');
     const svgInputEl = document.getElementById('svgInput');
@@ -3664,12 +3675,14 @@ inComment = true;
       normal: {
         editorToggle: { display: 'block', left: '20px', top: '' },
         exportButton: { display: 'block', left: '120px', top: '' },
+        addCardButton: { display: 'none' },
         zoomOutButton: { display: 'block', right: '20px', top: '', transform: '', border: '', boxShadow: '' },
         cardIndicator: { display: 'block', right: '120px', top: '', transform: '', border: '', boxShadow: '' }
       },
       zoomedOut: {
         editorToggle: { display: 'none' },
         exportButton: { display: 'none' },
+        addCardButton: { display: 'block', left: '228px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' },
         zoomOutButton: { display: 'block', right: '228px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' },
         cardIndicator: { right: '648px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' }
       }
@@ -3900,6 +3913,110 @@ inComment = true;
     function updateCardFileName() {
       if (cardFileNameEl) {
         cardFileNameEl.textContent = `${currentCardIndex}.json`;
+      }
+    }
+    
+    async function addNewCard() {
+      try {
+        // Get current set information
+        const currentSetInfo = await getSetForCard(currentCardIndex);
+        const insertPosition = currentSetInfo.end + 1;
+        
+        // Shift all cards from insertPosition onwards up by one
+        await shiftCardsUp(insertPosition);
+        
+        // Create a new card with default content
+        const newCardData = {
+          input: '',
+          rule: '',
+          options: {
+            size: 10,
+            background: '#808080',
+            italics: false,
+            animate: true,
+            svgColor: false,
+            svgBackground: '',
+            position: null,
+            order: null
+          }
+        };
+        
+        // Upload the new card at the insert position using Supabase storage
+        const jsonString = JSON.stringify(newCardData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const fileName = `${insertPosition}.json`;
+        
+        const { data, error } = await supabaseClient.storage
+          .from('card')
+          .upload(fileName, blob, {
+            contentType: 'application/json',
+            upsert: true // Overwrite if file exists
+          });
+        
+        if (error) {
+          throw new Error(`Failed to create card: ${error.message}`);
+        }
+        
+        // Update max card index
+        maxCardIndex = maxCardIndex + 1;
+        
+        // Navigate to the new card
+        currentCardIndex = insertPosition;
+        updateCardFileName();
+        await loadCard(insertPosition);
+        
+        // Update card indicator
+        await updateCardIndicator();
+        
+        // If in zoomed-out mode, refresh the view
+        if (isZoomedOut()) {
+          showCardBlockOverview();
+        }
+        
+        // Clear set boundaries cache since we added a new card
+        setBoundaries.clear();
+        
+      } catch (error) {
+        console.error('Error adding new card:', error);
+        alert(`Failed to add new card: ${error.message}`);
+      }
+    }
+    
+    async function shiftCardsUp(startIndex) {
+      // Work backwards from the highest card to avoid overwriting
+      for (let i = maxCardIndex; i >= startIndex; i--) {
+        const currentCardData = await getCardData(i);
+        if (currentCardData) {
+          // Upload the card with the new index using Supabase storage
+          const jsonString = JSON.stringify(currentCardData, null, 2);
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const newFileName = `${i + 1}.json`;
+          
+          const { data, error } = await supabaseClient.storage
+            .from('card')
+            .upload(newFileName, blob, {
+              contentType: 'application/json',
+              upsert: true // Overwrite if file exists
+            });
+          
+          if (error) {
+            throw new Error(`Failed to shift card ${i} to ${i + 1}: ${error.message}`);
+          }
+          
+          // Delete the old card file
+          const { error: deleteError } = await supabaseClient.storage
+            .from('card')
+            .remove([`${i}.json`]);
+          
+          if (deleteError) {
+            console.warn(`Failed to delete old card ${i}.json:`, deleteError);
+            // Don't throw here - the new file was created successfully
+          }
+          
+          // Update cache
+          cardCache.set(i + 1, currentCardData);
+          cardCache.delete(i);
+        }
       }
     }
 
@@ -4204,6 +4321,12 @@ inComment = true;
     exportButton.addEventListener('click', (e) => {
       preventCardFlip(e);
       uploadCard();
+    });
+    
+    // Add card button event listener
+    addCardButton.addEventListener('click', (e) => {
+      preventCardFlip(e);
+      addNewCard();
     });
     
     // Zoom out button event listener
