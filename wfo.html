@@ -2751,9 +2751,16 @@ inComment = true;
           draggedElement.setAttribute('data-original-position', `${targetRow}-${targetCol}`);
           targetElement.setAttribute('data-original-position', `${draggedRow}-${draggedCol}`);
           
-          // Update the visual feedback
+          // Update the visual feedback - selected class should follow the card matching currentCardIndex
           draggedElement.classList.remove('selected');
-          targetElement.classList.add('selected');
+          targetElement.classList.remove('selected');
+          
+          // Re-apply selected to whichever card matches currentCardIndex
+          if (draggedCardIndex === currentCardIndex) {
+            draggedElement.classList.add('selected');
+          } else if (targetCardIndex === currentCardIndex) {
+            targetElement.classList.add('selected');
+          }
           
         } else if (targetElement.classList.contains('empty-placeholder')) {
           // Card-to-empty-placeholder drop
@@ -3047,6 +3054,12 @@ inComment = true;
       if (!mainCardContainer) {
         return;
       }
+      
+      // Clear any existing selected classes from old grid before creating new one
+      const oldSelected = mainCardContainer.querySelectorAll('.card-wrapper.selected');
+      oldSelected.forEach(card => {
+        card.classList.remove('selected');
+      });
       
       // Create the grid container for all cards
       const gridContainer = document.createElement('div');
@@ -4776,11 +4789,11 @@ inComment = true;
             // Update visual selection in the grid
             const gridContainer = document.querySelector('.grid-container');
             if (gridContainer) {
-              // Remove previous selection
-              const previousSelected = gridContainer.querySelector('.card-wrapper.selected');
-              if (previousSelected) {
-                previousSelected.classList.remove('selected');
-              }
+              // Remove previous selection from ALL cards (in case multiple have it)
+              const previousSelected = gridContainer.querySelectorAll('.card-wrapper.selected');
+              previousSelected.forEach(card => {
+                card.classList.remove('selected');
+              });
               
               // Add selection to new card
               const cardWrappers = gridContainer.querySelectorAll('.card-wrapper');
