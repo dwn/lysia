@@ -817,10 +817,10 @@ a     xxx    b    yyy</div>
       { name: 'ora', hex: '#f34001' },
       { name: 'amb', hex: '#faaf00' },
       { name: 'yel', hex: '#d9ce00' },
-      { name: 'grn', hex: '#0ccc0e' },
+      { name: 'grn', hex: '#00cb00' },
       { name: 'cya', hex: '#00dfd8' },
       { name: 'blu', hex: '#3441fc' },
-      { name: 'ind', hex: '#5020e0' },
+      { name: 'ind', hex: '#4020f0' },
       { name: 'pur', hex: '#8000f0' },
       { name: 'vio', hex: '#350063' },
       { name: 'gry', hex: '#808080' },
@@ -847,6 +847,11 @@ a     xxx    b    yyy</div>
     
     // Calculate luminosity of a hex color (0-1, where 1 is brightest)
     function getLuminosity(hexColor) {
+      // Handle transparent as dark (0 luminosity)
+      if (hexColor === 'transparent') {
+        return 0;
+      }
+      
       const rgb = hexToRgb(hexColor);
       // Using relative luminance formula
       const r = rgb.r / 255;
@@ -878,6 +883,10 @@ a     xxx    b    yyy</div>
     
     // Utility functions for color operations
     function hexToRgb(hex) {
+      // Handle transparent as black (0,0,0)
+      if (hex === 'transparent') {
+        return { r: 0, g: 0, b: 0 };
+      }
       const h = hex.replace('#', '');
       return {
         r: parseInt(h.substr(0, 2), 16),
@@ -891,6 +900,10 @@ a     xxx    b    yyy</div>
     }
     
     function blendColors(color1, color2, ratio) {
+      // Handle transparent colors
+      if (color1 === 'transparent') return color2;
+      if (color2 === 'transparent') return color1;
+      
       const rgb1 = hexToRgb(color1);
       const rgb2 = hexToRgb(color2);
       return rgbToHex(
@@ -4213,6 +4226,11 @@ inComment = true;
     
     // Generate gradient from base color (slightly lighter at bottom for zoomed-in mode)
     function generateGradientFromColor(baseColor) {
+      // Handle transparent
+      if (baseColor === 'transparent') {
+        return 'transparent';
+      }
+      
       const rgb = hexToRgb(baseColor);
       
       // Create gradient with varying opacity (brighter overall)
@@ -4226,6 +4244,11 @@ inComment = true;
     
     // Generate lighter gradient for zoomed-out cards
     function generateLightGradientFromColor(baseColor) {
+      // Handle transparent
+      if (baseColor === 'transparent') {
+        return 'transparent';
+      }
+      
       const rgb = hexToRgb(baseColor);
       
       // Create gradient with varying opacity - brighter overall for zoomed-out mode
@@ -4268,6 +4291,14 @@ inComment = true;
     
     // Update card glow to match the selected color
     function updateCardGlow(selectedColor) {
+      // Handle transparent - use subtle white glow
+      if (selectedColor === 'transparent') {
+        document.documentElement.style.setProperty('--card-glow-1', 'rgba(255, 255, 255, 0.6)');
+        document.documentElement.style.setProperty('--card-glow-2', 'rgba(255, 255, 255, 0.4)');
+        document.documentElement.style.setProperty('--card-glow-3', 'rgba(255, 255, 255, 0.2)');
+        return;
+      }
+      
       const rgb = hexToRgb(selectedColor);
       
       // Create lighter, more whitish glow variations (brighter)
