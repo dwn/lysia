@@ -2493,10 +2493,12 @@ inComment = true;
       
       let setStart = cardIndex;
       let setEnd = cardIndex;
+      let foundExplicitBoundary = false; // Track if we found an order=1 marker
       
       // Check if current card itself starts a new set
       const currentCardData = await getCardData(cardIndex);
       if (currentCardData && currentCardData.options && currentCardData.options.order === 1) {
+        foundExplicitBoundary = true;
         // Current card starts a new set
         setStart = cardIndex;
         // For a set starter, find the end by looking forward
@@ -2522,6 +2524,7 @@ inComment = true;
           const cardData = await getCardData(i);
           if (cardData && cardData.options && cardData.options.order === 1) {
             setStart = i;
+            foundExplicitBoundary = true;
             break;
           }
           // If we've gone back too far (more than MAX_CARDS_PER_SET), assume this is the start
@@ -2537,6 +2540,7 @@ inComment = true;
         const cardData = await getCardData(i);
         if (cardData && cardData.options && cardData.options.order === 1) {
           setEnd = i - 1; // Previous card is the end of this set
+          foundExplicitBoundary = true;
           break;
         }
         // If we've gone forward too far (more than MAX_CARDS_PER_SET), assume this is the end
@@ -2547,7 +2551,7 @@ inComment = true;
       }
       
       // If no explicit boundaries found, use intelligent grouping
-      if (setStart === cardIndex && setEnd === cardIndex) {
+      if (!foundExplicitBoundary && setStart === cardIndex && setEnd === cardIndex) {
         const result = await detectIntelligentSetBoundaries(cardIndex);
         setStart = result.start;
         setEnd = result.end;
