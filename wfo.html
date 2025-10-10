@@ -4928,7 +4928,7 @@ inComment = true;
       document.body.style.zoom = optimalZoom.toString();
       setButtonState('zoomedOut');
       await updateCardIndicator();
-      showCardBlockOverview();
+      await showCardBlockOverview();
       
       // Preload the first block in the background
       if (maxCardIndex > 0) {
@@ -4943,15 +4943,19 @@ inComment = true;
       // Apply fade-in animation after everything is loaded
       applyCardFadeIn();
       
-      // Start rendering based on checkbox state
-      const coloredItems = parseBytesWithColors(getEditorValue());
-      const { ops, visited } = buildOps(coloredItems);
+      // Skip initial canvas rendering since we're starting in zoomed-out mode
+      // The canvas will be replaced by the grid, and rendering will happen
+      // when user zooms back in to single card view
       
-      if (animateCheckbox.checked) {
-        startAnim(ops, visited);
-      } else {
-        renderInstant(ops, visited);
-      }
+      // Start rendering based on checkbox state
+      // const coloredItems = parseBytesWithColors(getEditorValue());
+      // const { ops, visited } = buildOps(coloredItems);
+      // 
+      // if (animateCheckbox.checked) {
+      //   startAnim(ops, visited);
+      // } else {
+      //   renderInstant(ops, visited);
+      // }
       pushHistory(); // seed history
       
       // Add event listeners after DOM is ready
