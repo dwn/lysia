@@ -4335,6 +4335,20 @@ inComment = true;
       
       // Toggle between zoom modes
       if (!isZoomedOut()) {
+        // Stop any ongoing flip animations and clear timeouts
+        isFlippingOut = false;
+        if (flipTimeoutId) {
+          clearTimeout(flipTimeoutId);
+          flipTimeoutId = null;
+        }
+        if (flipInTimeoutId) {
+          clearTimeout(flipInTimeoutId);
+          flipInTimeoutId = null;
+        }
+        if (cardElement) {
+          cardElement.style.animation = 'none';
+        }
+        
         const optimalZoom = calculateOptimalZoom();
         document.body.style.zoom = optimalZoom.toString();
         setButtonState('zoomedOut');
@@ -4388,6 +4402,8 @@ inComment = true;
 
     // Hotkey listener for editor toggle (Ctrl+E or Cmd+E)
     let isFlippingOut = false;
+    let flipTimeoutId = null;
+    let flipInTimeoutId = null;
     
     // Consolidated card flip handler
     async function handleCardFlip(direction = 'left') {
@@ -4417,7 +4433,7 @@ inComment = true;
       if (cardElement) {
         cardElement.style.animation = `${flipOutAnimation} 0.8s linear forwards`;
         
-        setTimeout(async () => {
+        flipTimeoutId = setTimeout(async () => {
           // Update card index
           if (direction === 'left') {
             currentCardIndex++;
@@ -4461,7 +4477,7 @@ inComment = true;
           cardElement.style.animation = `${flipInAnimation} 0.8s linear forwards`;
           
           // Re-enable interactions after flip in completes
-          setTimeout(() => {
+          flipInTimeoutId = setTimeout(() => {
             isFlippingOut = false;
           }, 800); // Wait for flip in animation to complete
         }, 800);
