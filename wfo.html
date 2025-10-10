@@ -3107,10 +3107,29 @@ inComment = true;
       }
     }
 
+    // Debug function to show all cards with order=1
+    async function logCardsWithOrder1() {
+      console.log('=== Scanning all cards for order=1 ===');
+      const cardsWithOrder1 = [];
+      for (let i = 1; i <= maxCardIndex; i++) {
+        const cardData = await getCardData(i);
+        if (cardData && cardData.options && cardData.options.order === 1) {
+          cardsWithOrder1.push(i);
+        }
+      }
+      console.log('Cards with order=1:', cardsWithOrder1);
+      console.log('Total cards:', maxCardIndex);
+      return cardsWithOrder1;
+    }
+
     async function showCardBlockOverview() {
       // Get the current block range
       const blockStart = await getBlockForCard(currentCardIndex);
       const range = await getBlockRange(blockStart);
+      
+      // Debug: log cards with order=1
+      await logCardsWithOrder1();
+      console.log(`Showing set: cards ${range.start}-${range.end} (current card: ${currentCardIndex})`);
       
       // Check if range is valid
       if (!range || range.start === undefined || range.end === undefined) {
@@ -4042,6 +4061,12 @@ inComment = true;
         const currentSetInfo = await getSetForCard(currentCardIndex);
         const insertPosition = currentSetInfo.end + 1;
         
+        // Calculate current set size
+        const currentSetSize = currentSetInfo.end - currentSetInfo.start + 1;
+        
+        // If the current set is full (15 cards), the 16th card should start a new set
+        const shouldStartNewSet = currentSetSize >= 15;
+        
         // Shift all cards from insertPosition onwards up by one
         await shiftCardsUp(insertPosition);
         
@@ -4051,13 +4076,13 @@ inComment = true;
           rule: '',
           options: {
             size: 10,
-            background: '#808080',
+            backgroundColor: '#808080',
             italics: false,
             animate: true,
             svgColor: false,
             svgBackground: '',
             position: null,
-            order: null
+            order: shouldStartNewSet ? 1 : null
           }
         };
         
