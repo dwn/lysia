@@ -27,10 +27,24 @@
     }
     
     body {
-      opacity: 0;
-      transition: opacity 0.15s ease-in;
       position: relative;
       overflow-x: hidden;
+    }
+    
+    /* Hide main content until page is ready */
+    body:not(.page-ready) main,
+    body:not(.page-ready) aside,
+    body:not(.page-ready) .editor-toggle {
+      visibility: hidden;
+      opacity: 0;
+    }
+    
+    body.page-ready main,
+    body.page-ready aside,
+    body.page-ready .editor-toggle {
+      visibility: visible;
+      opacity: 1;
+      transition: opacity 0.15s ease-in;
     }
     
     /* Page fade effect during mode transitions */
@@ -38,8 +52,42 @@
       transition: opacity 0.4s ease-in-out;
     }
     
-    body.page-ready {
+    /* ===== SPLASH SCREEN ===== */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
       opacity: 1;
+      transition: opacity 0.5s ease-out;
+      transform: scale(1);
+      transform-origin: top left;
+    }
+    
+    body.page-ready #splash-screen {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    #splash-screen .spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #333;
+      border-top: 4px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
     
     #bgColorSelect, #bgColorSelect option {
@@ -555,6 +603,11 @@
   </style>
 </head>
 <body>
+  <!-- Splash Screen -->
+  <div id="splash-screen">
+    <div class="spinner"></div>
+  </div>
+
   <!-- Editor toggle button -->
   <button id="editorToggle" class="editor-toggle" title="Toggle Editor Mode (⌘E)" style="left: 120px; width: 80px;">
     ✏️
@@ -3090,6 +3143,62 @@ inComment = true;
         padding: 40px;
       `;
       
+      // Fetch all card data in parallel first
+      const cardDataPromises = [];
+      for (let i = range.start; i <= range.end; i++) {
+        let cardData = cardCache.get(i);
+        if (!cardData) {
+          const cacheBuster = `?t=${Date.now()}`;
+          cardDataPromises.push(
+            fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`)
+              .then(response => response.ok ? response.json() : null)
+              .then(data => {
+                if (data) cardCache.set(i, data);
+                return { index: i, data };
+              })
+              .catch(error => {
+                console.error(`Failed to load card ${i}:`, error);
+                return { index: i, data: null };
+              })
+          );
+        } else {
+          cardDataPromises.push(Promise.resolve({ index: i, data: cardData }));
+        }
+      }
+      
+      // Wait for all cards to load in parallel
+      const loadedCards = await Promise.all(cardDataPromises);
+      const cardDataMap = new Map(loadedCards.map(item => [item.index, item.data]));
+      
+      // Pre-fetch all unique SVG URLs in parallel
+      const svgUrls = new Set();
+      loadedCards.forEach(({ data }) => {
+        if (data && data.options && data.options.svgBackground) {
+          const svgValue = data.options.svgBackground;
+          if ((svgValue.startsWith('http://') || svgValue.startsWith('https://')) && !svgCache.has(svgValue)) {
+            svgUrls.add(svgValue);
+          }
+        }
+      });
+      
+      const svgPromises = Array.from(svgUrls).map(url =>
+        fetch(url)
+          .then(response => response.text())
+          .then(content => {
+            svgCache.set(url, content);
+            return { url, content };
+          })
+          .catch(error => {
+            console.error(`Failed to fetch SVG ${url}:`, error);
+            return { url, content: null };
+          })
+      );
+      
+      // Wait for all SVGs to load in parallel
+      if (svgPromises.length > 0) {
+        await Promise.all(svgPromises);
+      }
+      
       // Create card elements for each card in the block
       for (let i = range.start; i <= range.end; i++) {
         const cardWrapper = document.createElement('div');
@@ -3140,16 +3249,8 @@ inComment = true;
         
         // Load and render the card content
         try {
-          // Get card data from cache or load it
-          let cardData = cardCache.get(i);
-          if (!cardData) {
-            const cacheBuster = `?t=${Date.now()}`;
-            const response = await fetch(`${CARD_BASE_URL}${i}.json${cacheBuster}`);
-            if (response.ok) {
-              cardData = await response.json();
-              cardCache.set(i, cardData);
-            }
-          }
+          // Get card data from the pre-loaded map
+          const cardData = cardDataMap.get(i);
           
           // Set card background gradient (will be overridden if SVG is present)
           const cardColor = getCardColor(cardData);
@@ -3193,23 +3294,14 @@ inComment = true;
             // Load SVG background
             if (cardData.options && cardData.options.svgBackground) {
               const svgValue = cardData.options.svgBackground;
-              let svgContent = null; // Initialize svgContent outside the if block
+              let svgContent = null;
               
+              // Get from cache (already pre-fetched) or use direct SVG
               if (svgValue.startsWith('http://') || svgValue.startsWith('https://')) {
-                // Check cache first
                 svgContent = svgCache.get(svgValue);
-                if (!svgContent) {
-                  try {
-                    const response = await fetch(svgValue);
-                    svgContent = await response.text();
-                    svgCache.set(svgValue, svgContent);
-                  } catch (error) {
-                    console.error('Failed to fetch SVG:', error);
-                  }
-                }
               }
               
-              // Process SVG content (either fetched or direct)
+              // Process SVG content (either cached or direct)
               try {
                 const svgContentToUse = svgContent || svgValue;
                 if (svgContentToUse) {
@@ -4983,12 +5075,22 @@ inComment = true;
       // Set current card to 1 (first card of first set)
       currentCardIndex = 1;
       
-      // Start directly in zoomed-out mode showing set 1
+      // Prepare zoom and cards before revealing
       const optimalZoom = calculateOptimalZoom();
+      
+      // Counteract zoom on splash screen before applying body zoom
+      const splashScreen = document.getElementById('splash-screen');
+      if (splashScreen && optimalZoom < 1) {
+        splashScreen.style.transform = `scale(${1 / optimalZoom})`;
+      }
+      
       document.body.style.zoom = optimalZoom.toString();
       setButtonState('zoomedOut');
       await updateCardIndicator();
       await showCardBlockOverview();
+      
+      // Now hide splash screen - content is ready to show
+      document.body.classList.add('page-ready');
       
       // Preload the first block in the background
       if (maxCardIndex > 0) {
@@ -4996,9 +5098,6 @@ inComment = true;
           console.error('Failed to preload initial block:', error);
         });
       }
-      
-      // Now show the page with fade-in
-      document.body.classList.add('page-ready');
       
       // Apply fade-in animation after everything is loaded
       applyCardFadeIn();
