@@ -468,7 +468,6 @@
         inset 0 -2px 4px rgba(0,0,0,0.1),
         0 8px 32px rgba(0,0,0,0.3),
         0 0 0 1px rgba(255,255,255,0.1);
-      /* filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3)); */
       border-radius: 16px;
       padding: 1.5rem;
       position: relative;
@@ -1134,7 +1133,6 @@ a     xxx    b    yyy</div>
       svgBackground.innerHTML = `
         <style>
           #svgBackground ${createSvgStyle(true, hasZRotation ? '0.707' : '1', textColor)}
-          /* filter: drop-shadow(0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)) drop-shadow(0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)) drop-shadow(0 0 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)); */
         </style>
         ${processedSvg}
       `;
@@ -5106,15 +5104,6 @@ inComment = true;
       // The canvas will be replaced by the grid, and rendering will happen
       // when user zooms back in to single card view
       
-      // Start rendering based on checkbox state
-      // const coloredItems = parseBytesWithColors(getEditorValue());
-      // const { ops, visited } = buildOps(coloredItems);
-      // 
-      // if (animateCheckbox.checked) {
-      //   startAnim(ops, visited);
-      // } else {
-      //   renderInstant(ops, visited);
-      // }
       pushHistory(); // seed history
       
       // Add event listeners after DOM is ready
