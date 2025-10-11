@@ -622,6 +622,11 @@
     ➕
   </button>
 
+  <!-- Delete card button -->
+  <button id="deleteCardButton" class="editor-toggle" title="Add New Card to Current Set" style="left: 120px; width: 80px;">
+    ➖
+  </button>
+  
   <!-- Zoom out button -->
   <button id="zoomOutButton" class="editor-toggle" title="Toggle Zoom (Enter)" style="left: auto; right: 20px; width: 80px;">
     🔍
@@ -825,6 +830,7 @@ a     xxx    b    yyy</div>
     const editorToggleBtn = document.getElementById('editorToggle');
     const exportButton = document.getElementById('exportButton');
     const addCardButton = document.getElementById('addCardButton');
+    const deleteCardButton = document.getElementById('deleteCardButton');
     const zoomOutButton = document.getElementById('zoomOutButton');
     const cardIndicator = document.getElementById('cardIndicator');
     const svgInputEl = document.getElementById('svgInput');
@@ -3815,6 +3821,7 @@ inComment = true;
         editorToggle: { display: 'block', left: '20px', top: '' },
         exportButton: { display: 'block', left: '120px', top: '' },
         addCardButton: { display: 'none' },
+        deleteCardButton: { display: 'none' },
         zoomOutButton: { display: 'block', right: '20px', top: '', transform: '', border: '', boxShadow: '' },
         cardIndicator: { display: 'block', right: '120px', top: '', transform: '', border: '', boxShadow: '' }
       },
@@ -3822,6 +3829,7 @@ inComment = true;
         editorToggle: { display: 'none' },
         exportButton: { display: 'none' },
         addCardButton: { display: 'block', left: '228px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' },
+        deleteCardButton: { display: 'block', left: '648px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' },
         zoomOutButton: { display: 'block', right: '228px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' },
         cardIndicator: { right: '648px', top: '160px', transform: 'scale(4.2)', border: 'none', boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)' }
       }
@@ -4127,6 +4135,106 @@ inComment = true;
       }
     }
     
+    async function deleteSelectedCard() {
+      try {
+        // Prevent deleting the last card
+        if (maxCardIndex <= 1) {
+          alert('Cannot delete the last card. At least one card must remain.');
+          return;
+        }
+        
+        // Confirm deletion
+        if (!confirm(`Are you sure you want to delete card ${currentCardIndex}? This cannot be undone.`)) {
+          return;
+        }
+        
+        const cardToDelete = currentCardIndex;
+        
+        // Delete the card from storage
+        const fileName = `${cardToDelete}.json`;
+        const { error: deleteError } = await supabaseClient.storage
+          .from('card')
+          .remove([fileName]);
+        
+        if (deleteError) {
+          throw new Error(`Failed to delete card: ${deleteError.message}`);
+        }
+        
+        // Shift all cards after this one down by one
+        await shiftCardsDown(cardToDelete + 1);
+        
+        // Update max card index
+        maxCardIndex = maxCardIndex - 1;
+        
+        // Navigate to the previous card, or stay at 1 if we deleted card 1
+        currentCardIndex = Math.max(1, cardToDelete - 1);
+        if (currentCardIndex > maxCardIndex) {
+          currentCardIndex = maxCardIndex;
+        }
+        
+        updateCardFileName();
+        await loadCard(currentCardIndex);
+        
+        // Update card indicator
+        await updateCardIndicator();
+        
+        // If in zoomed-out mode, refresh the view
+        if (isZoomedOut()) {
+          showCardBlockOverview();
+        }
+        
+        // Clear set boundaries cache and card cache
+        setBoundaries.clear();
+        cardCache.clear();
+        
+      } catch (error) {
+        console.error('Error deleting card:', error);
+        alert(`Failed to delete card: ${error.message}`);
+      }
+    }
+    
+    async function shiftCardsDown(startIndex) {
+      // Shift all cards from startIndex onwards down by one (renumber them)
+      for (let i = startIndex; i <= maxCardIndex; i++) {
+        try {
+          // Download the card at position i
+          const oldFileName = `${i}.json`;
+          const { data: fileData, error: downloadError } = await supabaseClient.storage
+            .from('card')
+            .download(oldFileName);
+          
+          if (downloadError) {
+            console.warn(`Card ${i} doesn't exist, skipping`);
+            continue;
+          }
+          
+          // Upload to position i-1
+          const newFileName = `${i - 1}.json`;
+          const { error: uploadError } = await supabaseClient.storage
+            .from('card')
+            .upload(newFileName, fileData, {
+              contentType: 'application/json',
+              upsert: true
+            });
+          
+          if (uploadError) {
+            throw new Error(`Failed to shift card ${i}: ${uploadError.message}`);
+          }
+          
+          // Delete the old file at position i
+          const { error: deleteError } = await supabaseClient.storage
+            .from('card')
+            .remove([oldFileName]);
+          
+          if (deleteError) {
+            console.warn(`Failed to delete old file ${oldFileName}:`, deleteError);
+          }
+        } catch (error) {
+          console.error(`Error shifting card ${i}:`, error);
+        }
+      }
+    }
+    
     async function shiftCardsUp(startIndex) {
       // Work backwards from the highest card to avoid overwriting
       for (let i = maxCardIndex; i >= startIndex; i--) {
@@ -4296,28 +4404,6 @@ inComment = true;
     ruleEl.addEventListener('input', () => {
       debouncedProcessTextReplacement();
     });
-
-    // Update highlighting when cursor position changes (click, arrow keys, etc.)
-    // DISABLED - causing infinite loops. Using input event only.
-    /*
-    document.addEventListener('selectionchange', () => {
-      if (document.activeElement === inputEl) {
-        // Only update if there's no active selection (just cursor movement)
-        const sel = getSelection();
-        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
-          // Small delay to ensure cursor position is fully established
-          setTimeout(() => {
-            const caret = getCaretOffset(inputEl);
-            highlightEditor();
-            highlightOutput();
-            setCaretOffset(inputEl, caret);
-            renderNow();
-          }, 0);
-        }
-      }
-    });
-    */
-
     
     // ===== COLOR & BACKGROUND FUNCTIONS =====
     function populateColorOptions() {
@@ -4491,7 +4577,13 @@ inComment = true;
       preventCardFlip(e);
       addNewCard();
     });
-    
+
+    // Delete card button event listener
+    deleteCardButton.addEventListener('click', (e) => {
+      preventCardFlip(e);
+      deleteSelectedCard();
+    });
+
     // Zoom out button event listener
     zoomOutButton.addEventListener('click', async (e) => {
       preventCardFlip(e);
