@@ -67,9 +67,9 @@ class WFOServer:
         else:
             raise RuntimeError("Could not find an available port")
                 
-    def process_html_file(self):
-        """Process wfo.html with environment variable substitution"""
-        source_file = self.original_dir / 'wfo.html'
+    def process_html_file(self, filename='wfo.html'):
+        """Process HTML file with environment variable substitution"""
+        source_file = self.original_dir / filename
         
         if not source_file.exists():
             print(f"❌ Error: {source_file} not found!")
@@ -78,7 +78,7 @@ class WFOServer:
         # Reload environment variables on each request to ensure they're fresh
         self.load_env_vars()
             
-        print("🔄 Processing wfo.html...")
+        print(f"🔄 Processing {filename}...")
         print(f"📁 Source: {source_file}")
         
         # Read the source file
@@ -116,7 +116,14 @@ class WFOServer:
             
         @self.app.get("/wfo.html", response_class=HTMLResponse)
         async def serve_wfo():
-            content = self.process_html_file()
+            content = self.process_html_file('wfo.html')
+            if content is None:
+                return HTMLResponse("<h1>Error: File not processed</h1>", status_code=500)
+            return HTMLResponse(content)
+        
+        @self.app.get("/wfo_v2.html", response_class=HTMLResponse)
+        async def serve_wfo_v2():
+            content = self.process_html_file('wfo_v2.html')
             if content is None:
                 return HTMLResponse("<h1>Error: File not processed</h1>", status_code=500)
             return HTMLResponse(content)
@@ -142,6 +149,8 @@ class WFOServer:
         self.find_available_port()
         print(f"🌐 Server will be available at: http://localhost:{self.port}")
         print(f"📄 WFO page: http://localhost:{self.port}/wfo.html")
+        if (self.original_dir / 'wfo_v2.html').exists():
+            print(f"📄 WFO v2 page: http://localhost:{self.port}/wfo_v2.html")
         print("   Press Ctrl+C to stop the server")
         print()
         
@@ -152,7 +161,7 @@ class WFOServer:
             
         # Start FastAPI server with hot reloading
         print(f"🌐 FastAPI server starting on http://localhost:{self.port}")
-        print("🔥 Hot reloading enabled - changes to wfo.html will be reflected immediately!")
+        print("🔥 Hot reloading enabled - changes to HTML files will be reflected immediately!")
         
         uvicorn.run(
             "serve_wfo:app",  # Import string for reload mode

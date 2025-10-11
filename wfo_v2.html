@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wfo Writer v2</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #1a1a1a;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .controls {
+      text-align: center;
+      padding: 15px;
+      flex-shrink: 0;
+    }
+    
+    .controls select {
+      background: #333;
+      color: #fff;
+      border: 1px solid #666;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .controls select:hover {
+      background: #444;
+    }
+    
+    .grid-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+    
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 20px;
+      width: 100%;
+      height: 100%;
+      /* Grid is 3 cards wide, 5 cards tall, each card is 1:1.62 aspect */
+      /* Grid aspect = 3 / (5 * 1.62) = 3 / 8.1 = 0.37 */
+      max-width: calc(100vh * 3 / 8.1);
+      max-height: 100%;
+    }
+    
+    .card-wrapper {
+      width: 100%;
+      height: 100%;
+      border: 2px solid #666;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      background: #333;
+      cursor: grab;
+      user-select: none;
+      transition: all 0.2s ease;
+      z-index: 1;
+    }
+    
+    .card-wrapper:active {
+      cursor: grabbing;
+    }
+    
+    .card-wrapper.dragging {
+      opacity: 0.4;
+    }
+    
+    .card-wrapper.drag-source {
+      background: #2a2a2a;
+      border-style: dashed;
+      border-color: #888;
+    }
+    
+    .card-wrapper.drag-source canvas,
+    .card-wrapper.drag-source .svg-container,
+    .card-wrapper.drag-source .card-order {
+      visibility: hidden;
+    }
+    
+    .card-wrapper.drag-over {
+      border-color: #4CAF50;
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+    }
+    
+    .card-wrapper.empty-slot {
+      cursor: default;
+      background: #2a2a2a;
+      border-style: dashed;
+      z-index: 0;
+    }
+    
+    .card-wrapper.empty-slot.drag-over {
+      background: #3a3a3a;
+      border-color: #4CAF50;
+      cursor: grab;
+    }
+    
+    .card-wrapper canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    
+    .card-order {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 10;
+    }
+    
+    .svg-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    .svg-container svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      object-position: center;
+      opacity: 0.5;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      font-size: 1.2rem;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .error {
+      color: #ff6b6b;
+      text-align: center;
+      padding: 1rem;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #gridContainer {
+      flex: 1;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <select id="setSelect">
+      <option value="1">Set 1</option>
+      <option value="2">Set 2</option>
+      <option value="3">Set 3</option>
+      <option value="4">Set 4</option>
+      <option value="5">Set 5</option>
+    </select>
+  </div>
+  
+  <div id="status" class="loading">Loading cards...</div>
+  <div class="grid-wrapper">
+    <div id="gridContainer" class="grid-container" style="display: none;"></div>
+  </div>
+  
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // ===== CONFIGURATION =====
+    const SUPABASE_URL = '{{SUPABASE_URL}}';
+    const SUPABASE_SERVICE_ROLE_KEY = '{{SUPABASE_SERVICE_ROLE_KEY}}';
+    const CARD_BASE_URL = `${SUPABASE_URL}/storage/v1/object/public/card/`;
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    // ===== GLOBAL VARIABLES =====
+    let cardData = new Map(); // Cache for card data: "set.order" -> cardData
+    let svgData = new Map(); // Cache for SVG data: "set.order" -> svgContent
+    let setInfo = new Map(); // Cache for set information: setNumber -> {cardCount, cards: [{order, position, filename}]}
+    
+    // ===== HELPER FUNCTIONS =====
+    function formatCardFilename(set, order) {
+      return `${set}.${order}.json`;
+    }
+    
+    function parseCardFilename(filename) {
+      const match = filename.match(/^(\d+)\.(\d+)\.json$/);
+      if (match) {
+        return {
+          set: parseInt(match[1], 10),
+          order: parseInt(match[2], 10)
+        };
+      }
+      return null;
+    }
+    
+    // Generate gradient from hex color
+    function generateGradientFromColor(hexColor) {
+      if (hexColor === 'transparent') {
+        return 'linear-gradient(135deg, #f8f8f8 0%, #a0a0a0 100%)';
+      }
+      
+      const rgb = hexToRgb(hexColor);
+      const lighter = `rgb(${Math.min(255, rgb.r + 40)}, ${Math.min(255, rgb.g + 40)}, ${Math.min(255, rgb.b + 40)})`;
+      const darker = `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`;
+      
+      return `linear-gradient(135deg, ${lighter} 0%, ${hexColor} 50%, ${darker} 100%)`;
+    }
+    
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 128, g: 128, b: 128 };
+    }
+    
+    // Get color for a card (from options or default)
+    function getCardColor(cardData) {
+      if (cardData && cardData.options && cardData.options.backgroundColor) {
+        return cardData.options.backgroundColor;
+      }
+      return '#808080'; // Default gray
+    }
+    
+    // Strip SVG colors to allow CSS inheritance
+    function stripSvgColors(svgContent, keepNaturalColors = false) {
+      if (keepNaturalColors) {
+        return svgContent;
+      }
+      
+      let processed = svgContent;
+      processed = processed.replace(/\s*fill="[^"]*"/g, '');
+      processed = processed.replace(/\s*stroke="[^"]*"/g, '');
+      processed = processed.replace(/\s*fill='[^']*'/g, '');
+      processed = processed.replace(/\s*stroke='[^']*'/g, '');
+      processed = processed.replace(/\s*style="[^"]*fill:[^;"]*[^"]*"/g, '');
+      processed = processed.replace(/\s*style='[^']*fill:[^;']*[^']*'/g, '');
+      
+      return processed;
+    }
+    
+    // Calculate text color for SVG
+    function calculateSvgTextColor(backgroundColor, editorVisible) {
+      if (backgroundColor === 'transparent') {
+        return editorVisible ? '#000000' : '#ffffff';
+      }
+      
+      const rgb = hexToRgb(backgroundColor);
+      const luminosity = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+      
+      return luminosity > 0.5 ? '#000000' : '#ffffff';
+    }
+    
+    // ===== CARD DATA FUNCTIONS =====
+    async function loadCardData(set, order) {
+      try {
+        const filename = formatCardFilename(set, order);
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(`${CARD_BASE_URL}${filename}${cacheBuster}`);
+        
+        if (!response.ok) {
+          return null;
+        }
+        
+        const cardData = await response.json();
+        return cardData;
+      } catch (error) {
+        console.error(`Failed to load card ${set}.${order}:`, error);
+        return null;
+      }
+    }
+    
+    // ===== DRAWING FUNCTIONS =====
+    const COLORS = [
+      { name: 'bla', hex: '#000000' },
+      { name: 'car', hex: '#8c0004' },
+      { name: 'red', hex: '#e00000' },
+      { name: 'ora', hex: '#f34001' },
+      { name: 'amb', hex: '#faaf00' },
+      { name: 'yel', hex: '#dbd200' },
+      { name: 'grn', hex: '#00cb00' },
+      { name: 'cya', hex: '#00dfd8' },
+      { name: 'blu', hex: '#3441fc' },
+      { name: 'ind', hex: '#4020f0' },
+      { name: 'pur', hex: '#8000f0' },
+      { name: 'vio', hex: '#350063' },
+      { name: 'gry', hex: '#808080' },
+      { name: 'wht', hex: '#ffffff' }
+    ];
+    
+    // Simple drawing function (placeholder - we'll render cards as images or simple representations)
+    function drawCardPreview(canvas, cardData) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw background
+      const bgColor = getCardColor(cardData);
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw simple text if there's input
+      if (cardData && cardData.input) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Card ${cardData.input.substring(0, 10)}...`, canvas.width / 2, canvas.height / 2);
+      }
+    }
+    
+    // ===== DRAG AND DROP =====
+    let draggedCard = null;
+    
+    function setupDragAndDrop(setNumber) {
+      const gridEl = document.getElementById('gridContainer');
+      
+      // Remove any existing drag event listeners to prevent duplicates
+      gridEl.removeEventListener('dragstart', handleDragStart);
+      gridEl.removeEventListener('dragend', handleDragEnd);
+      gridEl.removeEventListener('dragover', handleDragOver);
+      gridEl.removeEventListener('drop', handleDrop);
+      
+      function handleDragStart(e) {
+        if (e.target.classList.contains('card-wrapper') && e.target.hasAttribute('data-order')) {
+          draggedCard = e.target;
+          e.target.classList.add('dragging');
+          e.target.classList.add('drag-source');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', ''); // Required for some browsers
+        }
+      }
+      
+      function handleDragEnd(e) {
+        if (e.target.classList.contains('card-wrapper')) {
+          e.target.classList.remove('dragging');
+          e.target.classList.remove('drag-source');
+          const allCards = gridEl.querySelectorAll('.card-wrapper');
+          allCards.forEach(card => card.classList.remove('drag-over'));
+          
+          setTimeout(() => {
+            draggedCard = null;
+          }, 100);
+        }
+      }
+      
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        // Highlight the drop target
+        let target = e.target;
+        while (target && !target.classList.contains('card-wrapper') && target !== gridEl) {
+          target = target.parentElement;
+        }
+        
+        if (target && target.classList.contains('card-wrapper') && target !== draggedCard) {
+          const allCards = gridEl.querySelectorAll('.card-wrapper');
+          allCards.forEach(card => card.classList.remove('drag-over'));
+          target.classList.add('drag-over');
+        }
+      }
+      
+      function handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!draggedCard) return;
+        
+        let targetCard = e.target;
+        while (targetCard && !targetCard.classList.contains('card-wrapper') && targetCard !== gridEl) {
+          targetCard = targetCard.parentElement;
+        }
+        
+        if (!targetCard || targetCard === draggedCard) return;
+        
+        // Get the positions
+        const draggedRow = parseInt(draggedCard.style.gridRow);
+        const draggedCol = parseInt(draggedCard.style.gridColumn);
+        const targetRow = parseInt(targetCard.style.gridRow);
+        const targetCol = parseInt(targetCard.style.gridColumn);
+        
+        // Get current set from dropdown to ensure we're working with the right set
+        const currentSet = parseInt(document.getElementById('setSelect').value, 10);
+        
+        const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
+        const isTargetEmpty = targetCard.classList.contains('empty-slot');
+        
+        if (isTargetEmpty) {
+          // Move to empty slot - update visual position
+          draggedCard.style.gridRow = targetRow;
+          draggedCard.style.gridColumn = targetCol;
+          
+          // Create placeholder at original position
+          const originalEmptySlot = document.createElement('div');
+          originalEmptySlot.className = 'card-wrapper empty-slot';
+          originalEmptySlot.style.gridRow = draggedRow;
+          originalEmptySlot.style.gridColumn = draggedCol;
+          gridEl.appendChild(originalEmptySlot);
+          
+          // Save position in background
+          updateCardPosition(currentSet, draggedOrder, targetRow, targetCol);
+        } else {
+          // Swap with another card - update visual positions
+          const targetOrder = parseInt(targetCard.getAttribute('data-order'));
+          
+          draggedCard.style.gridRow = targetRow;
+          draggedCard.style.gridColumn = targetCol;
+          targetCard.style.gridRow = draggedRow;
+          targetCard.style.gridColumn = draggedCol;
+          
+          // Save both positions in background
+          updateCardPosition(currentSet, draggedOrder, targetRow, targetCol);
+          updateCardPosition(currentSet, targetOrder, draggedRow, draggedCol);
+        }
+        
+        targetCard.classList.remove('drag-over');
+      }
+      
+      // Add the event listeners
+      gridEl.addEventListener('dragstart', handleDragStart);
+      gridEl.addEventListener('dragend', handleDragEnd);
+      gridEl.addEventListener('dragover', handleDragOver);
+      gridEl.addEventListener('drop', handleDrop);
+    }
+    
+    async function updateCardPosition(set, order, row, col) {
+      try {
+        const key = `${set}.${order}`;
+        let cardDataObj = cardData.get(key);
+        
+        // If not in cache, load it
+        if (!cardDataObj) {
+          cardDataObj = await loadCardData(set, order);
+          if (!cardDataObj) return;
+          cardData.set(key, cardDataObj);
+        }
+        
+        if (!cardDataObj.options) {
+          cardDataObj.options = {};
+        }
+        cardDataObj.options.position = { row, col };
+        
+        // Update cache
+        cardData.set(key, cardDataObj);
+        
+        const jsonString = JSON.stringify(cardDataObj, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const fileName = formatCardFilename(set, order);
+        
+        const { error } = await supabaseClient.storage
+          .from('card')
+          .upload(fileName, blob, {
+            contentType: 'application/json',
+            upsert: true
+          });
+        
+        if (error) {
+          console.error(`Failed to save position for ${set}.${order}:`, error);
+        }
+      } catch (error) {
+        console.error(`Error updating position for ${set}.${order}:`, error);
+      }
+    }
+    
+    // ===== CACHING =====
+    async function scanAllSets() {
+      try {
+        console.log('Scanning all sets...');
+        const { data: files, error } = await supabaseClient.storage
+          .from('card')
+          .list('', { limit: 1000 });
+        
+        if (error) throw error;
+        
+        // Group files by set
+        const sets = new Map();
+        for (const file of files) {
+          const parsed = parseCardFilename(file.name);
+          if (parsed) {
+            if (!sets.has(parsed.set)) {
+              sets.set(parsed.set, []);
+            }
+            sets.get(parsed.set).push(parsed);
+          }
+        }
+        
+        // Cache set info and populate dropdown
+        const setSelect = document.getElementById('setSelect');
+        setSelect.innerHTML = '';
+        
+        for (const [setNumber, cards] of sets) {
+          setInfo.set(setNumber, {
+            cardCount: cards.length,
+            cards: cards.sort((a, b) => a.order - b.order)
+          });
+          
+          const option = document.createElement('option');
+          option.value = setNumber;
+          option.textContent = `Set ${setNumber} (${cards.length} cards)`;
+          setSelect.appendChild(option);
+        }
+        
+        console.log('Cached set info:', setInfo);
+        
+      } catch (error) {
+        console.error('Error scanning sets:', error);
+      }
+    }
+    
+    async function loadCardDataCached(set, order) {
+      const key = `${set}.${order}`;
+      
+      // Return cached data if available
+      if (cardData.has(key)) {
+        return cardData.get(key);
+      }
+      
+      // Load and cache
+      const data = await loadCardData(set, order);
+      cardData.set(key, data);
+      return data;
+    }
+    
+    async function loadSvgDataCached(set, order) {
+      const key = `${set}.${order}`;
+      
+      // Return cached SVG if available
+      if (svgData.has(key)) {
+        return svgData.get(key);
+      }
+      
+      // Load and cache
+      const svgContent = await loadSvgData(set, order);
+      svgData.set(key, svgContent);
+      return svgContent;
+    }
+    
+    // ===== GRID DISPLAY =====
+    async function displaySet(setNumber) {
+      const statusEl = document.getElementById('status');
+      const gridEl = document.getElementById('gridContainer');
+      
+      statusEl.textContent = `Loading Set ${setNumber}...`;
+      statusEl.style.display = 'block';
+      gridEl.style.display = 'none';
+      gridEl.innerHTML = '';
+      
+      try {
+        // Use cached set info if available, otherwise load all cards
+        let loadedCards;
+        if (setInfo.has(setNumber)) {
+          const setCards = setInfo.get(setNumber).cards;
+          const cardPromises = setCards.map(card => 
+            loadCardDataCached(setNumber, card.order).then(data => ({ order: card.order, data }))
+          );
+          loadedCards = await Promise.all(cardPromises);
+        } else {
+          // Fallback: load all cards for this set
+          const cardPromises = [];
+          for (let order = 1; order <= 15; order++) {
+            cardPromises.push(loadCardDataCached(setNumber, order).then(data => ({ order, data })));
+          }
+          loadedCards = await Promise.all(cardPromises);
+        }
+        
+        // Create a map of grid positions (row-col) to card data
+        const gridPositions = new Map();
+        const cardsWithoutPosition = [];
+        
+        // First pass: place cards that have explicit positions
+        loadedCards.forEach(({ order, data }) => {
+          if (data && data.options && data.options.position) {
+            const { row, col } = data.options.position;
+            const key = `${row}-${col}`;
+            gridPositions.set(key, { order, data });
+          } else if (data) {
+            cardsWithoutPosition.push({ order, data });
+          }
+        });
+        
+        // Second pass: fill empty positions with cards that don't have positions
+        let cardWithoutPosIndex = 0;
+        for (let row = 1; row <= 5; row++) {
+          for (let col = 1; col <= 3; col++) {
+            const key = `${row}-${col}`;
+            if (!gridPositions.has(key) && cardWithoutPosIndex < cardsWithoutPosition.length) {
+              gridPositions.set(key, cardsWithoutPosition[cardWithoutPosIndex]);
+              cardWithoutPosIndex++;
+            }
+          }
+        }
+        
+        // Create grid in order (row by row, col by col)
+        for (let row = 1; row <= 5; row++) {
+          for (let col = 1; col <= 3; col++) {
+            const key = `${row}-${col}`;
+            const cardInfo = gridPositions.get(key);
+            
+            const cardWrapper = document.createElement('div');
+            cardWrapper.className = 'card-wrapper';
+            cardWrapper.style.gridRow = row;
+            cardWrapper.style.gridColumn = col;
+          
+          if (cardInfo) {
+            const { order, data: cardData } = cardInfo;
+            cardWrapper.setAttribute('draggable', 'true');
+            cardWrapper.setAttribute('data-order', order);
+          
+          if (cardData) {
+            // Order number label
+            const orderLabel = document.createElement('div');
+            orderLabel.className = 'card-order';
+            orderLabel.textContent = order;
+            cardWrapper.appendChild(orderLabel);
+            
+            // SVG container
+            const svgContainer = document.createElement('div');
+            svgContainer.className = 'svg-container';
+            cardWrapper.appendChild(svgContainer);
+            
+            // Load SVG if present
+            if (cardData.options && cardData.options.svgBackground) {
+              const svgValue = cardData.options.svgBackground;
+              let svgContent = null;
+              
+              if (svgValue.startsWith('http://') || svgValue.startsWith('https://')) {
+                try {
+                  const response = await fetch(svgValue);
+                  svgContent = await response.text();
+                } catch (error) {
+                  console.error('Failed to load SVG:', error);
+                }
+              } else {
+                svgContent = svgValue;
+              }
+              
+              if (svgContent) {
+                const cardColor = getCardColor(cardData);
+                const textColor = calculateSvgTextColor(cardColor, false);
+                const useNaturalColors = cardData.options && cardData.options.svgColor === true;
+                const cleanedSvg = stripSvgColors(svgContent, useNaturalColors);
+                
+                svgContainer.innerHTML = `
+                  <style>
+                    .svg-container svg {
+                      ${!useNaturalColors ? `color: ${textColor};` : ''}
+                    }
+                    ${!useNaturalColors ? `.svg-container svg * { fill: currentColor; stroke: currentColor; }` : ''}
+                  </style>
+                  ${cleanedSvg}
+                `;
+              }
+            }
+            
+            // Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 972; // 600 * 1.62 = 972
+            cardWrapper.appendChild(canvas);
+            
+            // Set background
+            const bgColor = getCardColor(cardData);
+            canvas.style.background = generateGradientFromColor(bgColor);
+            
+            // Draw simple preview
+            drawCardPreview(canvas, cardData);
+          }
+          } else {
+            // Empty slot - make it a valid drop target
+            cardWrapper.classList.add('empty-slot');
+            
+            // Add a placeholder div to ensure events are captured
+            const placeholder = document.createElement('div');
+            placeholder.style.width = '100%';
+            placeholder.style.height = '100%';
+            placeholder.style.pointerEvents = 'none'; // Don't interfere with drag events
+            cardWrapper.appendChild(placeholder);
+          }
+          
+          gridEl.appendChild(cardWrapper);
+          }
+        }
+        
+        statusEl.style.display = 'none';
+        gridEl.style.display = 'grid';
+        
+        // Setup drag and drop
+        setupDragAndDrop(setNumber);
+        
+      } catch (error) {
+        statusEl.className = 'error';
+        statusEl.textContent = `Error loading set: ${error.message}`;
+        console.error('Error displaying set:', error);
+      }
+    }
+    
+    // ===== INITIALIZATION =====
+    document.getElementById('setSelect').addEventListener('change', (e) => {
+      const setNumber = parseInt(e.target.value, 10);
+      displaySet(setNumber);
+    });
+    
+    // Initialize: scan all sets and load first one
+    async function initialize() {
+      await scanAllSets();
+      
+      // Load the first available set
+      const setSelect = document.getElementById('setSelect');
+      if (setSelect.options.length > 0) {
+        const firstSet = parseInt(setSelect.options[0].value, 10);
+        displaySet(firstSet);
+      }
+    }
+    
+    // Start the app
+    initialize();
+  </script>
+</body>
+</html>
+
