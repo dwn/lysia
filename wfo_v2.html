@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>Wfo Writer v2</title>
   <style>
+    /* ===== BASE STYLES ===== */
     * {
       margin: 0;
       padding: 0;
@@ -20,6 +21,7 @@
       flex-direction: column;
     }
     
+    /* ===== LAYOUT COMPONENTS ===== */
     .controls {
       text-align: center;
       padding: 15px;
@@ -40,6 +42,7 @@
       background: #444;
     }
     
+    /* ===== GRID SYSTEM ===== */
     .grid-wrapper {
       flex: 1;
       display: flex;
@@ -62,6 +65,7 @@
       max-height: 100%;
     }
     
+    /* ===== CARD COMPONENTS ===== */
     .card-wrapper {
       width: 100%;
       height: 100%;
@@ -115,6 +119,76 @@
       cursor: grab;
     }
     
+    /* ===== INDIVIDUAL CARD VIEW ===== */
+    .individual-card-view {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .individual-card {
+      width: 80vw;
+      max-width: 600px;
+      height: auto;
+      aspect-ratio: 600 / 971;
+      background: #333;
+      border: 2px solid #666;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+    }
+    
+    .individual-card canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    
+    .individual-card .svg-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    .individual-card .svg-container svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      object-position: center;
+      opacity: 0.5;
+    }
+    
+    .close-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid #666;
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 1001;
+    }
+    
+    .close-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
     .card-wrapper canvas {
       width: 100%;
       height: 100%;
@@ -142,15 +216,6 @@
       height: 100%;
       z-index: 0;
       pointer-events: none;
-    }
-    
-    .svg-container svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: contain;
-      object-position: center;
-      opacity: 0.5;
     }
     
     .loading {
@@ -195,6 +260,14 @@
     <div id="gridContainer" class="grid-container" style="display: none;"></div>
   </div>
   
+  <!-- Individual Card View -->
+  <div id="individualCardView" class="individual-card-view">
+    <div class="individual-card" id="individualCard">
+      <!-- Individual card content will be inserted here -->
+    </div>
+    <button class="close-button" id="closeButton">Close</button>
+  </div>
+  
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     // ===== CONFIGURATION =====
@@ -205,14 +278,24 @@
     
     // ===== GLOBAL VARIABLES =====
     let cardData = new Map(); // Cache for card data: "set.order" -> cardData
-    let svgData = new Map(); // Cache for SVG data: "set.order" -> svgContent
     let setInfo = new Map(); // Cache for set information: setNumber -> {cardCount, cards: [{order, position, filename}]}
     
-    // ===== HELPER FUNCTIONS =====
+    // ===== UTILITY FUNCTIONS =====
+    /**
+     * Format card filename in the new naming convention
+     * @param {number} set - Set number
+     * @param {number} order - Card order within the set
+     * @returns {string} Formatted filename (e.g., "1.2.json")
+     */
     function formatCardFilename(set, order) {
       return `${set}.${order}.json`;
     }
     
+    /**
+     * Parse card filename to extract set and order numbers
+     * @param {string} filename - Card filename (e.g., "1.2.json")
+     * @returns {Object|null} Object with set and order properties, or null if invalid
+     */
     function parseCardFilename(filename) {
       const match = filename.match(/^(\d+)\.(\d+)\.json$/);
       if (match) {
@@ -224,7 +307,11 @@
       return null;
     }
     
-    // Generate gradient from hex color
+    /**
+     * Generate CSS gradient from hex color
+     * @param {string} hexColor - Hex color code or 'transparent'
+     * @returns {string} CSS gradient string
+     */
     function generateGradientFromColor(hexColor) {
       if (hexColor === 'transparent') {
         return 'linear-gradient(135deg, #f8f8f8 0%, #a0a0a0 100%)';
@@ -261,14 +348,59 @@
       }
       
       let processed = svgContent;
-      processed = processed.replace(/\s*fill="[^"]*"/g, '');
-      processed = processed.replace(/\s*stroke="[^"]*"/g, '');
-      processed = processed.replace(/\s*fill='[^']*'/g, '');
-      processed = processed.replace(/\s*stroke='[^']*'/g, '');
+      
+      // Remove fill attributes and replace with currentColor
+      processed = processed.replace(/fill="[^"]*"/g, 'fill="currentColor"');
+      processed = processed.replace(/fill='[^']*'/g, "fill='currentColor'");
+      
+      // Remove stroke attributes and replace with currentColor, or set to none for thin strokes
+      processed = processed.replace(/stroke="[^"]*"/g, 'stroke="currentColor"');
+      processed = processed.replace(/stroke='[^']*'/g, "stroke='currentColor'");
+      
+      // Remove stroke-width attributes to eliminate thick strokes
+      processed = processed.replace(/\s*stroke-width="[^"]*"/g, '');
+      processed = processed.replace(/\s*stroke-width='[^']*'/g, '');
+      
+      // Remove style attributes that contain fill or stroke
       processed = processed.replace(/\s*style="[^"]*fill:[^;"]*[^"]*"/g, '');
       processed = processed.replace(/\s*style='[^']*fill:[^;']*[^']*'/g, '');
+      processed = processed.replace(/\s*style="[^"]*stroke:[^;"]*[^"]*"/g, '');
+      processed = processed.replace(/\s*style='[^']*stroke:[^;']*[^']*'/g, '');
       
       return processed;
+    }
+    
+    // Create SVG styling (from wfo.html)
+    function createSvgStyle(hasTransform = false, transformValue = '1', textColor = 'currentColor', useNaturalColors = false) {
+      if (useNaturalColors) {
+        // Keep original SVG colors - no CSS override
+        return `svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: contain;
+          object-position: center;
+          ${hasTransform ? `transform: scale(${transformValue});` : ''}
+          opacity: 0.5;
+        }`;
+      } else {
+        // Apply color inheritance
+        return `svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: contain;
+          object-position: center;
+          ${hasTransform ? `transform: scale(${transformValue});` : ''}
+          opacity: 0.5;
+          color: ${textColor};
+        }
+        svg * {
+          fill: currentColor;
+          stroke: currentColor;
+          stroke-width: 0;
+        }`;
+      }
     }
     
     // Calculate text color for SVG
@@ -284,6 +416,12 @@
     }
     
     // ===== CARD DATA FUNCTIONS =====
+    /**
+     * Load card data from Supabase storage
+     * @param {number} set - Set number
+     * @param {number} order - Card order within the set
+     * @returns {Promise<Object|null>} Card data object or null if not found
+     */
     async function loadCardData(set, order) {
       try {
         const filename = formatCardFilename(set, order);
@@ -339,7 +477,7 @@
       }
     }
     
-    // ===== DRAG AND DROP =====
+    // ===== DRAG AND DROP SYSTEM =====
     let draggedCard = null;
     
     function setupDragAndDrop(setNumber) {
@@ -493,7 +631,88 @@
       }
     }
     
-    // ===== CACHING =====
+    // ===== INDIVIDUAL CARD VIEW =====
+    async function showIndividualCard(setNumber, order, cardData) {
+      const individualView = document.getElementById('individualCardView');
+      const individualCard = document.getElementById('individualCard');
+      const gridContainer = document.getElementById('gridContainer');
+      const controls = document.querySelector('.controls');
+      
+      // Hide grid and controls
+      gridContainer.style.display = 'none';
+      controls.style.display = 'none';
+      
+      // Clear previous content
+      individualCard.innerHTML = '';
+      
+      // Create canvas for the individual card
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 972; // 600 * 1.62 = 972
+      individualCard.appendChild(canvas);
+      
+      // Set background
+      const bgColor = getCardColor(cardData);
+      canvas.style.background = generateGradientFromColor(bgColor);
+      
+      // Draw card preview
+      drawCardPreview(canvas, cardData);
+      
+      // Load SVG if present
+      if (cardData.options && cardData.options.svgBackground) {
+        const svgValue = cardData.options.svgBackground;
+        let svgContent = null;
+        
+        if (svgValue.startsWith('http://') || svgValue.startsWith('https://')) {
+          try {
+            const response = await fetch(svgValue);
+            svgContent = await response.text();
+          } catch (error) {
+            console.error('Failed to load SVG:', error);
+          }
+        } else {
+          svgContent = svgValue;
+        }
+        
+        if (svgContent) {
+          const cardColor = getCardColor(cardData);
+          const textColor = calculateSvgTextColor(cardColor, false);
+          const useNaturalColors = cardData.options && cardData.options.svgColor === true;
+          const cleanedSvg = stripSvgColors(svgContent, useNaturalColors);
+          
+          const svgContainer = document.createElement('div');
+          svgContainer.className = 'svg-container';
+          svgContainer.innerHTML = `
+            <style>
+              .svg-container ${createSvgStyle(false, '1', textColor, useNaturalColors)}
+            </style>
+            ${cleanedSvg}
+          `;
+          individualCard.appendChild(svgContainer);
+          
+          // Force a reflow/repaint to ensure SVG is rendered (from wfo.html)
+          svgContainer.offsetHeight;
+        }
+      }
+      
+      // Show individual card view
+      individualView.style.display = 'flex';
+    }
+    
+    function hideIndividualCard() {
+      const individualView = document.getElementById('individualCardView');
+      const gridContainer = document.getElementById('gridContainer');
+      const controls = document.querySelector('.controls');
+      
+      // Hide individual view
+      individualView.style.display = 'none';
+      
+      // Show grid and controls
+      gridContainer.style.display = 'grid';
+      controls.style.display = 'flex';
+    }
+    
+    // ===== CACHING SYSTEM =====
     async function scanAllSets() {
       try {
         console.log('Scanning all sets...');
@@ -552,21 +771,12 @@
       return data;
     }
     
-    async function loadSvgDataCached(set, order) {
-      const key = `${set}.${order}`;
-      
-      // Return cached SVG if available
-      if (svgData.has(key)) {
-        return svgData.get(key);
-      }
-      
-      // Load and cache
-      const svgContent = await loadSvgData(set, order);
-      svgData.set(key, svgContent);
-      return svgContent;
-    }
     
-    // ===== GRID DISPLAY =====
+    // ===== GRID DISPLAY SYSTEM =====
+    /**
+     * Display a set of cards in the grid layout
+     * @param {number} setNumber - Set number to display
+     */
     async function displaySet(setNumber) {
       const statusEl = document.getElementById('status');
       const gridEl = document.getElementById('gridContainer');
@@ -644,6 +854,11 @@
             orderLabel.textContent = order;
             cardWrapper.appendChild(orderLabel);
             
+            // Add double-click event to show individual card
+            cardWrapper.addEventListener('dblclick', () => {
+              showIndividualCard(setNumber, order, cardData);
+            });
+            
             // SVG container
             const svgContainer = document.createElement('div');
             svgContainer.className = 'svg-container';
@@ -673,13 +888,13 @@
                 
                 svgContainer.innerHTML = `
                   <style>
-                    .svg-container svg {
-                      ${!useNaturalColors ? `color: ${textColor};` : ''}
-                    }
-                    ${!useNaturalColors ? `.svg-container svg * { fill: currentColor; stroke: currentColor; }` : ''}
+                    .svg-container ${createSvgStyle(false, '1', textColor, useNaturalColors)}
                   </style>
                   ${cleanedSvg}
                 `;
+                
+                // Force a reflow/repaint to ensure SVG is rendered (from wfo.html)
+                svgContainer.offsetHeight;
               }
             }
             
@@ -725,10 +940,23 @@
       }
     }
     
-    // ===== INITIALIZATION =====
+    // ===== INITIALIZATION AND EVENT HANDLERS =====
     document.getElementById('setSelect').addEventListener('change', (e) => {
       const setNumber = parseInt(e.target.value, 10);
       displaySet(setNumber);
+    });
+    
+    // Close button for individual card view
+    document.getElementById('closeButton').addEventListener('click', hideIndividualCard);
+    
+    // Also close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const individualView = document.getElementById('individualCardView');
+        if (individualView.style.display === 'flex') {
+          hideIndividualCard();
+        }
+      }
     });
     
     // Initialize: scan all sets and load first one
@@ -745,6 +973,7 @@
     
     // Start the app
     initialize();
+    
   </script>
 </body>
 </html>
