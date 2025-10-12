@@ -466,10 +466,8 @@
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw background
-      const bgColor = getCardColor(cardData);
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Don't draw background - let CSS gradient show through
+      // Background is now handled by CSS gradient on canvas.style.background
       
       // Draw simple text if there's input
       if (cardData && cardData.input) {
