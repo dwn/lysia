@@ -517,16 +517,34 @@
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         
-        // Highlight the drop target
-        let target = e.target;
-        while (target && !target.classList.contains('card-wrapper') && target !== gridEl) {
-          target = target.parentElement;
+        // Clear all existing drag-over highlights
+        const allCards = gridEl.querySelectorAll('.card-wrapper');
+        allCards.forEach(card => card.classList.remove('drag-over'));
+        
+        // Calculate distances to all card centers and find the closest one
+        let closestCard = null;
+        let closestDistance = Infinity;
+        
+        for (const card of allCards) {
+          const cardRect = card.getBoundingClientRect();
+          const cardCenterX = cardRect.left + cardRect.width / 2;
+          const cardCenterY = cardRect.top + cardRect.height / 2;
+          
+          // Calculate distance from mouse to card center
+          const distance = Math.sqrt(
+            Math.pow(e.clientX - cardCenterX, 2) + 
+            Math.pow(e.clientY - cardCenterY, 2)
+          );
+          
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestCard = card;
+          }
         }
         
-        if (target && target.classList.contains('card-wrapper') && target !== draggedCard) {
-          const allCards = gridEl.querySelectorAll('.card-wrapper');
-          allCards.forEach(card => card.classList.remove('drag-over'));
-          target.classList.add('drag-over');
+        // Highlight the closest card
+        if (closestCard) {
+          closestCard.classList.add('drag-over');
         }
       }
       
@@ -536,24 +554,41 @@
         
         if (!draggedCard) return;
         
-        let targetCard = e.target;
-        while (targetCard && !targetCard.classList.contains('card-wrapper') && targetCard !== gridEl) {
-          targetCard = targetCard.parentElement;
+        // Find the closest card to the drop point
+        let targetCard = null;
+        let closestDistance = Infinity;
+        const allCards = gridEl.querySelectorAll('.card-wrapper');
+        
+        for (const card of allCards) {
+          const cardRect = card.getBoundingClientRect();
+          const cardCenterX = cardRect.left + cardRect.width / 2;
+          const cardCenterY = cardRect.top + cardRect.height / 2;
+          
+          // Calculate distance from drop point to card center
+          const distance = Math.sqrt(
+            Math.pow(e.clientX - cardCenterX, 2) + 
+            Math.pow(e.clientY - cardCenterY, 2)
+          );
+          
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            targetCard = card;
+          }
         }
         
-        if (!targetCard || targetCard === draggedCard) return;
+        // Get the target position from the closest card
+        const targetRow = parseInt(targetCard?.style.gridRow) || 1;
+        const targetCol = parseInt(targetCard?.style.gridColumn) || 1;
         
-        // Get the positions
-        const draggedRow = parseInt(draggedCard.style.gridRow);
-        const draggedCol = parseInt(draggedCard.style.gridColumn);
-        const targetRow = parseInt(targetCard.style.gridRow);
-        const targetCol = parseInt(targetCard.style.gridColumn);
+        // Get the dragged card positions
+        const draggedRow = parseInt(draggedCard.style.gridRow) || 1;
+        const draggedCol = parseInt(draggedCard.style.gridColumn) || 1;
         
         // Get current set from dropdown to ensure we're working with the right set
         const currentSet = parseInt(document.getElementById('setSelect').value, 10);
         
         const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
-        const isTargetEmpty = targetCard.classList.contains('empty-slot');
+        const isTargetEmpty = !targetCard || targetCard.classList.contains('empty-slot');
         
         if (isTargetEmpty) {
           // Move to empty slot - update visual position
