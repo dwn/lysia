@@ -848,8 +848,14 @@
         loadedCards.forEach(({ order, data }) => {
           if (data && data.options && data.options.position) {
             const { row, col } = data.options.position;
-            const key = `${row}-${col}`;
-            gridPositions.set(key, { order, data });
+            // Only use position if both row and col are valid numbers
+            if (row !== null && col !== null && typeof row === 'number' && typeof col === 'number') {
+              const key = `${row}-${col}`;
+              gridPositions.set(key, { order, data });
+            } else {
+              // Position exists but has null values, treat as no position
+              cardsWithoutPosition.push({ order, data });
+            }
           } else if (data) {
             cardsWithoutPosition.push({ order, data });
           }
