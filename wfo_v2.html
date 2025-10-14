@@ -526,8 +526,8 @@
         let closestDistance = Infinity;
         
         for (const card of allCards) {
-          // Skip the dragged card itself
-          if (card === draggedCard) continue;
+          // Skip the dragged card itself and empty slots
+          if (card === draggedCard || card.classList.contains('empty-slot')) continue;
           
           const cardRect = card.getBoundingClientRect();
           const cardCenterX = cardRect.left + cardRect.width / 2;
@@ -563,7 +563,7 @@
         const allCards = gridEl.querySelectorAll('.card-wrapper');
         
         for (const card of allCards) {
-          // Skip the dragged card itself
+          // Skip only the dragged card itself (allow empty slots as targets)
           if (card === draggedCard) continue;
           
           const cardRect = card.getBoundingClientRect();
@@ -586,12 +586,12 @@
         const targetRow = parseInt(targetCard?.style.gridRow) || 1;
         const targetCol = parseInt(targetCard?.style.gridColumn) || 1;
         
-        // Get the dragged card positions
-        const draggedRow = parseInt(draggedCard.style.gridRow) || 1;
-        const draggedCol = parseInt(draggedCard.style.gridColumn) || 1;
+        // Get the dragged card's ORIGINAL positions (before any visual updates)
+        const originalDraggedRow = parseInt(draggedCard.style.gridRow) || 1;
+        const originalDraggedCol = parseInt(draggedCard.style.gridColumn) || 1;
         
         // Check if dropping on the same position
-        if (targetRow === draggedRow && targetCol === draggedCol) {
+        if (targetRow === originalDraggedRow && targetCol === originalDraggedCol) {
           // No change needed
           targetCard?.classList.remove('drag-over');
           return;
@@ -602,8 +602,31 @@
         
         const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
         const isTargetEmpty = !targetCard || targetCard.classList.contains('empty-slot');
+        const targetOrder = targetCard ? parseInt(targetCard.getAttribute('data-order')) : null;
         
-        if (isTargetEmpty) {
+        console.log(`Target card:`, targetCard);
+        console.log(`Is target empty:`, isTargetEmpty);
+        console.log(`Target order:`, targetOrder);
+        
+        // If target is an empty slot, we need to find if there's a real card at that position
+        if (targetCard && targetCard.classList.contains('empty-slot')) {
+          // Look for a real card at the same grid position
+          const allRealCards = gridEl.querySelectorAll('.card-wrapper:not(.empty-slot)');
+          for (const realCard of allRealCards) {
+            const realCardRow = parseInt(realCard.style.gridRow) || 1;
+            const realCardCol = parseInt(realCard.style.gridColumn) || 1;
+            if (realCardRow === targetRow && realCardCol === targetCol) {
+              // Found the real card at this position
+              targetCard = realCard;
+              break;
+            }
+          }
+        }
+        
+        // Update isTargetEmpty after potentially finding the real card
+        const finalIsTargetEmpty = !targetCard || targetCard.classList.contains('empty-slot');
+        
+        if (finalIsTargetEmpty) {
           // Move to empty slot - update visual position
           draggedCard.style.gridRow = targetRow;
           draggedCard.style.gridColumn = targetCol;
@@ -611,8 +634,8 @@
           // Create placeholder at original position
           const originalEmptySlot = document.createElement('div');
           originalEmptySlot.className = 'card-wrapper empty-slot';
-          originalEmptySlot.style.gridRow = draggedRow;
-          originalEmptySlot.style.gridColumn = draggedCol;
+          originalEmptySlot.style.gridRow = originalDraggedRow;
+          originalEmptySlot.style.gridColumn = originalDraggedCol;
           gridEl.appendChild(originalEmptySlot);
           
           // Save position in background
@@ -623,12 +646,12 @@
           
           draggedCard.style.gridRow = targetRow;
           draggedCard.style.gridColumn = targetCol;
-          targetCard.style.gridRow = draggedRow;
-          targetCard.style.gridColumn = draggedCol;
+          targetCard.style.gridRow = originalDraggedRow;
+          targetCard.style.gridColumn = originalDraggedCol;
           
           // Save both positions in background
           updateCardPosition(currentSet, draggedOrder, targetRow, targetCol);
-          updateCardPosition(currentSet, targetOrder, draggedRow, draggedCol);
+          updateCardPosition(currentSet, targetOrder, originalDraggedRow, originalDraggedCol);
         }
         
         targetCard.classList.remove('drag-over');
@@ -643,13 +666,18 @@
     
     async function updateCardPosition(set, order, row, col) {
       try {
+        console.log(`Updating position for ${set}.${order} to (${row}, ${col})`);
+        
         const key = `${set}.${order}`;
         let cardDataObj = cardData.get(key);
         
         // If not in cache, load it
         if (!cardDataObj) {
           cardDataObj = await loadCardData(set, order);
-          if (!cardDataObj) return;
+          if (!cardDataObj) {
+            console.error(`Could not load card data for ${set}.${order}`);
+            return;
+          }
           cardData.set(key, cardDataObj);
         }
         
@@ -664,6 +692,8 @@
         const jsonString = JSON.stringify(cardDataObj, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const fileName = formatCardFilename(set, order);
+        
+        console.log(`Saving to file: ${fileName}`);
         
         const { error } = await supabaseClient.storage
           .from('card')
