@@ -526,6 +526,9 @@
         let closestDistance = Infinity;
         
         for (const card of allCards) {
+          // Skip the dragged card itself
+          if (card === draggedCard) continue;
+          
           const cardRect = card.getBoundingClientRect();
           const cardCenterX = cardRect.left + cardRect.width / 2;
           const cardCenterY = cardRect.top + cardRect.height / 2;
@@ -560,6 +563,9 @@
         const allCards = gridEl.querySelectorAll('.card-wrapper');
         
         for (const card of allCards) {
+          // Skip the dragged card itself
+          if (card === draggedCard) continue;
+          
           const cardRect = card.getBoundingClientRect();
           const cardCenterX = cardRect.left + cardRect.width / 2;
           const cardCenterY = cardRect.top + cardRect.height / 2;
@@ -583,6 +589,13 @@
         // Get the dragged card positions
         const draggedRow = parseInt(draggedCard.style.gridRow) || 1;
         const draggedCol = parseInt(draggedCard.style.gridColumn) || 1;
+        
+        // Check if dropping on the same position
+        if (targetRow === draggedRow && targetCol === draggedCol) {
+          // No change needed
+          targetCard?.classList.remove('drag-over');
+          return;
+        }
         
         // Get current set from dropdown to ensure we're working with the right set
         const currentSet = parseInt(document.getElementById('setSelect').value, 10);
