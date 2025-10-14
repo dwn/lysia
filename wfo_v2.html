@@ -22,24 +22,28 @@
     }
     
     /* ===== LAYOUT COMPONENTS ===== */
-    .controls {
-      text-align: center;
-      padding: 15px;
-      flex-shrink: 0;
-    }
-    
-    .controls select {
-      background: #333;
-      color: #fff;
-      border: 1px solid #666;
-      padding: 8px 16px;
-      border-radius: 4px;
-      font-size: 14px;
+    /* ===== NAVIGATION AREAS ===== */
+    .nav-area {
+      position: fixed;
+      top: 0;
+      bottom: 0;
       cursor: pointer;
+      z-index: 100;
+      transition: background 0.2s ease;
     }
     
-    .controls select:hover {
-      background: #444;
+    .nav-left {
+      left: 0;
+      right: calc(50% + (100vh * 3 / 8.1) / 2);
+    }
+    
+    .nav-right {
+      left: calc(50% + (100vh * 3 / 8.1) / 2);
+      right: 0;
+    }
+    
+    .nav-area:hover {
+      background: rgba(255, 255, 255, 0.05);
     }
     
     /* ===== GRID SYSTEM ===== */
@@ -257,15 +261,9 @@
   </style>
 </head>
 <body>
-  <div class="controls">
-    <select id="setSelect">
-      <option value="1">Set 1</option>
-      <option value="2">Set 2</option>
-      <option value="3">Set 3</option>
-      <option value="4">Set 4</option>
-      <option value="5">Set 5</option>
-    </select>
-  </div>
+  <!-- Navigation areas for previous/next set -->
+  <div id="prevSetArea" class="nav-area nav-left" title="Previous Set"></div>
+  <div id="nextSetArea" class="nav-area nav-right" title="Next Set"></div>
   
   <div id="status" class="loading">Loading cards...</div>
   
@@ -287,6 +285,8 @@
     // ===== GLOBAL VARIABLES =====
     let cardData = new Map(); // Cache for card data: "set.order" -> cardData
     let setInfo = new Map(); // Cache for set information: setNumber -> {cardCount, cards: [{order, position, filename}]}
+    let currentSetNumber = 1; // Track the current set being displayed
+    let availableSets = []; // Array of available set numbers
     
     // ===== UTILITY FUNCTIONS =====
     /**
@@ -606,8 +606,8 @@
           return;
         }
         
-        // Get current set from dropdown to ensure we're working with the right set
-        const currentSet = parseInt(document.getElementById('setSelect').value, 10);
+        // Use the global current set number
+        const currentSet = currentSetNumber;
         
         const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
         const isTargetEmpty = !targetCard || targetCard.classList.contains('empty-slot');
@@ -721,13 +721,11 @@
       const individualView = document.getElementById('individualCardView');
       const individualCard = document.getElementById('individualCard');
       const gridContainer = document.getElementById('gridContainer');
-      const controls = document.querySelector('.controls');
       
-      // Hide grid and controls, and remove grid container from DOM entirely
+      // Hide grid and remove grid container from DOM entirely
       if (gridContainer) {
         gridContainer.remove();
       }
-      controls.style.display = 'none';
       
       // Clear previous content
       individualCard.innerHTML = '';
@@ -791,18 +789,12 @@
      */
     function hideIndividualCard() {
       const individualView = document.getElementById('individualCardView');
-      const controls = document.querySelector('.controls');
-      const setSelect = document.getElementById('setSelect');
       
       // Hide individual view
       individualView.style.display = 'none';
       
-      // Show controls
-      controls.style.display = 'flex';
-      
       // Restore the grid by calling displaySet with the current set
-      const currentSet = parseInt(setSelect.value, 10);
-      displaySet(currentSet);
+      displaySet(currentSetNumber);
     }
     
     // ===== CACHING SYSTEM =====
@@ -827,9 +819,8 @@
           }
         }
         
-        // Cache set info and populate dropdown
-        const setSelect = document.getElementById('setSelect');
-        setSelect.innerHTML = '';
+        // Cache set info and build available sets array
+        availableSets = [];
         
         for (const [setNumber, cards] of sets) {
           setInfo.set(setNumber, {
@@ -837,11 +828,11 @@
             cards: cards.sort((a, b) => a.order - b.order)
           });
           
-          const option = document.createElement('option');
-          option.value = setNumber;
-          option.textContent = `Set ${setNumber} (${cards.length} cards)`;
-          setSelect.appendChild(option);
+          availableSets.push(setNumber);
         }
+        
+        // Sort available sets
+        availableSets.sort((a, b) => a - b);
         
         console.log('Cached set info:', setInfo);
         
@@ -1048,11 +1039,26 @@
       }
     }
     
+    // ===== NAVIGATION FUNCTIONS =====
+    function goToNextSet() {
+      const currentIndex = availableSets.indexOf(currentSetNumber);
+      if (currentIndex < availableSets.length - 1) {
+        currentSetNumber = availableSets[currentIndex + 1];
+        displaySet(currentSetNumber);
+      }
+    }
+    
+    function goToPreviousSet() {
+      const currentIndex = availableSets.indexOf(currentSetNumber);
+      if (currentIndex > 0) {
+        currentSetNumber = availableSets[currentIndex - 1];
+        displaySet(currentSetNumber);
+      }
+    }
+    
     // ===== INITIALIZATION AND EVENT HANDLERS =====
-    document.getElementById('setSelect').addEventListener('change', (e) => {
-      const setNumber = parseInt(e.target.value, 10);
-      displaySet(setNumber);
-    });
+    document.getElementById('nextSetArea').addEventListener('click', goToNextSet);
+    document.getElementById('prevSetArea').addEventListener('click', goToPreviousSet);
     
     // Click on individual card to close it
     document.getElementById('individualCard').addEventListener('click', hideIndividualCard);
@@ -1072,10 +1078,9 @@
       await scanAllSets();
       
       // Load the first available set
-      const setSelect = document.getElementById('setSelect');
-      if (setSelect.options.length > 0) {
-        const firstSet = parseInt(setSelect.options[0].value, 10);
-        displaySet(firstSet);
+      if (availableSets.length > 0) {
+        currentSetNumber = availableSets[0];
+        displaySet(currentSetNumber);
       }
     }
     
