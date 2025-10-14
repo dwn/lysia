@@ -200,23 +200,6 @@
       opacity: 0.5;
     }
     
-    .close-button {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid #666;
-      color: #fff;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      z-index: 1001;
-    }
-    
-    .close-button:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
     
     .card-wrapper canvas {
       width: 100%;
@@ -291,7 +274,6 @@
     <div class="individual-card" id="individualCard">
       <!-- Individual card content will be inserted here -->
     </div>
-    <button class="close-button" id="closeButton">Close</button>
   </div>
   
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -980,8 +962,8 @@
             orderLabel.textContent = order;
             cardWrapper.appendChild(orderLabel);
             
-            // Add double-click event to show individual card
-            cardWrapper.addEventListener('dblclick', () => {
+            // Add click event to show individual card
+            cardWrapper.addEventListener('click', () => {
               showIndividualCard(setNumber, order, cardData);
             });
             
@@ -1072,8 +1054,8 @@
       displaySet(setNumber);
     });
     
-    // Close button for individual card view
-    document.getElementById('closeButton').addEventListener('click', hideIndividualCard);
+    // Click on individual card to close it
+    document.getElementById('individualCard').addEventListener('click', hideIndividualCard);
     
     // Also close on Escape key
     document.addEventListener('keydown', (e) => {
