@@ -234,14 +234,25 @@
       pointer-events: none;
     }
     
-    .loading {
-      text-align: center;
-      padding: 2rem;
-      font-size: 1.2rem;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    #status {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
     
     .error {
@@ -265,7 +276,9 @@
   <div id="prevSetArea" class="nav-area nav-left" title="Previous Set"></div>
   <div id="nextSetArea" class="nav-area nav-right" title="Next Set"></div>
   
-  <div id="status" class="loading">Loading cards...</div>
+  <div id="status" style="display: none;">
+    <div class="spinner"></div>
+  </div>
   
   <!-- Individual Card View -->
   <div id="individualCardView" class="individual-card-view">
@@ -874,7 +887,6 @@
         document.body.insertBefore(gridEl, document.getElementById('individualCardView'));
       }
       
-      statusEl.textContent = `Loading Set ${setNumber}...`;
       statusEl.style.display = 'block';
       gridEl.style.display = 'none';
       gridEl.innerHTML = '';
@@ -1033,8 +1045,7 @@
         setupDragAndDrop(setNumber);
         
       } catch (error) {
-        statusEl.className = 'error';
-        statusEl.textContent = `Error loading set: ${error.message}`;
+        statusEl.style.display = 'none';
         console.error('Error displaying set:', error);
       }
     }
