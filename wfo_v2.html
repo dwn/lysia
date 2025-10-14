@@ -504,6 +504,9 @@
     
     // ===== DRAG AND DROP SYSTEM =====
     let draggedCard = null;
+    let dragOffGridTimer = null;
+    let isDraggingOffGrid = false;
+    let lastDragX = 0;
     
     /**
      * Set up drag and drop functionality for the grid
@@ -525,10 +528,84 @@
           e.target.classList.add('drag-source');
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setData('text/plain', ''); // Required for some browsers
+          
+          // Add document-level listener to track drag position
+          document.addEventListener('dragover', checkDragOffGrid);
+        }
+      }
+      
+      function checkDragOffGrid(e) {
+        if (!draggedCard) return;
+        
+        lastDragX = e.clientX;
+        const gridEl = document.getElementById('gridContainer');
+        if (!gridEl) return;
+        
+        const gridRect = gridEl.getBoundingClientRect();
+        const isOutsideGrid = (
+          e.clientX < gridRect.left ||
+          e.clientX > gridRect.right ||
+          e.clientY < gridRect.top ||
+          e.clientY > gridRect.bottom
+        );
+        
+        const prevArea = document.getElementById('prevSetArea');
+        const nextArea = document.getElementById('nextSetArea');
+        
+        if (isOutsideGrid && !isDraggingOffGrid) {
+          isDraggingOffGrid = true;
+          const direction = e.clientX < gridRect.left ? 'prev' : 'next';
+          console.log('Started dragging off grid, direction:', direction);
+          
+          // Highlight the appropriate nav area
+          if (direction === 'prev') {
+            prevArea.style.background = 'rgba(255, 255, 255, 0.05)';
+          } else {
+            nextArea.style.background = 'rgba(255, 255, 255, 0.05)';
+          }
+          
+          dragOffGridTimer = setTimeout(() => {
+            console.log('1 second elapsed, finding target set...');
+            const targetSet = findNonFullSet(direction);
+            console.log('Target set:', targetSet);
+            if (targetSet !== null) {
+              const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
+              console.log(`Moving card ${currentSetNumber}.${draggedOrder} to set ${targetSet}`);
+              moveCardToSet(currentSetNumber, draggedOrder, targetSet);
+            } else {
+              console.log('No non-full sets available');
+            }
+            // Remove highlight
+            prevArea.style.background = '';
+            nextArea.style.background = '';
+          }, 1000);
+        } else if (!isOutsideGrid && isDraggingOffGrid) {
+          console.log('Moved back onto grid, canceling timer');
+          clearTimeout(dragOffGridTimer);
+          isDraggingOffGrid = false;
+          // Remove highlights
+          prevArea.style.background = '';
+          nextArea.style.background = '';
         }
       }
       
       function handleDragEnd(e) {
+        // Remove document listener
+        document.removeEventListener('dragover', checkDragOffGrid);
+        
+        // Clear timer if still running
+        if (dragOffGridTimer) {
+          clearTimeout(dragOffGridTimer);
+          dragOffGridTimer = null;
+        }
+        isDraggingOffGrid = false;
+        
+        // Clear nav area highlights
+        const prevArea = document.getElementById('prevSetArea');
+        const nextArea = document.getElementById('nextSetArea');
+        if (prevArea) prevArea.style.background = '';
+        if (nextArea) nextArea.style.background = '';
+        
         if (e.target.classList.contains('card-wrapper')) {
           e.target.classList.remove('dragging');
           e.target.classList.remove('drag-source');
@@ -828,6 +905,8 @@
         
         // Group files by set
         const sets = new Map();
+        let maxSetFound = 0;
+        
         for (const file of files) {
           const parsed = parseCardFilename(file.name);
           if (parsed) {
@@ -835,23 +914,22 @@
               sets.set(parsed.set, []);
             }
             sets.get(parsed.set).push(parsed);
+            maxSetFound = Math.max(maxSetFound, parsed.set);
           }
         }
         
         // Cache set info and build available sets array
+        // Include all sets from 1 to maxSetFound, even if empty
         availableSets = [];
         
-        for (const [setNumber, cards] of sets) {
-          setInfo.set(setNumber, {
+        for (let setNum = 1; setNum <= maxSetFound; setNum++) {
+          const cards = sets.get(setNum) || [];
+          setInfo.set(setNum, {
             cardCount: cards.length,
             cards: cards.sort((a, b) => a.order - b.order)
           });
-          
-          availableSets.push(setNumber);
+          availableSets.push(setNum);
         }
-        
-        // Sort available sets
-        availableSets.sort((a, b) => a - b);
         
         console.log('Cached set info:', setInfo);
         
@@ -1056,6 +1134,62 @@
       }
     }
     
+    // ===== CARD MANAGEMENT FUNCTIONS =====
+    async function moveCardToSet(fromSet, cardOrder, toSet) {
+      try {
+        // Load the card data
+        const key = `${fromSet}.${cardOrder}`;
+        let cardDataObj = cardData.get(key);
+        
+        if (!cardDataObj) {
+          cardDataObj = await loadCardData(fromSet, cardOrder);
+          if (!cardDataObj) return;
+        }
+        
+        // Find next available order number in target set
+        const targetSetInfo = setInfo.get(toSet);
+        let nextOrder = 1;
+        if (targetSetInfo) {
+          const usedOrders = targetSetInfo.cards.map(c => c.order);
+          while (usedOrders.includes(nextOrder)) {
+            nextOrder++;
+          }
+        }
+        
+        // Delete old file
+        const oldFileName = formatCardFilename(fromSet, cardOrder);
+        await supabaseClient.storage.from('card').remove([oldFileName]);
+        
+        // Reset position for new set
+        if (cardDataObj.options) {
+          cardDataObj.options.position = null;
+        }
+        
+        // Save to new location
+        const newFileName = formatCardFilename(toSet, nextOrder);
+        const jsonString = JSON.stringify(cardDataObj, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        
+        await supabaseClient.storage
+          .from('card')
+          .upload(newFileName, blob, { contentType: 'application/json', upsert: true });
+        
+        // Update caches
+        cardData.delete(key);
+        cardData.set(`${toSet}.${nextOrder}`, cardDataObj);
+        
+        // Rescan sets to update setInfo
+        await scanAllSets();
+        
+        // Switch to the target set and display
+        currentSetNumber = toSet;
+        await displaySet(toSet);
+        
+      } catch (error) {
+        console.error('Error moving card to set:', error);
+      }
+    }
+    
     // ===== NAVIGATION FUNCTIONS =====
     function goToNextSet() {
       const currentIndex = availableSets.indexOf(currentSetNumber);
@@ -1071,6 +1205,21 @@
         currentSetNumber = availableSets[currentIndex - 1];
         displaySet(currentSetNumber);
       }
+    }
+    
+    function findNonFullSet(direction = 'next') {
+      const currentIndex = availableSets.indexOf(currentSetNumber);
+      const setsToCheck = direction === 'next' 
+        ? availableSets.slice(currentIndex + 1)
+        : availableSets.slice(0, currentIndex).reverse();
+      
+      for (const setNum of setsToCheck) {
+        const info = setInfo.get(setNum);
+        if (info && info.cardCount < 15) {
+          return setNum;
+        }
+      }
+      return null; // All sets are full
     }
     
     // ===== INITIALIZATION AND EVENT HANDLERS =====
