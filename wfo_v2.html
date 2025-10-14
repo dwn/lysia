@@ -818,7 +818,7 @@
       const individualCard = document.getElementById('individualCard');
       const gridContainer = document.getElementById('gridContainer');
       
-      // Hide grid and remove grid container from DOM entirely
+      // Remove grid from DOM to prevent CSS interference with SVG rendering
       if (gridContainer) {
         gridContainer.remove();
       }
@@ -885,12 +885,18 @@
      */
     function hideIndividualCard() {
       const individualView = document.getElementById('individualCardView');
+      const gridContainer = document.getElementById('gridContainer');
       
       // Hide individual view
       individualView.style.display = 'none';
       
-      // Restore the grid by calling displaySet with the current set
-      displaySet(currentSetNumber);
+      // Show the grid if it exists, otherwise rebuild it
+      if (gridContainer) {
+        gridContainer.style.display = 'grid';
+      } else {
+        // Grid was removed, rebuild it
+        displaySet(currentSetNumber);
+      }
     }
     
     // ===== CACHING SYSTEM =====
