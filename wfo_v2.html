@@ -43,15 +43,6 @@
     }
     
     /* ===== GRID SYSTEM ===== */
-    .grid-wrapper {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      overflow: hidden;
-    }
-    
     .grid-container {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -65,6 +56,7 @@
       max-height: 100%;
       padding: 20px;
       box-sizing: border-box;
+      margin: 0 auto; /* Center the grid */
     }
     
     /* ===== CARD COMPONENTS ===== */
@@ -136,17 +128,19 @@
     }
     
     .individual-card {
-      width: 75vw;
-      max-width: 500px;
-      height: auto;
-      aspect-ratio: 600 / 971;
-      background: #333;
-      border: 2px solid #666;
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
-      margin: 20px;
+      /* Isolate from any grid-related CSS inheritance */
+      all: initial;
+      width: 75vw !important;
+      max-width: 500px !important;
+      height: auto !important;
+      aspect-ratio: 600 / 971 !important;
+      background: #333 !important;
+      border: 2px solid #666 !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      position: relative !important;
+      box-shadow: 0 0 50px rgba(255, 255, 255, 0.1) !important;
+      margin: 20px !important;
     }
     
     .individual-card canvas {
@@ -259,9 +253,6 @@
   </div>
   
   <div id="status" class="loading">Loading cards...</div>
-  <div class="grid-wrapper">
-    <div id="gridContainer" class="grid-container" style="display: none;"></div>
-  </div>
   
   <!-- Individual Card View -->
   <div id="individualCardView" class="individual-card-view">
@@ -481,6 +472,10 @@
     // ===== DRAG AND DROP SYSTEM =====
     let draggedCard = null;
     
+    /**
+     * Set up drag and drop functionality for the grid
+     * @param {number} setNumber - Set number for position updates
+     */
     function setupDragAndDrop(setNumber) {
       const gridEl = document.getElementById('gridContainer');
       
@@ -604,10 +599,6 @@
         const isTargetEmpty = !targetCard || targetCard.classList.contains('empty-slot');
         const targetOrder = targetCard ? parseInt(targetCard.getAttribute('data-order')) : null;
         
-        console.log(`Target card:`, targetCard);
-        console.log(`Is target empty:`, isTargetEmpty);
-        console.log(`Target order:`, targetOrder);
-        
         // If target is an empty slot, we need to find if there's a real card at that position
         if (targetCard && targetCard.classList.contains('empty-slot')) {
           // Look for a real card at the same grid position
@@ -666,8 +657,6 @@
     
     async function updateCardPosition(set, order, row, col) {
       try {
-        console.log(`Updating position for ${set}.${order} to (${row}, ${col})`);
-        
         const key = `${set}.${order}`;
         let cardDataObj = cardData.get(key);
         
@@ -675,7 +664,6 @@
         if (!cardDataObj) {
           cardDataObj = await loadCardData(set, order);
           if (!cardDataObj) {
-            console.error(`Could not load card data for ${set}.${order}`);
             return;
           }
           cardData.set(key, cardDataObj);
@@ -693,8 +681,6 @@
         const blob = new Blob([jsonString], { type: 'application/json' });
         const fileName = formatCardFilename(set, order);
         
-        console.log(`Saving to file: ${fileName}`);
-        
         const { error } = await supabaseClient.storage
           .from('card')
           .upload(fileName, blob, {
@@ -711,14 +697,22 @@
     }
     
     // ===== INDIVIDUAL CARD VIEW =====
+    /**
+     * Show individual card in full-screen view
+     * @param {number} setNumber - Set number of the card
+     * @param {number} order - Order number of the card
+     * @param {Object} cardData - Card data object
+     */
     async function showIndividualCard(setNumber, order, cardData) {
       const individualView = document.getElementById('individualCardView');
       const individualCard = document.getElementById('individualCard');
       const gridContainer = document.getElementById('gridContainer');
       const controls = document.querySelector('.controls');
       
-      // Hide grid and controls
-      gridContainer.style.display = 'none';
+      // Hide grid and controls, and remove grid container from DOM entirely
+      if (gridContainer) {
+        gridContainer.remove();
+      }
       controls.style.display = 'none';
       
       // Clear previous content
@@ -778,17 +772,23 @@
       individualView.style.display = 'flex';
     }
     
+    /**
+     * Hide individual card view and return to grid view
+     */
     function hideIndividualCard() {
       const individualView = document.getElementById('individualCardView');
-      const gridContainer = document.getElementById('gridContainer');
       const controls = document.querySelector('.controls');
+      const setSelect = document.getElementById('setSelect');
       
       // Hide individual view
       individualView.style.display = 'none';
       
-      // Show grid and controls
-      gridContainer.style.display = 'grid';
+      // Show controls
       controls.style.display = 'flex';
+      
+      // Restore the grid by calling displaySet with the current set
+      const currentSet = parseInt(setSelect.value, 10);
+      displaySet(currentSet);
     }
     
     // ===== CACHING SYSTEM =====
@@ -858,7 +858,16 @@
      */
     async function displaySet(setNumber) {
       const statusEl = document.getElementById('status');
-      const gridEl = document.getElementById('gridContainer');
+      
+      // Create grid container dynamically if it doesn't exist
+      let gridEl = document.getElementById('gridContainer');
+      if (!gridEl) {
+        gridEl = document.createElement('div');
+        gridEl.id = 'gridContainer';
+        gridEl.className = 'grid-container';
+        gridEl.style.display = 'none';
+        document.body.insertBefore(gridEl, document.getElementById('individualCardView'));
+      }
       
       statusEl.textContent = `Loading Set ${setNumber}...`;
       statusEl.style.display = 'block';
