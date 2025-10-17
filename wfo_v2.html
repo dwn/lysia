@@ -235,6 +235,30 @@
       opacity: 1;
     }
     
+    .card-edit-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    .card-wrapper:hover .card-edit-button {
+      opacity: 1;
+    }
+    
+    .card-edit-button:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.1);
+    }
+    
     .svg-container {
       position: absolute;
       top: 0;
@@ -428,6 +452,372 @@
       background: #777;
       transform: translateY(-1px);
     }
+    
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #45a049;
+      transform: translateY(-1px);
+    }
+    
+    /* ===== CARD EDITOR MODAL ===== */
+    .card-editor-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    
+    .card-editor-content {
+      background: #333;
+      border-radius: 12px;
+      max-width: 1400px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    
+    .card-editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid #555;
+    }
+    
+    .card-editor-header h3 {
+      color: #fff;
+      margin: 0;
+      font-size: 20px;
+    }
+    
+    .card-editor-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    
+    .card-editor-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 20px 24px;
+      border-top: 1px solid #555;
+    }
+    
+    /* ===== EDITOR GRID LAYOUT ===== */
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      height: 100%;
+    }
+    
+    .editor-preview {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .preview-header h4 {
+      color: #fff;
+      margin: 0;
+      font-size: 16px;
+    }
+    
+    .preview-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .preview-controls label {
+      color: #ccc;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .preview-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 20px;
+      overflow: auto;
+    }
+    
+    .preview-container canvas {
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+    
+    .editor-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+    
+    .editor-section {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .editor-section h4 {
+      color: #fff;
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      border-bottom: 1px solid #555;
+      padding-bottom: 8px;
+    }
+    
+    /* ===== ACCORDION STYLES ===== */
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 12px 0;
+      border-bottom: 1px solid #555;
+      transition: background-color 0.2s ease;
+    }
+    
+    .accordion-header:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .accordion-header h4 {
+      margin: 0;
+      color: #fff;
+      font-size: 16px;
+      border: none;
+      padding: 0;
+    }
+    
+    .accordion-icon {
+      color: #ccc;
+      font-size: 12px;
+      transition: transform 0.2s ease;
+    }
+    
+    .accordion:not(.collapsed) .accordion-icon {
+      transform: rotate(90deg);
+    }
+    
+    .accordion-content {
+      padding-top: 16px;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .accordion.collapsed .accordion-content {
+      max-height: 0;
+      padding-top: 0;
+      opacity: 0;
+    }
+    
+    .accordion-subsection {
+      margin-bottom: 20px;
+    }
+    
+    .accordion-subsection:last-child {
+      margin-bottom: 0;
+    }
+    
+    .accordion-subsection h5 {
+      color: #ccc;
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* ===== FORM STYLES ===== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-group label {
+      color: #ccc;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .form-group input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #555;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    .form-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #4CAF50;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .form-group input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: #4CAF50;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .form-group select,
+    .form-group textarea {
+      background: #444;
+      border: 1px solid #666;
+      border-radius: 6px;
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .form-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #4CAF50;
+    }
+    
+    .position-display {
+      background: #444;
+      border: 1px solid #666;
+      border-radius: 6px;
+      color: #ccc;
+      padding: 8px 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 14px;
+    }
+    
+    /* ===== CODE EDITOR STYLES ===== */
+    .code-editor {
+      background: #1a1a1a;
+      border: 1px solid #666;
+      border-radius: 6px;
+      color: #fff;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+      resize: vertical;
+    }
+    
+    .code-editor:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    
+    .output-display {
+      background: #2a2a2a;
+      color: #ccc;
+      cursor: default;
+      min-height: 100px;
+    }
+    
+    /* ===== SVG PREVIEW ===== */
+    .svg-preview {
+      margin-top: 12px;
+      padding: 16px;
+      background: #1a1a1a;
+      border: 1px solid #666;
+      border-radius: 6px;
+    }
+    
+    .svg-preview-content {
+      background: linear-gradient(135deg, #f8f8f8 0%, #a0a0a0 100%);
+      padding: 20px;
+      border-radius: 4px;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @media (max-width: 1200px) {
+      .editor-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      .preview-container {
+        max-height: 400px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .card-editor-content {
+        margin: 10px;
+        max-height: 95vh;
+      }
+      
+      .card-editor-header,
+      .card-editor-body,
+      .card-editor-footer {
+        padding: 16px;
+      }
+      
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -460,6 +850,156 @@
       <div class="delete-modal-buttons">
         <button id="confirmDelete" class="btn btn-danger">Delete</button>
         <button id="cancelDelete" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Card Editor Modal -->
+  <div id="cardEditorModal" class="card-editor-modal" style="display: none;">
+    <div class="card-editor-content">
+      <div class="card-editor-body">
+        <div class="editor-grid">
+          <!-- Left Column: Editor Controls -->
+          <div class="editor-controls">
+            <!-- Card Settings Accordion -->
+            <div class="editor-section accordion collapsed">
+              <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h4>Card Settings</h4>
+                <span class="accordion-icon">▶</span>
+              </div>
+              <div class="accordion-content">
+                <!-- Card Info -->
+                <div class="accordion-subsection">
+                  <h5>Card Info</h5>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="editorOrder">Order</label>
+                      <select id="editorOrder">
+                        <option value="">Undefined</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="editorPosition">Position</label>
+                      <div id="editorPositionDisplay" class="position-display">Not set</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Visual Options -->
+                <div class="accordion-subsection">
+                  <h5>Visual Options</h5>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="editorSize">Size <span id="editorSizeValue">8</span></label>
+                      <input type="range" id="editorSize" min="2" max="40" value="5">
+                    </div>
+                    <div class="form-group">
+                      <label for="editorBackground">Background</label>
+                      <select id="editorBackground">
+                        <option value="transparent">Transparent</option>
+                        <option value="#000000">Black</option>
+                        <option value="#8c0004">Carnelian</option>
+                        <option value="#e00000">Red</option>
+                        <option value="#f34001">Orange</option>
+                        <option value="#faaf00">Amber</option>
+                        <option value="#dbd200">Yellow</option>
+                        <option value="#00cb00">Green</option>
+                        <option value="#00dfd8">Cyan</option>
+                        <option value="#3441fc">Blue</option>
+                        <option value="#4020f0">Indigo</option>
+                        <option value="#8000f0">Purple</option>
+                        <option value="#350063">Violet</option>
+                        <option value="#808080">Gray</option>
+                        <option value="#ffffff">White</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>
+                        <input type="checkbox" id="editorItalics" checked> Italics
+                      </label>
+                    </div>
+                    <div class="form-group">
+                      <label>
+                        <input type="checkbox" id="editorSvgColor"> SVG Color
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- SVG Background -->
+                <div class="accordion-subsection">
+                  <h5>SVG Background</h5>
+                  <div class="form-group">
+                    <label for="editorSvg">SVG URL or Code</label>
+                    <textarea id="editorSvg" placeholder="https://example.com/image.svg or paste SVG code directly" rows="3"></textarea>
+                  </div>
+                  <div id="editorSvgPreview" class="svg-preview" style="display: none;">
+                    <div id="editorSvgPreviewContent"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Rule Input -->
+            <div class="editor-section">
+              <h4>Rule</h4>
+              <div class="form-group">
+                <textarea id="editorRule" class="code-editor" placeholder="Enter rule code..." rows="4"></textarea>
+              </div>
+            </div>
+            
+            <!-- Input Data -->
+            <div class="editor-section">
+              <h4>Input</h4>
+              <div class="form-group">
+                <textarea id="editorInput" class="code-editor" placeholder="Enter input data..." rows="6"></textarea>
+              </div>
+            </div>
+            
+            <!-- Output Display -->
+            <div class="editor-section">
+              <h4>Output</h4>
+              <div class="form-group">
+                <div id="editorOutput" class="code-editor output-display" readonly></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Column: Canvas Preview -->
+          <div class="editor-preview">
+            <div class="preview-header">
+              <h4>Preview</h4>
+              <div class="preview-controls">
+                <label>
+                  <input type="checkbox" id="animatePreview"> Animate
+                </label>
+              </div>
+            </div>
+            <div class="preview-container">
+              <canvas id="editorCanvas" width="600" height="848"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card-editor-footer">
+        <button id="saveCard" class="btn btn-primary">Save Card</button>
+        <button id="cancelEdit" class="btn btn-secondary">Cancel</button>
       </div>
     </div>
   </div>
@@ -1413,6 +1953,17 @@
               showIndividualCard(setNumber, order, cardData);
             });
             
+            // Add edit button
+            const editButton = document.createElement('button');
+            editButton.className = 'card-edit-button';
+            editButton.innerHTML = '✏️';
+            editButton.title = 'Edit Card';
+            editButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openCardEditor(setNumber, order, cardData);
+            });
+            cardWrapper.appendChild(editButton);
+            
             // SVG container
             const svgContainer = document.createElement('div');
             svgContainer.className = 'svg-container';
@@ -1493,6 +2044,135 @@
       } catch (error) {
         statusEl.style.display = 'none';
         console.error('Error displaying set:', error);
+      }
+    }
+    
+    // ===== CARD EDITOR FUNCTIONS =====
+    let currentEditingCard = null;
+    
+    function toggleAccordion(header) {
+      const accordion = header.parentElement;
+      accordion.classList.toggle('collapsed');
+    }
+    
+    function openCardEditor(setNumber, order, cardData) {
+      currentEditingCard = { setNumber, order, cardData };
+      
+      // Populate editor fields
+      document.getElementById('editorOrder').value = order || '';
+      document.getElementById('editorSize').value = cardData.options?.size || 5;
+      document.getElementById('editorSizeValue').textContent = cardData.options?.size || 5;
+      document.getElementById('editorBackground').value = cardData.options?.backgroundColor || 'transparent';
+      document.getElementById('editorItalics').checked = cardData.options?.italics !== false;
+      document.getElementById('editorSvgColor').checked = cardData.options?.svgColor === true;
+      document.getElementById('editorSvg').value = cardData.options?.svgBackground || '';
+      document.getElementById('editorRule').value = cardData.rule || '';
+      document.getElementById('editorInput').value = cardData.input || '';
+      
+      // Update position display
+      const positionDisplay = document.getElementById('editorPositionDisplay');
+      if (cardData.options?.position) {
+        positionDisplay.textContent = `Row ${cardData.options.position.row}, Col ${cardData.options.position.col}`;
+      } else {
+        positionDisplay.textContent = 'Not set';
+      }
+      
+      // Show modal
+      document.getElementById('cardEditorModal').style.display = 'flex';
+      
+      // Update preview
+      updateEditorPreview();
+    }
+    
+    function closeCardEditor() {
+      document.getElementById('cardEditorModal').style.display = 'none';
+      currentEditingCard = null;
+    }
+    
+    function updateEditorPreview() {
+      // This would implement the card rendering logic
+      // For now, just a placeholder
+      const canvas = document.getElementById('editorCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Set background
+      const bgColor = document.getElementById('editorBackground').value;
+      if (bgColor === 'transparent') {
+        ctx.fillStyle = '#f0f0f0';
+      } else {
+        ctx.fillStyle = bgColor;
+      }
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw placeholder text
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Card Preview', canvas.width / 2, canvas.height / 2);
+    }
+    
+    async function saveCard() {
+      if (!currentEditingCard) return;
+      
+      try {
+        const { setNumber, order } = currentEditingCard;
+        
+        // Get form values
+        const newOrder = document.getElementById('editorOrder').value;
+        const size = parseInt(document.getElementById('editorSize').value);
+        const backgroundColor = document.getElementById('editorBackground').value;
+        const italics = document.getElementById('editorItalics').checked;
+        const svgColor = document.getElementById('editorSvgColor').checked;
+        const svgBackground = document.getElementById('editorSvg').value;
+        const rule = document.getElementById('editorRule').value;
+        const input = document.getElementById('editorInput').value;
+        
+        // Update card data
+        const cardDataObj = currentEditingCard.cardData;
+        cardDataObj.rule = rule;
+        cardDataObj.input = input;
+        
+        if (!cardDataObj.options) cardDataObj.options = {};
+        cardDataObj.options.size = size;
+        cardDataObj.options.backgroundColor = backgroundColor;
+        cardDataObj.options.italics = italics;
+        cardDataObj.options.svgColor = svgColor;
+        if (svgBackground) {
+          cardDataObj.options.svgBackground = svgBackground;
+        }
+        
+        // Save to storage
+        const jsonString = JSON.stringify(cardDataObj, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const fileName = formatCardFilename(setNumber, order);
+        
+        const { error } = await supabaseClient.storage
+          .from('card')
+          .upload(fileName, blob, {
+            contentType: 'application/json',
+            upsert: true
+          });
+        
+        if (error) {
+          console.error('Failed to save card:', error);
+          return;
+        }
+        
+        // Update cache
+        const key = `${setNumber}.${order}`;
+        cardData.set(key, cardDataObj);
+        
+        // Refresh display
+        await displaySet(currentSetNumber);
+        
+        // Close editor
+        closeCardEditor();
+        
+        console.log(`Card ${setNumber}.${order} saved successfully`);
+        
+      } catch (error) {
+        console.error('Error saving card:', error);
       }
     }
     
@@ -1798,16 +2478,36 @@
     document.getElementById('confirmDelete').addEventListener('click', deleteCard);
     document.getElementById('cancelDelete').addEventListener('click', hideDeleteModal);
     
+    // Card editor event handlers
+    document.getElementById('cancelEdit').addEventListener('click', closeCardEditor);
+    document.getElementById('saveCard').addEventListener('click', saveCard);
+    
+    // Editor form event handlers
+    document.getElementById('editorSize').addEventListener('input', (e) => {
+      document.getElementById('editorSizeValue').textContent = e.target.value;
+      updateEditorPreview();
+    });
+    
+    document.getElementById('editorBackground').addEventListener('change', updateEditorPreview);
+    document.getElementById('editorItalics').addEventListener('change', updateEditorPreview);
+    document.getElementById('editorSvgColor').addEventListener('change', updateEditorPreview);
+    document.getElementById('editorSvg').addEventListener('input', updateEditorPreview);
+    document.getElementById('editorRule').addEventListener('input', updateEditorPreview);
+    document.getElementById('editorInput').addEventListener('input', updateEditorPreview);
+    
     // Also close on Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const individualView = document.getElementById('individualCardView');
         const deleteModal = document.getElementById('deleteModal');
+        const cardEditorModal = document.getElementById('cardEditorModal');
         
         if (individualView.style.display === 'flex') {
           hideIndividualCard();
         } else if (deleteModal.style.display === 'flex') {
           hideDeleteModal();
+        } else if (cardEditorModal.style.display === 'flex') {
+          closeCardEditor();
         }
       }
     });
