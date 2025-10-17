@@ -34,11 +34,11 @@
     
     .nav-left {
       left: 0;
-      right: calc(50% + (100vh * 3 / 8.1) / 2);
+      right: calc(50% + (100vh * 3 / 7.07) / 2);
     }
     
     .nav-right {
-      left: calc(50% + (100vh * 3 / 8.1) / 2);
+      left: calc(50% + (100vh * 3 / 7.07) / 2);
       right: 0;
     }
     
@@ -51,14 +51,14 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(5, 1fr);
-      gap: 20px;
+      gap: 10px;
       width: 100%;
       height: 100%;
-      /* Grid is 3 cards wide, 5 cards tall, each card is 1:1.62 aspect */
-      /* Grid aspect = 3 / (5 * 1.62) = 3 / 8.1 = 0.37 */
-      max-width: calc(100vh * 3 / 8.1);
+      /* Grid is 3 cards wide, 5 cards tall, each card is 1:√2 aspect */
+      /* Grid aspect = 3 / (5 * √2) = 3 / (5 * 1.414) = 3 / 7.07 = 0.424 */
+      max-width: calc(100vh * 3 / 7.07);
       max-height: 100%;
-      padding: 20px;
+      padding: 10px;
       box-sizing: border-box;
       margin: 0 auto; /* Center the grid */
     }
@@ -151,7 +151,7 @@
       width: 75vw;
       max-width: 500px;
       height: auto;
-      aspect-ratio: 600 / 971;
+      aspect-ratio: 1 / 1.41421356;
       background: #333;
       border: none;
       border-radius: 12px;
@@ -829,7 +829,7 @@
       // Create canvas for the individual card
       const canvas = document.createElement('canvas');
       canvas.width = 600;
-      canvas.height = 972; // 600 * 1.62 = 972
+      canvas.height = 848; // 600 * √2 = 600 * 1.41421356 = 848.528
       individualCard.appendChild(canvas);
       
       // Set background
@@ -1102,7 +1102,7 @@
             // Canvas
             const canvas = document.createElement('canvas');
             canvas.width = 600;
-            canvas.height = 972; // 600 * 1.62 = 972
+            canvas.height = 848; // 600 * √2 = 600 * 1.41421356 = 848.528
             cardWrapper.appendChild(canvas);
             
             // Set background
