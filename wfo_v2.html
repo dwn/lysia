@@ -46,6 +46,11 @@
       background: rgba(255, 255, 255, 0.05);
     }
     
+    /* Disable hover for navigation areas when they can't be used */
+    .nav-area.disabled:hover {
+      background: transparent;
+    }
+    
     /* ===== GRID SYSTEM ===== */
     .grid-container {
       display: grid;
@@ -802,43 +807,68 @@
             const direction = e.clientX < gridRect.left ? 'prev' : 'next';
             console.log('Started dragging off grid, direction:', direction);
             
-            // Highlight the appropriate nav area
-            if (direction === 'prev') {
+            // Check if navigation is possible
+            const currentIndex = availableSets.indexOf(currentSetNumber);
+            const canGoPrev = currentIndex > 0;
+            const canGoNext = currentIndex < availableSets.length - 1;
+            
+            console.log('Navigation check:', {
+              currentSetNumber,
+              currentIndex,
+              availableSets,
+              canGoPrev,
+              canGoNext,
+              direction
+            });
+            
+            // Highlight the appropriate nav area only if navigation is possible
+            if (direction === 'prev' && canGoPrev) {
+              console.log('Highlighting prev area');
               prevArea.style.background = 'rgba(255, 255, 255, 0.05)';
-            } else {
+            } else if (direction === 'next' && canGoNext) {
+              console.log('Highlighting next area');
               nextArea.style.background = 'rgba(255, 255, 255, 0.05)';
+            } else if (direction === 'next' && !canGoNext) {
+              // On the last set, dragging right can create a new set, so highlight the area
+              console.log('On last set, highlighting right area for new set creation');
+              nextArea.style.background = 'rgba(255, 255, 255, 0.05)';
+            } else {
+              console.log('Not highlighting any nav area');
             }
             
-            dragOffGridTimer = setTimeout(() => {
-              console.log('1 second elapsed, finding target set...');
-              const targetSet = findNonFullSet(direction);
-              console.log('Target set:', targetSet);
-              if (targetSet !== null) {
-                const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
-                console.log(`Moving card ${currentSetNumber}.${draggedOrder} to set ${targetSet}`);
-                moveCardToSet(currentSetNumber, draggedOrder, targetSet);
-              } else {
-                // No non-full sets available, create a new set
-                let newSetNumber;
-                if (availableSets.length === 0) {
-                  newSetNumber = direction === 'next' ? 2 : 1;
-                } else {
-                  newSetNumber = direction === 'next' ? Math.max(...availableSets) + 1 : Math.min(...availableSets) - 1;
-                }
-                
-                if (newSetNumber > 0) { // Only create positive set numbers
-                  console.log(`Creating new set ${newSetNumber}`);
+            // Only start timer if navigation is possible or we can create a new set
+            if ((direction === 'prev' && canGoPrev) || (direction === 'next' && (canGoNext || !canGoNext))) {
+              dragOffGridTimer = setTimeout(() => {
+                console.log('1 second elapsed, finding target set...');
+                const targetSet = findNonFullSet(direction);
+                console.log('Target set:', targetSet);
+                if (targetSet !== null) {
                   const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
-                  console.log(`Moving card ${currentSetNumber}.${draggedOrder} to new set ${newSetNumber}`);
-                  moveCardToSet(currentSetNumber, draggedOrder, newSetNumber);
+                  console.log(`Moving card ${currentSetNumber}.${draggedOrder} to set ${targetSet}`);
+                  moveCardToSet(currentSetNumber, draggedOrder, targetSet);
                 } else {
-                  console.log('Cannot create set with negative number');
+                  // No non-full sets available, create a new set
+                  let newSetNumber;
+                  if (availableSets.length === 0) {
+                    newSetNumber = direction === 'next' ? 2 : 1;
+                  } else {
+                    newSetNumber = direction === 'next' ? Math.max(...availableSets) + 1 : Math.min(...availableSets) - 1;
+                  }
+                  
+                  if (newSetNumber > 0) { // Only create positive set numbers
+                    console.log(`Creating new set ${newSetNumber}`);
+                    const draggedOrder = parseInt(draggedCard.getAttribute('data-order'));
+                    console.log(`Moving card ${currentSetNumber}.${draggedOrder} to new set ${newSetNumber}`);
+                    moveCardToSet(currentSetNumber, draggedOrder, newSetNumber);
+                  } else {
+                    console.log('Cannot create set with negative number');
+                  }
                 }
-              }
-              // Remove highlight
-              prevArea.style.background = '';
-              nextArea.style.background = '';
-            }, 1000);
+                // Remove highlight
+                prevArea.style.background = '';
+                nextArea.style.background = '';
+              }, 1000);
+            }
           } else if (!isOutsideGrid && isDraggingOffGrid) {
             console.log('Moved back onto grid, canceling timer');
             clearTimeout(dragOffGridTimer);
@@ -1456,6 +1486,9 @@
         // Setup drag and drop
         setupDragAndDrop(setNumber);
         
+        // Update navigation area states
+        updateNavigationAreas();
+        
       } catch (error) {
         statusEl.style.display = 'none';
         console.error('Error displaying set:', error);
@@ -1651,12 +1684,49 @@
         currentSetNumber = toSet;
         await displaySet(toSet);
         
+        // Ensure buttons are hidden after set change
+        const trashCan = document.getElementById('trashCan');
+        const copyButton = document.getElementById('copyButton');
+        if (trashCan) {
+          trashCan.classList.remove('show');
+          trashCan.classList.remove('drag-over');
+        }
+        if (copyButton) {
+          copyButton.classList.remove('show');
+          copyButton.classList.remove('drag-over');
+        }
+        
       } catch (error) {
         console.error('Error moving card to set:', error);
       }
     }
     
     // ===== NAVIGATION FUNCTIONS =====
+    function updateNavigationAreas() {
+      const currentIndex = availableSets.indexOf(currentSetNumber);
+      const canGoPrev = currentIndex > 0;
+      const canGoNext = currentIndex < availableSets.length - 1;
+      
+      const prevArea = document.getElementById('prevSetArea');
+      const nextArea = document.getElementById('nextSetArea');
+      
+      if (prevArea) {
+        if (canGoPrev) {
+          prevArea.classList.remove('disabled');
+        } else {
+          prevArea.classList.add('disabled');
+        }
+      }
+      
+      if (nextArea) {
+        if (canGoNext) {
+          nextArea.classList.remove('disabled');
+        } else {
+          nextArea.classList.add('disabled');
+        }
+      }
+    }
+    
     function goToNextSet() {
       const currentIndex = availableSets.indexOf(currentSetNumber);
       if (currentIndex < availableSets.length - 1) {
