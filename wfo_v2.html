@@ -1317,6 +1317,7 @@
      * @param {number} setNumber - Set number to display
      */
     async function displaySet(setNumber) {
+      console.log(`displaySet called with setNumber: ${setNumber}`);
       const statusEl = document.getElementById('status');
       
       // Create grid container dynamically if it doesn't exist
@@ -1536,8 +1537,36 @@
         // Rescan sets to update setInfo
         await scanAllSets();
         
-        // Refresh the current set display
-        await displaySet(currentSetNumber);
+        // Check if the current set is now empty or no longer exists
+        const currentSetInfo = setInfo.get(currentSetNumber);
+        const isSetEmpty = !currentSetInfo || currentSetInfo.cardCount === 0;
+        const isSetRemoved = !availableSets.includes(currentSetNumber);
+        const isLastSet = currentSetNumber === Math.max(...availableSets);
+        
+        console.log('Delete check:', {
+          currentSetNumber,
+          availableSets,
+          currentSetInfo,
+          isSetEmpty,
+          isSetRemoved,
+          isLastSet,
+          availableSetsLength: availableSets.length
+        });
+        
+        if ((isSetEmpty || isSetRemoved) && availableSets.length > 0) {
+          // Move to the last available set (which is now the new last set)
+          const newCurrentSet = Math.max(...availableSets);
+          console.log(`Set ${currentSetNumber} is now empty/removed, moving to set ${newCurrentSet}`);
+          const oldSetNumber = currentSetNumber;
+          currentSetNumber = newCurrentSet;
+          console.log(`About to call displaySet(${currentSetNumber})`);
+          await displaySet(currentSetNumber);
+          console.log(`Successfully moved from set ${oldSetNumber} to set ${currentSetNumber}`);
+        } else {
+          console.log('Not moving - conditions not met:', { isSetEmpty, isSetRemoved, availableSetsLength: availableSets.length });
+          // Refresh the current set display (middle sets can be empty)
+          await displaySet(currentSetNumber);
+        }
         
         console.log(`Card ${set}.${order} deleted successfully`);
         
