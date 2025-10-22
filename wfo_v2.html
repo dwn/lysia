@@ -1489,6 +1489,7 @@
               order: draggedOrder,
               element: draggedCard
             };
+            console.log('Card to copy set:', cardToCopy);
             copyCard();
           } else {
             console.log('Not dropped on copy button or trash can');
@@ -1808,11 +1809,14 @@
         for (const file of files) {
           const parsed = parseCardFilename(file.name);
           if (parsed) {
+            console.log(`Found card file: ${file.name} -> set ${parsed.set}, order ${parsed.order}`);
             if (!sets.has(parsed.set)) {
               sets.set(parsed.set, []);
             }
             sets.get(parsed.set).push(parsed);
             maxSetFound = Math.max(maxSetFound, parsed.set);
+          } else {
+            console.log(`Skipping file (not a card): ${file.name}`);
           }
         }
         
@@ -1822,9 +1826,11 @@
         
         for (let setNum = 1; setNum <= maxSetFound; setNum++) {
           const cards = sets.get(setNum) || [];
+          const sortedCards = cards.sort((a, b) => a.order - b.order);
+          console.log(`Set ${setNum}: ${cards.length} cards found:`, sortedCards.map(c => `${c.set}.${c.order}`));
           setInfo.set(setNum, {
             cardCount: cards.length,
-            cards: cards.sort((a, b) => a.order - b.order)
+            cards: sortedCards
           });
           availableSets.push(setNum);
         }
@@ -1852,6 +1858,52 @@
     
     
     // ===== GRID DISPLAY SYSTEM =====
+    /**
+     * Fix position conflicts by updating card data files
+     * @param {number} setNumber - Set number
+     * @param {Array} cardsToFix - Array of cards with new positions
+     */
+    async function fixCardPositions(setNumber, cardsToFix) {
+      try {
+        for (const cardFix of cardsToFix) {
+          const { order, data, newPosition } = cardFix;
+          
+          // Update the card data with new position
+          if (!data.options) data.options = {};
+          data.options.position = newPosition;
+          
+          // Save updated card data
+          const jsonString = JSON.stringify(data, null, 2);
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const fileName = formatCardFilename(setNumber, order);
+          
+          const { error } = await supabaseClient.storage
+            .from('card')
+            .upload(fileName, blob, {
+              contentType: 'application/json',
+              upsert: true
+            });
+          
+          if (error) {
+            console.error(`Failed to fix position for card ${setNumber}.${order}:`, error);
+          } else {
+            console.log(`Fixed position for card ${setNumber}.${order}: ${newPosition.row}-${newPosition.col}`);
+            
+            // Update cache
+            const key = `${setNumber}.${order}`;
+            cardData.set(key, data);
+          }
+        }
+        
+        // Rescan sets to update setInfo with new positions
+        await scanAllSets();
+        console.log('Position fixes completed and sets rescanned');
+        
+      } catch (error) {
+        console.error('Error fixing card positions:', error);
+      }
+    }
+    
     /**
      * Display a set of cards in the grid layout
      * @param {number} setNumber - Set number to display
@@ -1897,29 +1949,54 @@
         const cardsWithoutPosition = [];
         
         // First pass: place cards that have explicit positions
+        const cardsToFix = []; // Track cards that need position fixes
         loadedCards.forEach(({ order, data }) => {
+          console.log(`Processing card ${setNumber}.${order}:`, data ? 'has data' : 'no data');
           if (data && data.options && data.options.position) {
             const { row, col } = data.options.position;
+            console.log(`Card ${setNumber}.${order} has position: row=${row}, col=${col}`);
             // Only use position if both row and col are valid numbers
             if (row !== null && col !== null && typeof row === 'number' && typeof col === 'number') {
               const key = `${row}-${col}`;
-              gridPositions.set(key, { order, data });
+              if (gridPositions.has(key)) {
+                // Position conflict! Add to no-position list instead
+                console.log(`Card ${setNumber}.${order} conflicts with existing card at position ${key}, adding to no-position list`);
+                cardsWithoutPosition.push({ order, data });
+              } else {
+                gridPositions.set(key, { order, data });
+                console.log(`Card ${setNumber}.${order} placed at position ${key}`);
+              }
             } else {
               // Position exists but has null values, treat as no position
+              console.log(`Card ${setNumber}.${order} has invalid position, adding to no-position list`);
               cardsWithoutPosition.push({ order, data });
             }
           } else if (data) {
+            console.log(`Card ${setNumber}.${order} has no position, adding to no-position list`);
             cardsWithoutPosition.push({ order, data });
+          } else {
+            console.log(`Card ${setNumber}.${order} has no data, skipping`);
           }
         });
         
         // Second pass: fill empty positions with cards that don't have positions
+        console.log(`Cards without position: ${cardsWithoutPosition.length}`, cardsWithoutPosition.map(c => `${setNumber}.${c.order}`));
         let cardWithoutPosIndex = 0;
         for (let row = 1; row <= 5; row++) {
           for (let col = 1; col <= 3; col++) {
             const key = `${row}-${col}`;
             if (!gridPositions.has(key) && cardWithoutPosIndex < cardsWithoutPosition.length) {
-              gridPositions.set(key, cardsWithoutPosition[cardWithoutPosIndex]);
+              const cardToPlace = cardsWithoutPosition[cardWithoutPosIndex];
+              gridPositions.set(key, cardToPlace);
+              console.log(`Placed card ${setNumber}.${cardToPlace.order} at empty position ${key}`);
+              
+              // Track cards that need position updates
+              cardsToFix.push({
+                order: cardToPlace.order,
+                data: cardToPlace.data,
+                newPosition: { row, col }
+              });
+              
               cardWithoutPosIndex++;
             }
           }
@@ -2034,6 +2111,12 @@
         
         statusEl.style.display = 'none';
         gridEl.style.display = 'grid';
+        
+        // Fix position conflicts by updating card data files
+        if (cardsToFix.length > 0) {
+          console.log(`Fixing position conflicts for ${cardsToFix.length} cards:`, cardsToFix.map(c => `${setNumber}.${c.order} -> ${c.newPosition.row}-${c.newPosition.col}`));
+          fixCardPositions(setNumber, cardsToFix);
+        }
         
         // Setup drag and drop
         setupDragAndDrop(setNumber);
@@ -2258,7 +2341,11 @@
     }
     
     async function copyCard() {
-      if (!cardToCopy) return;
+      console.log('copyCard function called, cardToCopy:', cardToCopy);
+      if (!cardToCopy) {
+        console.log('No card to copy, returning');
+        return;
+      }
       
       try {
         const { set, order } = cardToCopy;
@@ -2285,25 +2372,54 @@
         
         // Find next available order number in current set
         const currentSetInfo = setInfo.get(currentSetNumber);
+        let targetSet = currentSetNumber;
         let nextOrder = 1;
+        
         if (currentSetInfo) {
           const usedOrders = currentSetInfo.cards.map(c => c.order);
           while (usedOrders.includes(nextOrder)) {
             nextOrder++;
           }
           
-          // Check if set is full (15 cards max)
+          // Check if current set is full (15 cards max)
           if (nextOrder > 15) {
-            console.log(`Set ${currentSetNumber} is full (15 cards), cannot copy card`);
-            cardToCopy = null;
-            return;
+            console.log(`Set ${currentSetNumber} is full (15 cards), looking for next available set`);
+            
+            // Find next available set or create new one
+            const availableSets = Array.from(setInfo.keys()).sort((a, b) => a - b);
+            let foundSet = null;
+            
+            // Look for a set with available space
+            for (const setNum of availableSets) {
+              const targetSetInfo = setInfo.get(setNum);
+              if (targetSetInfo && targetSetInfo.cards.length < 15) {
+                foundSet = setNum;
+                break;
+              }
+            }
+            
+            if (foundSet) {
+              targetSet = foundSet;
+              const targetSetInfo = setInfo.get(targetSet);
+              const usedOrders = targetSetInfo.cards.map(c => c.order);
+              nextOrder = 1;
+              while (usedOrders.includes(nextOrder)) {
+                nextOrder++;
+              }
+              console.log(`Found available space in set ${targetSet}, order ${nextOrder}`);
+            } else {
+              // Create new set
+              targetSet = Math.max(...availableSets) + 1;
+              nextOrder = 1;
+              console.log(`Creating new set ${targetSet}, order ${nextOrder}`);
+            }
           }
         }
         
-        console.log(`Copying card to position ${currentSetNumber}.${nextOrder}`);
+        console.log(`Copying card to position ${targetSet}.${nextOrder}`);
         
         // Save the copied card
-        const newFileName = formatCardFilename(currentSetNumber, nextOrder);
+        const newFileName = formatCardFilename(targetSet, nextOrder);
         const jsonString = JSON.stringify(copiedCardData, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         
@@ -2315,25 +2431,31 @@
           });
         
         if (error) {
-          console.error(`Failed to save copied card ${currentSetNumber}.${nextOrder}:`, error);
+          console.error(`Failed to save copied card ${targetSet}.${nextOrder}:`, error);
           return;
         }
         
         console.log(`Successfully saved copied card to storage`);
         
         // Update caches
-        cardData.set(`${currentSetNumber}.${nextOrder}`, copiedCardData);
+        cardData.set(`${targetSet}.${nextOrder}`, copiedCardData);
         console.log(`Updated card data cache with new card`);
         
         // Rescan sets to update setInfo
         await scanAllSets();
         console.log(`Rescanned all sets`);
         
+        // If we copied to a different set, switch to that set
+        if (targetSet !== currentSetNumber) {
+          currentSetNumber = targetSet;
+          console.log(`Switched to set ${currentSetNumber}`);
+        }
+        
         // Refresh the current set display
         await displaySet(currentSetNumber);
         console.log(`Refreshed display for set ${currentSetNumber}`);
         
-        console.log(`Card ${set}.${order} copied to ${currentSetNumber}.${nextOrder} successfully`);
+        console.log(`Card ${set}.${order} copied to ${targetSet}.${nextOrder} successfully`);
         
       } catch (error) {
         console.error('Error copying card:', error);
