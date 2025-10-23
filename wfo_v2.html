@@ -1550,7 +1550,7 @@
         }
       }
       
-      function handleDrop(e) {
+      async function handleDrop(e) {
         e.preventDefault();
         e.stopPropagation();
         
@@ -1633,8 +1633,8 @@
           originalEmptySlot.style.gridColumn = originalDraggedCol;
           gridEl.appendChild(originalEmptySlot);
           
-          // Save position in background
-          updateCardPosition(currentSet, draggedOrder, targetRow, targetCol);
+          // Save position and wait for completion
+          await updateCardPosition(currentSet, draggedOrder, targetRow, targetCol);
         } else {
           // Swap with another card - update visual positions
           const targetOrder = parseInt(targetCard.getAttribute('data-order'));
@@ -1644,9 +1644,11 @@
           targetCard.style.gridRow = originalDraggedRow;
           targetCard.style.gridColumn = originalDraggedCol;
           
-          // Save both positions in background
-          updateCardPosition(currentSet, draggedOrder, targetRow, targetCol);
-          updateCardPosition(currentSet, targetOrder, originalDraggedRow, originalDraggedCol);
+          // Save both positions and wait for completion
+          await Promise.all([
+            updateCardPosition(currentSet, draggedOrder, targetRow, targetCol),
+            updateCardPosition(currentSet, targetOrder, originalDraggedRow, originalDraggedCol)
+          ]);
         }
         
         targetCard.classList.remove('drag-over');
